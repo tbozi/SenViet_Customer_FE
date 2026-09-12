@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
-  Sparkles,
   Star,
   Users,
   X,
@@ -33,7 +32,6 @@ import {
   type RoomStay,
 } from "@/lib/bookings";
 import { useLanguage } from "@/lib/i18n";
-import { services } from "@/data/services";
 const today = new Date();
 const dateValue = (date: Date) => date.toISOString().slice(0, 10);
 const defaultGuest = (searchParams: URLSearchParams): GuestForm => ({
@@ -953,34 +951,6 @@ export default function HotelRooms() {
             <p className="mt-4 text-sm text-muted-foreground">
               Chọn số phòng trong từng loại phòng để bắt đầu.
             </p>
-          }
-          callout={
-            selections.length ? (
-              <div className="mt-4 rounded-xl border border-gold/35 bg-gradient-to-br from-amber-50 via-white to-secondary/50 p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/20 text-gold-foreground">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-primary">
-                      Đặt thêm dịch vụ
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Chọn nhà hàng, spa, phòng họp và các dịch vụ khác riêng
-                      cho từng mã phòng ở bước tiếp theo.
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold text-primary">
-                      <span className="rounded-full bg-white px-2.5 py-1 shadow-sm">
-                        {services.length} dịch vụ
-                      </span>
-                      <span className="rounded-full bg-white px-2.5 py-1 shadow-sm">
-                        Theo từng phòng
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null
           }
           cta={
             selections.length ? (

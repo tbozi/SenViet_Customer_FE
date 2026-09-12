@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronLeft, Hotel, Minus, Plus } from "lucide-react";
+import { Check, ChevronLeft, Copy, Hotel, Minus, Plus } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
@@ -250,6 +250,24 @@ export default function BookingServices() {
     roomBreakdowns.find(({ stay }) => stay.roomCode === activeRoomCode) ||
     roomBreakdowns[0];
 
+  const applyServicesToAllRooms = () => {
+    const sourceServices = activeBreakdown?.stay.services || [];
+    if (!sourceServices.length) return;
+    setSelections((current) =>
+      current.map((selection) => ({
+        ...selection,
+        stays: selectionStays(selection).map((stay) => ({
+          ...stay,
+          services: sourceServices.map((service) => ({
+            ...service,
+            roomCode: stay.roomCode,
+            roomName: selection.roomNameVi,
+          })),
+        })),
+      })),
+    );
+  };
+
   const continueToCheckout = () => {
     if (!roomBreakdowns.length) return;
     const first = roomBreakdowns[0];
@@ -352,11 +370,24 @@ export default function BookingServices() {
                       {activeBreakdown.stay.roomCode}
                     </h3>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {activeBreakdown.stay.nights} đêm ·{" "}
-                    {activeBreakdown.stay.guest.adults} người lớn ·{" "}
-                    {activeBreakdown.stay.guest.children} trẻ em
-                  </p>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <p className="text-sm text-muted-foreground">
+                      {activeBreakdown.stay.nights} đêm ·{" "}
+                      {activeBreakdown.stay.guest.adults} người lớn ·{" "}
+                      {activeBreakdown.stay.guest.children} trẻ em
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={!activeBreakdown.stay.services?.length}
+                      onClick={applyServicesToAllRooms}
+                      title="Sao chép các dịch vụ đang chọn sang tất cả phòng"
+                    >
+                      <Copy className="h-4 w-4" />
+                      Áp dụng dịch vụ cho tất cả các phòng
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-2 border-b border-border">

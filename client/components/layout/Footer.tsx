@@ -60,11 +60,6 @@ export default function Footer() {
                 {t("nav.hotels")}
               </Link>
             </li>
-            <li>
-              <Link to="/admin" className="hover:text-primary-foreground">
-                {t("nav.admin")}
-              </Link>
-            </li>
           </ul>
         </div>
 

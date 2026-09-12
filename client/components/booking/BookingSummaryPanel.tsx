@@ -32,6 +32,8 @@ interface BookingSummaryPanelProps {
   totals?: BookingSummaryTotals;
   fallbackServices?: BookingService[];
   promo?: ReactNode;
+  savedPromotions?: Array<{ code: string; name: string }>;
+  onSelectPromotion?: (code: string) => void;
   callout?: ReactNode;
   children?: ReactNode;
   emptyState?: ReactNode;
@@ -77,6 +79,8 @@ export default function BookingSummaryPanel({
   totals,
   fallbackServices = [],
   promo,
+  savedPromotions = [],
+  onSelectPromotion,
   callout,
   children,
   emptyState,
@@ -262,6 +266,29 @@ export default function BookingSummaryPanel({
       {roomCount ? (
         <>
           {promo}
+          {savedPromotions.length > 0 && onSelectPromotion ? (
+            <div className="mt-4 rounded-xl border border-gold/30 bg-amber-50/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-[.12em] text-gold-foreground">
+                Ưu đãi đã lưu
+              </p>
+              <div className="mt-2 space-y-2">
+                {savedPromotions.map((promotion) => (
+                  <button
+                    key={promotion.code}
+                    type="button"
+                    onClick={() => onSelectPromotion(promotion.code)}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-gold/20 bg-white px-3 py-2 text-left text-xs transition hover:border-primary"
+                  >
+                    <span>
+                      <strong className="block text-primary">{promotion.code}</strong>
+                      <span className="text-muted-foreground">{promotion.name}</span>
+                    </span>
+                    <span className="shrink-0 font-semibold text-primary">Áp dụng</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {callout}
           {children}
 
