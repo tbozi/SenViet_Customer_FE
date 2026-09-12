@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Link,
   useLocation,
@@ -29,6 +29,11 @@ import {
   type RoomStay,
 } from "@/lib/bookings";
 import { useAuth } from "@/lib/auth";
+import {
+  getPromotionDiscount,
+  getSavedPromotionCodes,
+  promotionNames,
+} from "@/lib/savedPromotions";
 import { useLanguage } from "@/lib/i18n";
 
 const fallbackGuestForms = (params: URLSearchParams): GuestForm[] => {
@@ -126,6 +131,7 @@ export default function Checkout() {
   const [email, setEmail] = useState(user?.email || "");
   const [request, setRequest] = useState("");
   const [promo, setPromo] = useState(params.get("promo") || "");
+  const [savedPromotionCodes, setSavedPromotionCodes] = useState<string[]>([]);
   const [payment, setPayment] = useState<Booking["paymentMethod"]>("qr");
   const [error, setError] = useState("");
   const [paymentState, setPaymentState] = useState<"idle" | "processing">(
@@ -133,6 +139,10 @@ export default function Checkout() {
   );
   const selections = useMemo(() => parseSelections(params), [params]);
   const services = useMemo(() => parseServices(params), [params]);
+
+  useEffect(() => {
+    setSavedPromotionCodes(user ? getSavedPromotionCodes(user.email) : []);
+  }, [user?.email]);
   const arrivalTime = params.get("arrivalTime") || "14:00";
   const departureTime = params.get("departureTime") || "12:00";
   const roomCount = selections.reduce(
@@ -200,8 +210,18 @@ export default function Checkout() {
       ),
     [selections],
   );
-  const discount =
-    promo.trim().toUpperCase() === "SEN10" ? Math.round(roomSubtotal * 0.1) : 0;
+  const totalNights = Math.max(
+    0,
+    ...selections.flatMap((selection) =>
+      selectionStays(selection).map((stay) => stay.nights),
+    ),
+  );
+  const discount = getPromotionDiscount(promo, {
+    roomSubtotal,
+    serviceTotal,
+    nights: totalNights,
+    roomCount,
+  });
   const taxableSubtotal = Math.max(
     0,
     roomSubtotal + surcharge + extraGuestCharge + serviceTotal - discount,
@@ -526,12 +546,22 @@ export default function Checkout() {
                 Mã khuyến mãi
                 <input
                   value={promo}
-                  onChange={(event) => setPromo(event.target.value)}
-                  placeholder="SEN10"
+                  onChange={(event) => setPromo(event.target.value.toUpperCase())}
+                  placeholder="Nhập hoặc chọn mã đã lưu"
                   className="mt-1 w-full rounded-xl border border-input p-3 uppercase"
                 />
+                {promo && discount === 0 && (
+                  <span className="mt-1 block text-xs font-normal text-amber-700">
+                    Mã chưa đủ điều kiện cho đơn đặt phòng này.
+                  </span>
+                )}
               </label>
             }
+            savedPromotions={savedPromotionCodes.map((code) => ({
+              code,
+              name: promotionNames[code] || "Ưu đãi Sen Việt",
+            }))}
+            onSelectPromotion={setPromo}
             cta={
               <>
                 <Button

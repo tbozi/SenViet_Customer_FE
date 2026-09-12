@@ -1,120 +1,190 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import axiosInstance from "@/lib/axiosInstance";
 
+// ============================================================
+// Types
+// ============================================================
 export interface AuthUser {
+  userId: number;
+  accountId: number;
   name: string;
   email: string;
   phone?: string;
   birthDate?: string;
   identityNumber?: string;
-  preferredHotel?: string;
-  roomPreference?: string;
-  dietaryPreference?: string;
-}
-
-interface StoredUser extends AuthUser {
-  password: string;
-  verified?: boolean;
-  verificationCode?: string;
-  verificationExpiresAt?: number;
 }
 
 interface AuthContextValue {
   user: AuthUser | null;
+  token: string | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   register: (name: string, email: string, password: string, phone?: string) => Promise<{ ok: boolean; error?: string }>;
-  verifyRegistration: (email: string, code: string) => Promise<{ ok: boolean; error?: string }>;
+  verifyRegistration: (email: string, otp: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
-  updateProfile: (data: Partial<AuthUser>) => void;
+  updateProfile: (data: Partial<AuthUser>) => Promise<{ ok: boolean; error?: string }>;
 }
 
-const USERS_KEY = "senviet_users";
 const SESSION_KEY = "senviet_session";
-const DEMO_VERIFICATION_CODE = "123456";
-const VERIFICATION_WINDOW = 10 * 60 * 1000;
+const TOKEN_KEY = "senviet_token";
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function readUsers(): StoredUser[] {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(users: StoredUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
+// ============================================================
+// Provider
+// ============================================================
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
+  // Khôi phục session khi reload trang
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(SESSION_KEY);
-      if (stored) setUser(JSON.parse(stored));
+      const storedToken = localStorage.getItem(TOKEN_KEY);
+      const storedUser = localStorage.getItem(SESSION_KEY);
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
+      }
     } catch {
-      return;
+      // bỏ qua nếu parse lỗi
     }
   }, []);
 
-  const persistSession = (nextUser: AuthUser | null) => {
+  const persistSession = (nextUser: AuthUser | null, nextToken: string | null) => {
     setUser(nextUser);
-    if (nextUser) localStorage.setItem(SESSION_KEY, JSON.stringify(nextUser));
-    else localStorage.removeItem(SESSION_KEY);
+    setToken(nextToken);
+    if (nextUser && nextToken) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(nextUser));
+      localStorage.setItem(TOKEN_KEY, nextToken);
+    } else {
+      localStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+    }
   };
 
+  // ============================================================
+  // Login — gọi POST /auth/login
+  // ============================================================
   const login: AuthContextValue["login"] = async (email, password) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    const match = readUsers().find((candidate) => candidate.email.toLowerCase() === email.toLowerCase() && candidate.password === password);
-    if (!match) return { ok: false, error: "invalid" };
-    if (match.verified === false) return { ok: false, error: "unverified" };
-    persistSession({ name: match.name, email: match.email, phone: match.phone });
-    return { ok: true };
-  };
+    try {
+      const res = await axiosInstance.post("/auth/login", { email, password });
+      const data = res.data.result;
 
-  const register: AuthContextValue["register"] = async (name, email, password, phone) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    const users = readUsers();
-    if (users.some((candidate) => candidate.email.toLowerCase() === email.toLowerCase())) return { ok: false, error: "exists" };
-    writeUsers([...users, { name, email, password, phone, verified: false, verificationCode: DEMO_VERIFICATION_CODE, verificationExpiresAt: Date.now() + VERIFICATION_WINDOW }]);
-    return { ok: true };
-  };
+      const jwtToken: string = data.token;
+      const loggedUser: AuthUser = {
+        userId: 0, // sẽ load từ /users/me/profile sau
+        accountId: 0,
+        name: data.fullName,
+        email: data.email,
+        phone: data.phone,
+      };
 
-  const verifyRegistration: AuthContextValue["verifyRegistration"] = async (email, code) => {
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    const users = readUsers();
-    const index = users.findIndex((candidate) => candidate.email.toLowerCase() === email.toLowerCase());
-    if (index < 0) return { ok: false, error: "not_found" };
-    const pending = users[index];
-    if (pending.verified !== false) {
-      persistSession({ name: pending.name, email: pending.email, phone: pending.phone });
+      persistSession(loggedUser, jwtToken);
+
+      // Lấy thêm thông tin profile đầy đủ (userId, cccd, dateOfBirth...)
+      try {
+        const profileRes = await axiosInstance.get("/users/me/profile");
+        const profile = profileRes.data.result;
+        const fullUser: AuthUser = {
+          userId: profile.userId,
+          accountId: profile.accountId,
+          name: profile.fullName,
+          email: profile.email,
+          phone: profile.phone,
+          birthDate: profile.dateOfBirth,
+          identityNumber: profile.cccd,
+        };
+        persistSession(fullUser, jwtToken);
+      } catch {
+        // profile load thất bại cũng không sao, vẫn login được
+      }
+
       return { ok: true };
-    }
-    if (pending.verificationExpiresAt && pending.verificationExpiresAt < Date.now()) return { ok: false, error: "expired" };
-    if (pending.verificationCode !== code) return { ok: false, error: "invalid_code" };
-    const verified = { ...pending, verified: true, verificationCode: undefined, verificationExpiresAt: undefined };
-    users[index] = verified;
-    writeUsers(users);
-    persistSession({ name: verified.name, email: verified.email, phone: verified.phone });
-    return { ok: true };
-  };
-
-  const logout = () => persistSession(null);
-
-  const updateProfile = (data: Partial<AuthUser>) => {
-    if (!user) return;
-    const updated = { ...user, ...data };
-    persistSession(updated);
-    const users = readUsers();
-    const index = users.findIndex((candidate) => candidate.email === user.email);
-    if (index >= 0) {
-      users[index] = { ...users[index], ...data };
-      writeUsers(users);
+    } catch (err: any) {
+      const message = err.response?.data?.message || "";
+      if (err.response?.status === 401 || message.toLowerCase().includes("mật khẩu")) {
+        return { ok: false, error: "invalid" };
+      }
+      return { ok: false, error: message || "Không thể đăng nhập" };
     }
   };
 
-  return <AuthContext.Provider value={{ user, login, register, verifyRegistration, logout, updateProfile }}>{children}</AuthContext.Provider>;
+  // ============================================================
+  // Register — gọi POST /auth/register-request (gửi OTP)
+  // ============================================================
+  const register: AuthContextValue["register"] = async (name, email, password, phone) => {
+    try {
+      await axiosInstance.post("/auth/register-request", {
+        fullName: name,
+        email,
+        password,
+        phone,
+      });
+      return { ok: true };
+    } catch (err: any) {
+      const message = err.response?.data?.message || "";
+      if (message.toLowerCase().includes("email")) return { ok: false, error: "exists" };
+      if (message.toLowerCase().includes("điện thoại")) return { ok: false, error: "phone_exists" };
+      return { ok: false, error: message || "Không thể tạo tài khoản" };
+    }
+  };
+
+  // ============================================================
+  // Verify OTP — gọi POST /auth/verify-otp
+  // ============================================================
+  const verifyRegistration: AuthContextValue["verifyRegistration"] = async (email, otp) => {
+    try {
+      await axiosInstance.post("/auth/verify-otp", { email, otp });
+      return { ok: true };
+    } catch (err: any) {
+      const message = err.response?.data?.message || "";
+      if (message.toLowerCase().includes("invalid") || message.toLowerCase().includes("không hợp lệ")) {
+        return { ok: false, error: "invalid_code" };
+      }
+      if (message.toLowerCase().includes("expired") || message.toLowerCase().includes("hết hạn")) {
+        return { ok: false, error: "expired" };
+      }
+      return { ok: false, error: message || "Không thể xác thực" };
+    }
+  };
+
+  // ============================================================
+  // Logout
+  // ============================================================
+  const logout = () => persistSession(null, null);
+
+  // ============================================================
+  // Update Profile — gọi PUT /users/me/profile
+  // ============================================================
+  const updateProfile: AuthContextValue["updateProfile"] = async (data) => {
+    try {
+      const res = await axiosInstance.put("/users/me/profile", {
+        fullName: data.name,
+        phone: data.phone,
+        cccd: data.identityNumber,
+        dateOfBirth: data.birthDate,
+      });
+      const profile = res.data.result;
+      const updated: AuthUser = {
+        ...user!,
+        name: profile.fullName,
+        phone: profile.phone,
+        identityNumber: profile.cccd,
+        birthDate: profile.dateOfBirth,
+      };
+      persistSession(updated, token);
+      return { ok: true };
+    } catch (err: any) {
+      const message = err.response?.data?.message || "Không thể cập nhật hồ sơ";
+      return { ok: false, error: message };
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, login, register, verifyRegistration, logout, updateProfile }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

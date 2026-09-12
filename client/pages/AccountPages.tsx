@@ -21,7 +21,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationStep, setVerificationStep] = useState(false);
   const [error, setError] = useState("");
-  const from = (location.state as { from?: string } | null)?.from || "/profile";
+  const from = (location.state as { from?: string } | null)?.from || "/";
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
