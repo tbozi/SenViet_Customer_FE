@@ -123,6 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { ok: true };
     } catch (err: any) {
       const message = err.response?.data?.message || "";
+      const errorCode = String(err.response?.data?.code || err.response?.data?.errorCode || "").toUpperCase();
+      if (["EMAIL_EXISTED", "PHONE_EXISTED", "CCCD_EXISTED"].some((code) => errorCode.includes(code))) {
+        return { ok: false, error: "account_exists" };
+      }
+      const normalizedMessage = message.toLowerCase();
+      if (normalizedMessage.includes("email đã tồn tại") || normalizedMessage.includes("số điện thoại đã tồn tại") || normalizedMessage.includes("cccd đã tồn tại")) {
+        return { ok: false, error: "account_exists" };
+      }
       if (message.toLowerCase().includes("email")) return { ok: false, error: "exists" };
       if (message.toLowerCase().includes("điện thoại")) return { ok: false, error: "phone_exists" };
       return { ok: false, error: message || "Không thể tạo tài khoản" };

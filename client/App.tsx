@@ -1,6 +1,7 @@
 import { createRoot, Root } from "react-dom/client";
 import "@/global.css";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Provider as ReduxProvider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
@@ -24,6 +25,7 @@ import CustomerCRM from "@/pages/CustomerCRM";
 import { Offers, Services } from "@/pages/ExplorePages";
 import { AuthPage, Placeholder } from "@/pages/AccountPages";
 import NotFound from "@/pages/NotFound";
+import { store } from "@/store";
 
 const queryClient = new QueryClient();
 
@@ -35,7 +37,7 @@ function ProtectedProfile() {
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><LanguageProvider><AuthProvider><BrowserRouter><SiteLayout><Routes><Route path="/" element={<Index />} /><Route path="/hotels" element={<Hotels />} /><Route path="/search" element={<SearchResults />} /><Route path="/hotels/:slug" element={<HotelRooms />} /><Route path="/hotels/:slug/details" element={<HotelDetails />} /><Route path="/checkout" element={<Checkout />} /><Route path="/booking-success/:bookingId" element={<BookingSuccess />} /><Route path="/bookings" element={<BookingHistory />} /><Route path="/offers" element={<Offers />} /><Route path="/services" element={<Services />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/account" element={<CustomerAccount />} /><Route path="/loyalty" element={<LoyaltyPage />} /><Route path="/crm" element={<CustomerCRM />} /><Route path="/reviews/:bookingId" element={<ReviewPage />} /><Route path="/profile" element={<ProfilePage />} /><Route path="/forgot-password" element={<Placeholder title="Quên mật khẩu / OTP" />} /><Route path="/change-password" element={<Placeholder title="Đổi mật khẩu" />} /><Route path="/about" element={<Placeholder title="About Sen Việt" />} /><Route path="/contact" element={<Placeholder title="Contact Sen Việt" />} /><Route path="/admin" element={<Placeholder title="Chain management" />} /><Route path="*" element={<NotFound />} /></Routes></SiteLayout></BrowserRouter></AuthProvider></LanguageProvider></TooltipProvider></QueryClientProvider>;
+  return <ReduxProvider store={store}><QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><LanguageProvider><AuthProvider><BrowserRouter><SiteLayout><Routes><Route path="/" element={<Index />} /><Route path="/hotels" element={<Hotels />} /><Route path="/search" element={<SearchResults />} /><Route path="/hotels/:slug" element={<HotelRooms />} /><Route path="/hotels/:slug/details" element={<HotelDetails />} /><Route path="/checkout" element={<Checkout />} /><Route path="/booking-success/:bookingId" element={<BookingSuccess />} /><Route path="/bookings" element={<BookingHistory />} /><Route path="/offers" element={<Offers />} /><Route path="/services" element={<Services />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/account" element={<CustomerAccount />} /><Route path="/loyalty" element={<LoyaltyPage />} /><Route path="/crm" element={<CustomerCRM />} /><Route path="/reviews/:bookingId" element={<ReviewPage />} /><Route path="/profile" element={<ProfilePage />} /><Route path="/forgot-password" element={<Placeholder title="Quên mật khẩu / OTP" />} /><Route path="/change-password" element={<Placeholder title="Đổi mật khẩu" />} /><Route path="/about" element={<Placeholder title="About Sen Việt" />} /><Route path="/contact" element={<Placeholder title="Contact Sen Việt" />} /><Route path="/admin" element={<Placeholder title="Chain management" />} /><Route path="*" element={<NotFound />} /></Routes></SiteLayout></BrowserRouter></AuthProvider></LanguageProvider></TooltipProvider></QueryClientProvider></ReduxProvider>;
 }
 
 const container = document.getElementById("root") as (HTMLElement & { __senvietReactRoot?: Root }) | null;
