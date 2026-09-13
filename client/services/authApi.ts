@@ -10,6 +10,10 @@ interface VerifyOtpRequest {
   otp: string;
 }
 
+interface ResendOtpRequest {
+  email: string;
+}
+
 interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
@@ -49,6 +53,9 @@ export const authApi = baseApi.injectEndpoints({
     verifyOtp: builder.mutation<void, VerifyOtpRequest>({
       query: (body) => ({ url: "/auth/verify-otp", method: "POST", data: body }),
     }),
+    resendOtp: builder.mutation<void, ResendOtpRequest>({
+      query: (body) => ({ url: "/auth/resend-otp", method: "POST", data: body }),
+    }),
     getMyProfile: builder.query<Record<string, unknown>, void>({
       query: () => ({ url: "/users/me/profile", method: "GET" }),
       transformResponse: (response: ApiResponse<Record<string, unknown>>) =>
@@ -65,6 +72,7 @@ export const {
   useLoginMutation,
   useRegisterRequestMutation,
   useVerifyOtpMutation,
+  useResendOtpMutation,
   useGetMyProfileQuery,
   useChangePasswordMutation,
 } = authApi;
