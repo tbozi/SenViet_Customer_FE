@@ -1,6 +1,8 @@
 import { useState } from "react";
 import {
   ArrowRight,
+  Bookmark,
+  BookmarkCheck,
   CalendarDays,
   Check,
   Copy,
@@ -16,7 +18,7 @@ import {
   Waves,
   Wifi,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +27,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useLanguage } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
+import {
+  useGetActivePromotionsQuery,
+  useGetMySavedPromotionsQuery,
+  useSavePromotionMutation,
+  useUnsavePromotionMutation,
+} from "@/services/promotionApi";
 
 const offers = [
   {
@@ -171,9 +180,50 @@ const offers = [
 
 export function Offers() {
   const { language } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [copiedCode, setCopiedCode] = useState("");
   const [selectedOffer, setSelectedOffer] = useState<(typeof offers)[number] | null>(null);
   const isVietnamese = language === "vi";
+
+  // Lấy danh sách ưu đãi và voucher đã lưu từ Backend
+  const { data: activePromos } = useGetActivePromotionsQuery();
+  const { data: savedPromos } = useGetMySavedPromotionsQuery(undefined, {
+    skip: !user,
+  });
+  const [savePromo, { isLoading: isSaving }] = useSavePromotionMutation();
+  const [unsavePromo, { isLoading: isUnsaving }] = useUnsavePromotionMutation();
+
+  const isSavedCode = (code: string) => {
+    return Boolean(savedPromos?.some((sp) => sp.code.toUpperCase() === code.toUpperCase()));
+  };
+
+  const handleToggleSave = async (code: string) => {
+    if (!user) {
+      navigate("/login", { state: { from: "/offers" } });
+      return;
+    }
+
+    const saved = savedPromos?.find((sp) => sp.code.toUpperCase() === code.toUpperCase());
+    if (saved) {
+      try {
+        await unsavePromo(saved.promotionId).unwrap();
+      } catch {
+        // bỏ qua lỗi
+      }
+      return;
+    }
+
+    // Tìm id khuyến mãi bên BE
+    const matched = activePromos?.find((p) => p.code.toUpperCase() === code.toUpperCase());
+    if (matched) {
+      try {
+        await savePromo(matched.id).unwrap();
+      } catch {
+        // bỏ qua lỗi
+      }
+    }
+  };
 
   const copyCode = async (code: string) => {
     await navigator.clipboard?.writeText(code);
@@ -203,6 +253,8 @@ export function Offers() {
             {offers.map((offer) => {
               const Icon = offer.icon;
               const copied = copiedCode === offer.code;
+              const isSaved = isSavedCode(offer.code);
+
               return (
                 <article
                   key={offer.code}
@@ -222,21 +274,46 @@ export function Offers() {
                   <p className="mt-3 flex-1 text-sm leading-6 text-muted-foreground">
                     {isVietnamese ? offer.description : offer.descriptionEn}
                   </p>
-                  <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-primary/10 bg-white/80 p-3">
+                  <div className="mt-5 flex items-center justify-between gap-2 rounded-xl border border-primary/10 bg-white/80 p-3">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">
                         {isVietnamese ? "Mã ưu đãi" : "Promo code"}
                       </p>
                       <p className="mt-1 font-bold tracking-wider text-primary">{offer.code}</p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => copyCode(offer.code)}
-                      className="rounded-lg p-2 text-primary transition hover:bg-secondary"
-                      aria-label={isVietnamese ? "Sao chép mã" : "Copy code"}
-                    >
-                      {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSave(offer.code)}
+                        disabled={isSaving || isUnsaving}
+                        className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                          isSaved
+                            ? "bg-amber-100 text-amber-900 border border-amber-300"
+                            : "bg-secondary text-primary hover:bg-secondary/80"
+                        }`}
+                        title={isSaved ? "Bỏ lưu khỏi ví" : "Lưu vào ví voucher"}
+                      >
+                        {isSaved ? (
+                          <>
+                            <BookmarkCheck className="h-3.5 w-3.5 text-amber-700" />
+                            <span>Đã lưu</span>
+                          </>
+                        ) : (
+                          <>
+                            <Bookmark className="h-3.5 w-3.5" />
+                            <span>Lưu voucher</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyCode(offer.code)}
+                        className="rounded-lg p-2 text-primary transition hover:bg-secondary"
+                        aria-label={isVietnamese ? "Sao chép mã" : "Copy code"}
+                      >
+                        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" />
