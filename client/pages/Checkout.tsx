@@ -35,6 +35,7 @@ import {
   promotionNames,
 } from "@/lib/savedPromotions";
 import { useLanguage } from "@/lib/i18n";
+import { useGetMySavedPromotionsQuery } from "@/services/promotionApi";
 
 const fallbackGuestForms = (params: URLSearchParams): GuestForm[] => {
   try {
@@ -140,9 +141,16 @@ export default function Checkout() {
   const selections = useMemo(() => parseSelections(params), [params]);
   const services = useMemo(() => parseServices(params), [params]);
 
+  const { data: savedPromosBackend } = useGetMySavedPromotionsQuery(undefined, {
+    skip: !user,
+  });
+
   useEffect(() => {
-    setSavedPromotionCodes(user ? getSavedPromotionCodes(user.email) : []);
-  }, [user?.email]);
+    const localCodes = user ? getSavedPromotionCodes(user.email) : [];
+    const backendCodes = savedPromosBackend ? savedPromosBackend.map((sp) => sp.code) : [];
+    const allCodes = Array.from(new Set([...backendCodes, ...localCodes]));
+    setSavedPromotionCodes(allCodes);
+  }, [user?.email, savedPromosBackend]);
   const arrivalTime = params.get("arrivalTime") || "14:00";
   const departureTime = params.get("departureTime") || "12:00";
   const roomCount = selections.reduce(

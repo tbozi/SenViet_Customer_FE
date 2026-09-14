@@ -10,6 +10,6 @@ export interface ApiResponse<T> {
 export const baseApi = createApi({
   reducerPath: "api",
   baseQuery: axiosBaseQuery(),
-  tagTypes: ["User", "Room", "Building", "Floor", "Amenity", "Booking"],
+  tagTypes: ["User", "Room", "Building", "Floor", "Amenity", "Booking", "Promotion"],
   endpoints: () => ({}),
 });
