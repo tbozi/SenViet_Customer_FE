@@ -1,14 +1,10 @@
-import { useMemo, useState } from "react";
-import { Check, ChevronLeft, Copy, Hotel, Minus, Plus } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Check, ChevronLeft, Copy, Hotel, Minus, Plus, Loader2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 import { formatVnd, hotels } from "@/data/hotels";
-import {
-  services,
-  serviceTabs,
-  type ServiceCatalogItem,
-} from "@/data/services";
+import { useGetServicesQuery } from "@/services/hotelServiceApi";
 import {
   calculateEarlyCheckInSurcharge,
   calculateLateCheckOutSurcharge,
@@ -126,9 +122,36 @@ export default function BookingServices() {
       ? selectionStays(initialSelection)[0]?.roomCode || ""
       : "";
   });
-  const [activeCategory, setActiveCategory] = useState<
-    (typeof serviceTabs)[number][0]
-  >(serviceTabs[0][0]);
+  const { data: apiServices = [], isLoading: isLoadingServices } =
+    useGetServicesQuery({ activeOnly: true });
+
+  const services = useMemo(() => {
+    return apiServices.map((item) => ({
+      id: String(item.id),
+      category: item.category || "Chung",
+      name: item.name,
+      image:
+        item.imageUrl ||
+        "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=700&auto=format&fit=crop",
+      hours: item.hotelName ? `Chi nhánh: ${item.hotelName}` : "Toàn hệ thống",
+      detail: item.description || "Dịch vụ tiện ích cao cấp dành cho khách lưu trú.",
+      price: item.price,
+      unit: item.unit || "lượt",
+    }));
+  }, [apiServices]);
+
+  const serviceCategories = useMemo(() => {
+    const cats = Array.from(new Set(services.map((s) => s.category)));
+    return cats.length ? cats : ["Chung"];
+  }, [services]);
+
+  const [activeCategory, setActiveCategory] = useState<string>("Tất cả");
+
+  useEffect(() => {
+    if (activeCategory !== "Tất cả" && !serviceCategories.includes(activeCategory)) {
+      setActiveCategory("Tất cả");
+    }
+  }, [serviceCategories, activeCategory]);
 
   const concreteStays = useMemo<ConcreteStay[]>(
     () =>
@@ -137,9 +160,11 @@ export default function BookingServices() {
       ),
     [selections],
   );
-  const filteredServices = services.filter(
-    (service) => service.category === activeCategory,
-  );
+
+  const filteredServices = useMemo(() => {
+    if (activeCategory === "Tất cả") return services;
+    return services.filter((service) => service.category === activeCategory);
+  }, [services, activeCategory]);
 
   const updateService = (
     roomCode: string,
@@ -391,19 +416,36 @@ export default function BookingServices() {
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-2 border-b border-border">
-                  {serviceTabs.map(([category, label]) => (
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory("Tất cả")}
+                    className={`border-b-2 px-4 py-3 text-sm font-semibold transition ${activeCategory === "Tất cả" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-primary"}`}
+                  >
+                    Tất cả
+                  </button>
+                  {serviceCategories.map((category) => (
                     <button
                       key={category}
                       type="button"
                       onClick={() => setActiveCategory(category)}
                       className={`border-b-2 px-4 py-3 text-sm font-semibold transition ${activeCategory === category ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-primary"}`}
                     >
-                      {label}
+                      {category}
                     </button>
                   ))}
                 </div>
 
-                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {isLoadingServices ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <span className="ml-3 text-sm text-muted-foreground">Đang tải danh sách dịch vụ...</span>
+                  </div>
+                ) : filteredServices.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
+                    Chưa có dịch vụ nào trong danh mục này.
+                  </div>
+                ) : (
+                  <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   {filteredServices.map((service) => {
                     const quantity = stayServiceQuantity(
                       activeBreakdown.stay,
@@ -500,6 +542,7 @@ export default function BookingServices() {
                     );
                   })}
                 </div>
+                )}
               </div>
             ) : (
               <p className="mt-6 rounded-xl bg-secondary/50 p-4 text-sm text-muted-foreground">
