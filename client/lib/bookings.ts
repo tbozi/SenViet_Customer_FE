@@ -14,6 +14,10 @@ export interface RoomStay {
   nights: number;
   guest: GuestForm;
   extraGuestCharge: number;
+  nightlyPrice?: number;
+  offerId?: string;
+  offerName?: string;
+  offerCancellationPolicy?: string;
   services?: BookingService[];
 }
 
@@ -42,6 +46,9 @@ export interface RoomSelection {
   roomNameVi: string;
   quantity: number;
   nightlyPrice: number;
+  offerId?: string;
+  offerName?: string;
+  offerCancellationPolicy?: string;
   guestForms: GuestForm[];
   includedCapacity: GuestForm;
   checkIn?: string;
@@ -136,54 +143,6 @@ export function calculateNights(checkIn: string, checkOut: string) {
   );
 }
 
-function timeToMinutes(value: string) {
-  const [hours, minutes] = value.split(":").map(Number);
-  return Number.isFinite(hours) && Number.isFinite(minutes)
-    ? hours * 60 + minutes
-    : 14 * 60;
-}
-
-export function getEarlyCheckInRate(arrivalTime: string) {
-  const minutes = timeToMinutes(arrivalTime);
-  if (minutes < 6 * 60) return 1;
-  if (minutes < 9 * 60) return 0.5;
-  if (minutes < 14 * 60) return 0.3;
-  return 0;
-}
-
-export function getLateCheckOutRate(departureTime: string) {
-  const minutes = timeToMinutes(departureTime);
-  if (minutes >= 18 * 60) return 1;
-  if (minutes >= 15 * 60) return 0.5;
-  if (minutes >= 12 * 60) return 0.3;
-  return 0;
-}
-
-export function calculateEarlyCheckInSurcharge(
-  price: number,
-  arrivalTime: string,
-) {
-  return Math.round(price * getEarlyCheckInRate(arrivalTime));
-}
-
-export function calculateLateCheckOutSurcharge(
-  price: number,
-  departureTime: string,
-) {
-  return Math.round(price * getLateCheckOutRate(departureTime));
-}
-
-export function calculateSurcharge(
-  price: number,
-  arrivalTime: string,
-  departureTime: string,
-) {
-  return (
-    calculateEarlyCheckInSurcharge(price, arrivalTime) +
-    calculateLateCheckOutSurcharge(price, departureTime)
-  );
-}
-
 const roomInventory = [4, 3, 2, 2];
 
 function stableDateSeed(roomIndex: number, date: string) {
@@ -244,6 +203,31 @@ export function getMockRoomAvailability(
     available: daily.every((item) => item.available),
     remaining: Math.min(...daily.map((item) => item.remaining)),
   };
+}
+
+export function getCancellationSchedule(checkIn: string) {
+  const checkInDate = new Date(`${checkIn}T00:00:00`);
+  const fullRefundUntil = new Date(checkInDate);
+  fullRefundUntil.setDate(fullRefundUntil.getDate() - 7);
+  const halfRefundFrom = new Date(checkInDate);
+  halfRefundFrom.setDate(halfRefundFrom.getDate() - 6);
+  const halfRefundUntil = new Date(checkInDate);
+  halfRefundUntil.setDate(halfRefundUntil.getDate() - 3);
+  const noRefundFrom = new Date(checkInDate);
+  noRefundFrom.setDate(noRefundFrom.getDate() - 2);
+  const format = (date: Date) => date.toLocaleDateString("vi-VN");
+
+  return {
+    fullRefundUntil: format(fullRefundUntil),
+    halfRefundFrom: format(halfRefundFrom),
+    halfRefundUntil: format(halfRefundUntil),
+    noRefundFrom: format(noRefundFrom),
+  };
+}
+
+export function getCancellationScheduleText(checkIn: string) {
+  const schedule = getCancellationSchedule(checkIn);
+  return `Hoàn 100% nếu hủy trước hoặc trong ngày ${schedule.fullRefundUntil}; hoàn 50% từ ${schedule.halfRefundFrom} đến ${schedule.halfRefundUntil}; từ ${schedule.noRefundFrom} hoặc no-show: không hoàn.`;
 }
 
 export function getCancellationPolicy(checkIn: string, now = new Date()) {

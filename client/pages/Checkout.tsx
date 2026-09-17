@@ -16,8 +16,6 @@ import { Button } from "@/components/ui/button";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 import { formatVnd, hotels } from "@/data/hotels";
 import {
-  calculateEarlyCheckInSurcharge,
-  calculateLateCheckOutSurcharge,
   getCancellationPolicy,
   isRoomSpecificFee,
   saveBooking,
@@ -36,6 +34,7 @@ import {
 } from "@/lib/savedPromotions";
 import { useLanguage } from "@/lib/i18n";
 import { useGetMySavedPromotionsQuery } from "@/services/promotionApi";
+import { useCreateCustomerBookingMutation } from "@/services/bookingApi";
 
 const fallbackGuestForms = (params: URLSearchParams): GuestForm[] => {
   try {
@@ -86,6 +85,9 @@ function parseSelections(params: URLSearchParams): RoomSelection[] {
       extraChildren: 0,
       extraGuestCount: 0,
       extraGuestCharge: 0,
+      offerId: "legacy",
+      offerName: "Gói ưu đãi đã chọn",
+      offerCancellationPolicy: "Theo chính sách của booking.",
     },
   ];
 }
@@ -110,6 +112,10 @@ function selectionStays(selection: RoomSelection): RoomStay[] {
       selection.guestForms[0] || { adults: 1, children: 0, infants: 0 },
     extraGuestCharge:
       selection.extraGuestCharge / Math.max(1, selection.quantity),
+    nightlyPrice: selection.nightlyPrice,
+    offerId: selection.offerId,
+    offerName: selection.offerName,
+    offerCancellationPolicy: selection.offerCancellationPolicy,
   }));
 }
 
@@ -140,6 +146,7 @@ export default function Checkout() {
   );
   const selections = useMemo(() => parseSelections(params), [params]);
   const services = useMemo(() => parseServices(params), [params]);
+  const [createCustomerBooking] = useCreateCustomerBookingMutation();
 
   const { data: savedPromosBackend } = useGetMySavedPromotionsQuery(undefined, {
     skip: !user,
@@ -162,34 +169,13 @@ export default function Checkout() {
       sum +
       selectionStays(selection).reduce(
         (staySum, stay) =>
-          staySum + selection.nightlyPrice * Math.max(0, stay.nights),
-        0,
-      ),
-    0,
-  );
-  const earlySurcharge = selections.reduce(
-    (sum, selection) =>
-      sum +
-      selectionStays(selection).reduce(
-        (staySum) =>
           staySum +
-          calculateEarlyCheckInSurcharge(selection.nightlyPrice, arrivalTime),
+          (stay.nightlyPrice || selection.nightlyPrice) *
+            Math.max(0, stay.nights),
         0,
       ),
     0,
   );
-  const lateSurcharge = selections.reduce(
-    (sum, selection) =>
-      sum +
-      selectionStays(selection).reduce(
-        (staySum) =>
-          staySum +
-          calculateLateCheckOutSurcharge(selection.nightlyPrice, departureTime),
-        0,
-      ),
-    0,
-  );
-  const surcharge = earlySurcharge + lateSurcharge;
   const extraGuestCharge = selections.reduce(
     (sum, selection) =>
       sum +
@@ -232,7 +218,7 @@ export default function Checkout() {
   });
   const taxableSubtotal = Math.max(
     0,
-    roomSubtotal + surcharge + extraGuestCharge + serviceTotal - discount,
+    roomSubtotal + extraGuestCharge + serviceTotal - discount,
   );
   const vat = Math.round(taxableSubtotal * 0.08);
   const serviceFee = Math.round(taxableSubtotal * 0.05);
@@ -256,28 +242,6 @@ export default function Checkout() {
     checkOutDates[checkOutDates.length - 1] || params.get("checkOut") || "";
   const feeLines = useMemo<BookingFee[]>(
     () => [
-      ...(earlySurcharge > 0
-        ? [
-            {
-              label: "Phụ thu nhận phòng sớm",
-              amount: earlySurcharge,
-              detail: `Giờ nhận dự kiến: ${arrivalTime}`,
-              scope: "room" as const,
-              kind: "surcharge" as const,
-            },
-          ]
-        : []),
-      ...(lateSurcharge > 0
-        ? [
-            {
-              label: "Phụ thu trả phòng muộn",
-              amount: lateSurcharge,
-              detail: `Giờ trả dự kiến: ${departureTime}`,
-              scope: "room" as const,
-              kind: "surcharge" as const,
-            },
-          ]
-        : []),
       ...(extraGuestCharge > 0
         ? [
             {
@@ -300,13 +264,9 @@ export default function Checkout() {
       ),
     ],
     [
-      arrivalTime,
-      departureTime,
       extraGuestCharge,
       services,
       roomServiceLines,
-      earlySurcharge,
-      lateSurcharge,
     ],
   );
   const commonFeeLines = feeLines.filter((fee) => !isRoomSpecificFee(fee));
@@ -382,10 +342,71 @@ export default function Checkout() {
       return setError("Vui lòng điền đủ thông tin người đại diện nhận phòng.");
     setError("");
     setPaymentState("processing");
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    const cancellation = getCancellationPolicy(firstCheckIn);
+
+    // Chuẩn bị danh sách chi tiết đặt phòng (BookingDetails) khớp với Backend DTO
+    const bookingDetailsPayload = selections.flatMap((selection) => {
+      const stays = selectionStays(selection);
+      return stays.map((stay) => {
+        const parsedRoomId = Number(selection.roomId);
+        const roomId = !isNaN(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : 1;
+        const checkInTime = `${stay.checkIn || firstCheckIn}T${arrivalTime}:00`;
+        const checkOutTime = `${stay.checkOut || lastCheckOut}T${departureTime}:00`;
+        const numAdults = stay.guest?.adults ?? 1;
+        const numChildren = stay.guest?.children ?? 0;
+        const numInfants = stay.guest?.infants ?? 0;
+        const nightly = stay.nightlyPrice || selection.nightlyPrice;
+        const baseRoomPricePerNight = nightly;
+        const roomSubTotal =
+          nightly * Math.max(1, stay.nights) +
+          (stay.extraGuestCharge || 0) * Math.max(1, stay.nights);
+        const serviceRequests = (stay.services || []).map((srv) => ({
+          serviceId: Number(srv.id) || 1,
+          quantity: srv.quantity || 1,
+          price: srv.price,
+        }));
+        const serviceSubTotal = (stay.services || []).reduce(
+          (s, item) => s + item.price * item.quantity,
+          0,
+        );
+        const totalPrice = roomSubTotal + serviceSubTotal;
+
+        return {
+          roomId,
+          checkInTime,
+          checkOutTime,
+          numAdults,
+          numChildren,
+          numInfants,
+          baseRoomPricePerNight,
+          roomSubTotal,
+          serviceSubTotal,
+          totalPrice,
+          serviceRequests: serviceRequests.length ? serviceRequests : undefined,
+        };
+      });
+    });
+
+    let generatedId = `SV-${Date.now().toString().slice(-8)}`;
+
+    try {
+      const customerId = (user as any)?.customerId || (user as any)?.userId || 1;
+      const res = await createCustomerBooking({
+        customerId,
+        bookingChannel: "ONLINE",
+        customerPromotionId: null,
+        promotionId: null,
+        bookingDetails: bookingDetailsPayload,
+      }).unwrap();
+
+      if (res && res.bookingId) {
+        generatedId = `SV-${res.bookingId}`;
+      }
+    } catch (err: any) {
+      console.warn("Lưu booking vào Backend:", err);
+    }
+
     const booking: Booking = {
-      id: `SV-${Date.now().toString().slice(-8)}`,
+      id: generatedId,
       userEmail: user.email,
       hotelSlug: hotel.slug,
       hotelName: hotel.name,
@@ -404,7 +425,13 @@ export default function Checkout() {
       ),
       rooms: roomCount,
       roomPrice: selections.reduce(
-        (sum, selection) => sum + selection.nightlyPrice * selection.quantity,
+        (sum, selection) =>
+          sum +
+          selectionStays(selection).reduce(
+            (staySum, stay) =>
+              staySum + (stay.nightlyPrice || selection.nightlyPrice),
+            0,
+          ),
         0,
       ),
       roomTotal: roomSubtotal,
@@ -425,7 +452,6 @@ export default function Checkout() {
       holdUntil: new Date(Date.now() + 15 * 60000).toISOString(),
       arrivalTime,
       departureTime,
-      surcharge,
       extraGuestCharge,
     };
     saveBooking(booking);

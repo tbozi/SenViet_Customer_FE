@@ -8,8 +8,6 @@ import { Link, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/data/hotels";
 import {
-  calculateEarlyCheckInSurcharge,
-  calculateLateCheckOutSurcharge,
   getBookings,
   isRoomSpecificFee,
   type Booking,
@@ -96,6 +94,11 @@ export default function BookingSuccess() {
                           </span>
                           <span>{stay.nights} đêm</span>
                         </div>
+                        {(stay.offerName || selection.offerName) && (
+                          <p className="mt-1 text-xs font-medium text-primary">
+                            {stay.offerName || selection.offerName}
+                          </p>
+                        )}
                         <p className="mt-1 text-xs text-muted-foreground">
                           Nhận phòng: {" "}
                           {dateTime(stay.checkIn, booking.arrivalTime || "14:00")}
@@ -111,37 +114,9 @@ export default function BookingSuccess() {
                           <p className="font-semibold text-primary">
                             Tiền phòng: {" "}
                             {formatVnd(
-                              selection.nightlyPrice * Math.max(0, stay.nights),
+                              (stay.nightlyPrice || selection.nightlyPrice) * Math.max(0, stay.nights),
                             )}
                           </p>
-                          {calculateEarlyCheckInSurcharge(
-                            selection.nightlyPrice,
-                            booking.arrivalTime || "14:00",
-                          ) > 0 && (
-                            <p>
-                              Nhận phòng sớm: {" "}
-                              {formatVnd(
-                                calculateEarlyCheckInSurcharge(
-                                  selection.nightlyPrice,
-                                  booking.arrivalTime || "14:00",
-                                ),
-                              )}
-                            </p>
-                          )}
-                          {calculateLateCheckOutSurcharge(
-                            selection.nightlyPrice,
-                            booking.departureTime || "12:00",
-                          ) > 0 && (
-                            <p>
-                              Trả phòng muộn: {" "}
-                              {formatVnd(
-                                calculateLateCheckOutSurcharge(
-                                  selection.nightlyPrice,
-                                  booking.departureTime || "12:00",
-                                ),
-                              )}
-                            </p>
-                          )}
                           {Number(stay.extraGuestCharge || 0) *
                             Math.max(0, stay.nights) >
                             0 && (
@@ -192,11 +167,6 @@ export default function BookingSuccess() {
                       <p className="mt-2 text-xs font-semibold text-primary">
                         Tiền phòng: {formatVnd(booking.roomTotal)}
                       </p>
-                      {booking.surcharge && booking.surcharge > 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Phụ thu giờ: {formatVnd(booking.surcharge)}
-                        </p>
-                      ) : null}
                       {booking.extraGuestCharge &&
                       booking.extraGuestCharge > 0 ? (
                         <p className="text-xs text-muted-foreground">
@@ -221,11 +191,6 @@ export default function BookingSuccess() {
                   <p className="mt-2 text-xs font-semibold text-primary">
                     Tiền phòng: {formatVnd(booking.roomTotal)}
                   </p>
-                  {booking.surcharge && booking.surcharge > 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Phụ thu giờ: {formatVnd(booking.surcharge)}
-                    </p>
-                  ) : null}
                   {booking.extraGuestCharge && booking.extraGuestCharge > 0 ? (
                     <p className="text-xs text-muted-foreground">
                       Phụ thu khách thêm: {formatVnd(booking.extraGuestCharge)}

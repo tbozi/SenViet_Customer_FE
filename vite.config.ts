@@ -26,6 +26,14 @@ export default defineConfig(({ mode }) => ({
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
       },
+      "/bookings": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+      },
+      "/customer": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+      },
     },
     fs: {
       allow: ["./client", "./shared", "index.html"],

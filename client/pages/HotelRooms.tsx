@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -23,9 +23,10 @@ import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 import { rooms } from "@/data/rooms";
 import { formatVnd, hotels } from "@/data/hotels";
 import {
-  calculateEarlyCheckInSurcharge,
-  calculateLateCheckOutSurcharge,
   calculateNights,
+  getBookings,
+  getCancellationPolicy,
+  getCancellationSchedule,
   getMockRoomAvailability,
   type GuestForm,
   type RoomSelection,
@@ -144,9 +145,40 @@ function RoomDetailsModal({
             <p className="mt-2 text-sm font-medium text-muted-foreground">
               {room.size} · Tòa {room.building} · Tầng {room.floor}
             </p>
-            <p className="mt-5 text-sm leading-7 text-muted-foreground">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl bg-secondary/50 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                  <BedDouble className="h-4 w-4 text-gold" /> Giường
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{room.bedsVi}</p>
+              </div>
+              <div className="rounded-xl bg-secondary/50 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                  <Users className="h-4 w-4 text-gold" /> Sức chứa tối đa
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {room.capacity.adults} người lớn · {room.capacity.children} trẻ em · {room.capacity.infants} em bé
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-7 text-muted-foreground">
               {room.description}
             </p>
+            <p className="mt-3 rounded-xl border border-primary/10 bg-primary/[.03] p-3 text-sm text-muted-foreground">
+              <span className="font-semibold text-primary">Phù hợp với: </span>
+              {room.targetGuests}
+            </p>
+            <div className="mt-5 rounded-xl border border-border p-3">
+              <h3 className="text-sm font-bold text-primary">Gói giá</h3>
+              <div className="mt-2 space-y-2">
+                {room.offers.map((plan) => (
+                  <div key={plan.id} className="flex items-center justify-between gap-3 text-xs">
+                    <p className="font-semibold text-primary">{plan.nameVi}</p>
+                    <span className="shrink-0 font-bold text-primary">{formatVnd(plan.price)}/đêm</span>
+                  </div>
+                ))}
+              </div>
+            </div>
             <h3 className="mt-6 text-sm font-bold text-primary">
               Tiện ích trong phòng:
             </h3>
@@ -219,6 +251,16 @@ export default function HotelRooms() {
   const [selectedRoom, setSelectedRoom] = useState(
     oldRoomIndex >= 0 ? oldRoomIndex : 0,
   );
+  const [selectedOffers, setSelectedOffers] = useState<
+    Record<string, string[]>
+  >(() =>
+    Object.fromEntries(
+      rooms.map((room) => [room.id, [room.offers[0].id]]),
+    ),
+  );
+  const [selectedRoomCodes, setSelectedRoomCodes] = useState<
+    Record<string, string[]>
+  >(() => Object.fromEntries(rooms.map((room) => [room.id, [...room.roomCodes]])));
   const [calendarTarget, setCalendarTarget] = useState<CalendarTarget | null>(
     null,
   );
@@ -228,14 +270,174 @@ export default function HotelRooms() {
   const getDates = (roomId: string, index: number) =>
     roomStays[roomId]?.[index] || defaultDates;
 
-  const maxAvailable = (roomIndex: number, dates: StayDates) => {
-    const result = getMockRoomAvailability(
+  const getOffer = (roomId: string, index: number) => {
+    const room = rooms.find((item) => item.id === roomId) || rooms[0];
+    const planId =
+      selectedOffers[roomId]?.[index] ||
+      selectedOffers[roomId]?.[0] ||
+      room.offers[0].id;
+    return room.offers.find((plan) => plan.id === planId) || room.offers[0];
+  };
+
+  const getRoomCode = (roomId: string, index: number) => {
+    const room = rooms.find((item) => item.id === roomId) || rooms[0];
+    return selectedRoomCodes[roomId]?.[index] || room.roomCodes[index];
+  };
+
+  const setRoomOffer = (roomId: string, stayIndex: number, planId: string) => {
+    setSelectedOffers((current) => {
+      const room = rooms.find((item) => item.id === roomId) || rooms[0];
+      const plans = Array.from(
+        { length: Math.max(quantities[roomId] || 0, stayIndex + 1) },
+        (_, index) =>
+          current[roomId]?.[index] ||
+          current[roomId]?.[0] ||
+          room.offers[0].id,
+      );
+      plans[stayIndex] = planId;
+      return { ...current, [roomId]: plans };
+    });
+  };
+
+  const setRoomTypeOffer = (roomId: string, planId: string) => {
+    setSelectedOffers((current) => {
+      const quantity = Math.max(1, quantities[roomId] || 0);
+      return {
+        ...current,
+        [roomId]: Array.from({ length: quantity }, () => planId),
+      };
+    });
+  };
+
+  const setRoomCode = (roomId: string, stayIndex: number, roomCode: string) => {
+    setSelectedRoomCodes((current) => {
+      const room = rooms.find((item) => item.id === roomId) || rooms[0];
+      const codes = Array.from(
+        { length: Math.max(quantities[roomId] || 0, stayIndex + 1) },
+        (_, index) => current[roomId]?.[index] || room.roomCodes[index],
+      );
+      codes[stayIndex] = roomCode;
+      return { ...current, [roomId]: codes };
+    });
+  };
+
+  const getOfferRefund = (
+    cancellationType: "flexible" | "non-refundable",
+    checkIn: string,
+    checkOut: string,
+    offerPrice: number,
+  ) => {
+    const refundPercent =
+      cancellationType === "flexible"
+        ? getCancellationPolicy(checkIn).refundPercent
+        : 0;
+    const nights = Math.max(0, calculateNights(checkIn, checkOut));
+    return {
+      refundPercent,
+      refundAmount: Math.round((offerPrice * nights * refundPercent) / 100),
+    };
+  };
+
+  const currentRefundNotice = (
+    cancellationType: "flexible" | "non-refundable",
+    checkIn: string,
+    checkOut: string,
+    offerPrice: number,
+  ) => {
+    const refund = getOfferRefund(
+      cancellationType,
+      checkIn,
+      checkOut,
+      offerPrice,
+    );
+    return `Hiện tại: hoàn ${refund.refundPercent}% · Tạm tính hoàn ${formatVnd(refund.refundAmount)}/phòng`;
+  };
+
+  const daysUntilCheckIn = (checkIn: string) =>
+    Math.ceil(
+      (new Date(`${checkIn}T00:00:00`).getTime() -
+        new Date().setHours(0, 0, 0, 0)) /
+        86400000,
+    );
+
+  const getSharedAvailability = (
+    roomIndex: number,
+    roomId: string,
+    dates: StayDates,
+  ) => {
+    const base = getMockRoomAvailability(
       roomIndex,
       1,
       dates.checkIn,
       dates.checkOut,
     );
-    return Math.max(0, result.remaining);
+    const reservedRooms = getBookings()
+      .filter(
+        (booking) =>
+          booking.hotelSlug === hotel.slug &&
+          booking.status !== "cancelled" &&
+          (booking.status !== "pending_payment" ||
+            new Date(booking.holdUntil).getTime() > Date.now()),
+      )
+      .reduce(
+        (total, booking) =>
+          total +
+          (booking.roomSelections || []).reduce(
+            (selectionTotal, selection) =>
+              selectionTotal +
+              (selection.roomId === roomId
+                ? (selection.stays || []).filter(
+                    (stay) =>
+                      stay.checkIn < dates.checkOut &&
+                      dates.checkIn < stay.checkOut,
+                  ).length
+                : 0),
+            0,
+          ),
+        0,
+      );
+    const remaining = Math.max(0, base.remaining - reservedRooms);
+    return { available: remaining > 0, remaining };
+  };
+
+  const maxAvailable = (
+    roomIndex: number,
+    dates: StayDates,
+    roomId: string,
+  ) => Math.max(0, getSharedAvailability(roomIndex, roomId, dates).remaining);
+
+  const isRoomCodeUnavailable = (
+    roomId: string,
+    roomCode: string,
+    dates: StayDates,
+  ) =>
+    getBookings().some(
+      (booking) =>
+        booking.hotelSlug === hotel.slug &&
+        booking.status !== "cancelled" &&
+        (booking.status !== "pending_payment" ||
+          new Date(booking.holdUntil).getTime() > Date.now()) &&
+        (booking.roomSelections || []).some(
+          (selection) =>
+            selection.roomId === roomId &&
+            (selection.stays || []).some(
+              (stay) =>
+                stay.roomCode === roomCode &&
+                stay.checkIn < dates.checkOut &&
+                dates.checkIn < stay.checkOut,
+            ),
+        ),
+    );
+
+  const getAvailableRoomCodes = (
+    roomIndex: number,
+    roomId: string,
+    dates: StayDates,
+  ) => {
+    const room = rooms[roomIndex];
+    return room.roomCodes.filter(
+      (code) => !isRoomCodeUnavailable(roomId, code, dates),
+    );
   };
 
   const setRoomQuantity = (roomId: string, requestedQuantity: number) => {
@@ -243,7 +445,7 @@ export default function HotelRooms() {
     const currentDates = roomStays[roomId]?.[0] || defaultDates;
     const quantity = Math.min(
       Math.max(0, requestedQuantity),
-      maxAvailable(roomIndex, currentDates),
+      maxAvailable(roomIndex, currentDates, roomId),
     );
     setQuantities((current) => ({ ...current, [roomId]: quantity }));
     setGuestForms((current) => ({
@@ -260,7 +462,67 @@ export default function HotelRooms() {
         (_, index) => current[roomId]?.[index] || { ...defaultDates },
       ),
     }));
+    const availableCodes = getAvailableRoomCodes(
+      roomIndex,
+      roomId,
+      currentDates,
+    );
+    setSelectedRoomCodes((current) => ({
+      ...current,
+      [roomId]: Array.from(
+        { length: quantity },
+        (_, index) =>
+          current[roomId]?.[index] ||
+          availableCodes[index] ||
+          rooms[roomIndex].roomCodes[index],
+      ),
+    }));
+    setSelectedOffers((current) => ({
+      ...current,
+      [roomId]: Array.from(
+        { length: quantity },
+        (_, index) => current[roomId]?.[index] || current[roomId]?.[0] || rooms[roomIndex].offers[0].id,
+      ),
+    }));
   };
+
+  useEffect(() => {
+    setQuantities((current) => {
+      let changed = false;
+      const next = { ...current };
+      rooms.forEach((room, roomIndex) => {
+        const dates = roomStays[room.id]?.[0] || defaultDates;
+        const maximum = maxAvailable(roomIndex, dates, room.id);
+        const capped = Math.min(current[room.id] || 0, maximum);
+        if (capped !== (current[room.id] || 0)) {
+          next[room.id] = capped;
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+    setSelectedRoomCodes((current) => {
+      let changed = false;
+      const next = { ...current };
+      rooms.forEach((room, roomIndex) => {
+        const dates = roomStays[room.id]?.[0] || defaultDates;
+        const visibleCodes = room.roomCodes.slice(
+          0,
+          Math.max(0, maxAvailable(roomIndex, dates, room.id)),
+        );
+        const currentCodes = current[room.id] || [];
+        const nextCodes = currentCodes.map(
+          (code, index) =>
+            visibleCodes.includes(code) ? code : visibleCodes[index] || code,
+        );
+        if (nextCodes.some((code, index) => code !== currentCodes[index])) {
+          next[room.id] = nextCodes;
+          changed = true;
+        }
+      });
+      return changed ? next : current;
+    });
+  }, [defaultDates, roomStays, hotel.slug]);
 
   const updateGuest = (
     roomId: string,
@@ -327,12 +589,17 @@ export default function HotelRooms() {
             const guest = forms[index] || defaultGuest(searchParams);
             const extra = extraGuests(room, guest);
             return {
-              roomCode: room.roomCodes[index],
+              roomCode: getRoomCode(room.id, index),
               checkIn: stayDates.checkIn,
               checkOut: stayDates.checkOut,
               nights: calculateNights(stayDates.checkIn, stayDates.checkOut),
               guest,
               extraGuestCharge: extra.extraGuestCharge,
+              nightlyPrice: getOffer(room.id, index).price,
+              offerId: getOffer(room.id, index).id,
+              offerName: getOffer(room.id, index).nameVi,
+              offerCancellationPolicy:
+                getOffer(room.id, index).cancellationPolicyVi,
             };
           },
         );
@@ -360,7 +627,11 @@ export default function HotelRooms() {
             roomName: room.name,
             roomNameVi: room.nameVi,
             quantity,
-            nightlyPrice: room.price,
+            nightlyPrice: firstStay.nightlyPrice || room.offers[0].price,
+            offerId: firstStay.offerId || room.offers[0].id,
+            offerName: firstStay.offerName || room.offers[0].nameVi,
+            offerCancellationPolicy:
+              firstStay.offerCancellationPolicy || room.offers[0].cancellationPolicyVi,
             guestForms: forms,
             includedCapacity: room.capacity,
             checkIn: firstStay.checkIn,
@@ -372,7 +643,15 @@ export default function HotelRooms() {
           },
         ];
       }),
-    [defaultDates, guestForms, quantities, roomStays, searchParams],
+    [
+      defaultDates,
+      guestForms,
+      quantities,
+      roomStays,
+      searchParams,
+      selectedOffers,
+      selectedRoomCodes,
+    ],
   );
 
   const roomSubtotal = selections.reduce(
@@ -380,7 +659,9 @@ export default function HotelRooms() {
       sum +
       (selection.stays || []).reduce(
         (staySum, stay) =>
-          staySum + selection.nightlyPrice * Math.max(0, stay.nights),
+          staySum +
+          (stay.nightlyPrice || selection.nightlyPrice) *
+            Math.max(0, stay.nights),
         0,
       ),
     0,
@@ -393,20 +674,6 @@ export default function HotelRooms() {
           staySum + stay.extraGuestCharge * Math.max(0, stay.nights),
         0,
       ),
-    0,
-  );
-  const earlySurcharge = selections.reduce(
-    (sum, selection) =>
-      sum +
-      calculateEarlyCheckInSurcharge(selection.nightlyPrice, arrivalTime) *
-        selection.quantity,
-    0,
-  );
-  const lateSurcharge = selections.reduce(
-    (sum, selection) =>
-      sum +
-      calculateLateCheckOutSurcharge(selection.nightlyPrice, departureTime) *
-        selection.quantity,
     0,
   );
   const allGuestsComplete =
@@ -429,14 +696,18 @@ export default function HotelRooms() {
     0,
   );
   const selectedAvailabilities = selections.flatMap((selection) =>
-    (selection.stays || []).map((stay) =>
-      getMockRoomAvailability(
+    (selection.stays || []).map((stay) => ({
+      availability: getSharedAvailability(
         rooms.findIndex((room) => room.id === selection.roomId),
-        1,
-        stay.checkIn,
-        stay.checkOut,
+        selection.roomId,
+        { checkIn: stay.checkIn, checkOut: stay.checkOut },
       ),
-    ),
+      codeUnavailable: isRoomCodeUnavailable(
+        selection.roomId,
+        stay.roomCode,
+        { checkIn: stay.checkIn, checkOut: stay.checkOut },
+      ),
+    })),
   );
 
   const goCheckout = () => {
@@ -450,9 +721,14 @@ export default function HotelRooms() {
       )
     )
       return setError("Ngày trả phòng phải sau ngày nhận phòng ở từng phòng.");
-    if (selectedAvailabilities.some((availability) => !availability.available))
+    if (
+      selectedAvailabilities.some(
+        ({ availability, codeUnavailable }) =>
+          !availability.available || codeUnavailable,
+      )
+    )
       return setError(
-        "Một phòng đã hết phòng trong khoảng ngày bạn chọn. Vui lòng chọn ngày khác.",
+        "Mã phòng đã chọn không còn trống trong khoảng ngày này. Vui lòng chọn mã phòng khác.",
       );
     setError("");
     const first = selections[0];
@@ -464,10 +740,7 @@ export default function HotelRooms() {
       nights: String(first.nights || 0),
       rooms: String(totalRooms),
       roomPrice: String(first.nightlyPrice),
-      surcharge: String(earlySurcharge + lateSurcharge),
-      total: String(
-        roomSubtotal + earlySurcharge + lateSurcharge + extraGuestTotal,
-      ),
+      total: String(roomSubtotal + extraGuestTotal),
       promo: searchParams.get("promo") || "",
       roomSelections: JSON.stringify(selections),
       arrivalTime,
@@ -571,7 +844,7 @@ export default function HotelRooms() {
               className="mt-1 w-full rounded-xl border border-input p-2.5"
             />
             <span className="mt-1 block text-xs text-muted-foreground">
-              Sau 22:00 vui lòng ghi chú lễ tân
+              Chỉ để khách sạn tham khảo, không tính phụ thu khi đặt trước
             </span>
           </label>
           <label className="text-sm font-medium text-primary">
@@ -582,6 +855,9 @@ export default function HotelRooms() {
               onChange={(event) => setDepartureTime(event.target.value)}
               className="mt-1 w-full rounded-xl border border-input p-2.5"
             />
+            <span className="mt-1 block text-xs text-muted-foreground">
+              Chỉ để khách sạn tham khảo, không tính phụ thu khi đặt trước
+            </span>
           </label>
         </div>
       </section>
@@ -606,27 +882,28 @@ export default function HotelRooms() {
           )}
           <div className="mt-5 space-y-5">
             {rooms.map((item, index) => {
-              const quantity = quantities[item.id] || 0;
+              const requestedQuantity = quantities[item.id] || 0;
               const dates = getDates(item.id, 0);
-              const availability = getMockRoomAvailability(
+              const selectedOffer = getOffer(item.id, 0);
+              const availability = getSharedAvailability(
                 index,
-                1,
-                dates.checkIn,
-                dates.checkOut,
+                item.id,
+                dates,
               );
-              const maxQuantity = maxAvailable(index, dates);
+              const maxQuantity = maxAvailable(index, dates, item.id);
+              const quantity = Math.min(requestedQuantity, maxQuantity);
               return (
                 <article
                   key={item.id}
                   className={`overflow-hidden rounded-2xl border bg-card transition ${selectedRoom === index ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
                   onClick={() => setSelectedRoom(index)}
                 >
-                  <div className="grid md:grid-cols-[190px_1fr_auto]">
+                  <div className="grid md:grid-cols-[220px_minmax(0,1fr)]">
                     <div className="relative">
                       <img
                         src={item.image}
                         alt={item.nameVi}
-                        className="aspect-[4/3] h-full w-full object-cover md:aspect-auto"
+                        className="aspect-[4/3] h-full w-full object-cover md:h-[180px] md:aspect-auto"
                       />
                       <div className="absolute bottom-3 left-3 flex gap-1">
                         <button
@@ -681,7 +958,7 @@ export default function HotelRooms() {
                             : "Hết phòng"}
                         </span>
                         <span className="text-muted-foreground">
-                          Tòa {item.building} · Tầng {item.floor} · Giá cố định
+                          Tòa {item.building} · Tầng {item.floor}
                         </span>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
@@ -697,15 +974,89 @@ export default function HotelRooms() {
                         </button>
                       </div>
                     </div>
-                    <div className="border-t border-border bg-secondary/30 p-5 md:border-l md:border-t-0">
-                      <p className="text-xs text-muted-foreground">Giá từ</p>
+                  </div>
+                  <div className="border-t border-border bg-secondary/30 p-5">
+                    <p className="text-xs text-muted-foreground">Giá từ</p>
                       <p className="mt-1 text-2xl font-bold text-primary">
-                        {formatVnd(item.price)}
+                        {formatVnd(
+                          Math.min(...item.offers.map((plan) => plan.price)),
+                        )}
                         <span className="text-xs font-normal text-muted-foreground">
                           {" "}
                           / đêm
                         </span>
                       </p>
+                      <div className="mt-4">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-xs font-semibold uppercase tracking-[.08em] text-primary">
+                            Gói tiêu chuẩn ({item.offers.length})
+                          </p>
+                          <span className="text-[11px] text-muted-foreground">
+                            Chọn một gói ưu đãi
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          {item.offers.map((offer) => (
+                            <button
+                              key={offer.id}
+                              type="button"
+                              disabled={availability.remaining < 1}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setRoomTypeOffer(item.id, offer.id);
+                              }}
+                              className={`w-full rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${selectedOffer.id === offer.id ? "border-gold bg-amber-50/40 shadow-sm" : "border-border bg-white hover:border-gold/70"}`}
+                            >
+                              <div className="flex items-start gap-2">
+                                <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${selectedOffer.id === offer.id ? "border-gold bg-gold text-white" : "border-border"}`}>
+                                  {selectedOffer.id === offer.id ? "✓" : ""}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-start justify-between gap-2">
+                                    <div>
+                                      <p className="text-xs font-bold text-primary">{offer.nameVi}</p>
+                                      <p className="mt-1 text-[11px] font-semibold text-muted-foreground">{offer.highlight}</p>
+                                    </div>
+                                    <span className="rounded-md bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800">
+                                      {offer.highlight}
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                                    {offer.benefits.map((benefit) => (
+                                      <p key={benefit} className="flex gap-2">
+                                        <span className="text-gold">●</span>
+                                        <span>{benefit}</span>
+                                      </p>
+                                    ))}
+                                    <p className="flex gap-2">
+                                      <span className="text-gold">●</span>
+                                      <span>{offer.cancellationPolicyVi}</span>
+                                    </p>
+                                  </div>
+                                  <p className="mt-2 text-[11px] text-muted-foreground">{offer.conditions}</p>
+                                  <div className="mt-2 flex flex-wrap items-end justify-between gap-2 border-t border-border/70 pt-2">
+                                    <div className="text-[11px] text-muted-foreground">
+                                      <p>Giá công bố <span className="font-bold text-primary">{formatVnd(offer.price)}</span> / đêm</p>
+                                      <p>Giá thành viên <span className="text-base font-bold text-primary">{formatVnd(offer.memberPrice)}</span> / đêm</p>
+                                    </div>
+                                    <p className="text-[11px] font-semibold text-primary">
+                                      {(() => {
+                                        const refund = getOfferRefund(
+                                          offer.cancellationType,
+                                          dates.checkIn,
+                                          dates.checkOut,
+                                          offer.price,
+                                        );
+                                        return `Hiện tại hoàn ${refund.refundPercent}% · Hoàn ${formatVnd(refund.refundAmount)}`;
+                                      })()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <label className="mt-4 block text-xs font-semibold text-primary">
                         Số phòng
                         <select
@@ -735,7 +1086,6 @@ export default function HotelRooms() {
                         Tối đa {maxQuantity} phòng theo ngày đang chọn
                       </p>
                     </div>
-                  </div>
                   {quantity > 0 && (
                     <div
                       className="border-t border-border bg-white p-5"
@@ -760,6 +1110,12 @@ export default function HotelRooms() {
                           const guest =
                             guestForms[item.id]?.[stayIndex] ||
                             defaultGuest(searchParams);
+                          const selectedCode = getRoomCode(item.id, stayIndex);
+                          const selectedPlan = getOffer(item.id, stayIndex);
+                          const visibleRoomCodes = item.roomCodes.slice(
+                            0,
+                            Math.max(0, maxQuantity),
+                          );
                           const calendarOpen =
                             calendarTarget?.roomId === item.id &&
                             calendarTarget.stayIndex === stayIndex;
@@ -769,10 +1125,38 @@ export default function HotelRooms() {
                               className="rounded-xl border border-border bg-secondary/30 p-3"
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-xs font-semibold text-primary">
-                                  Phòng {stayIndex + 1} ·{" "}
-                                  {item.roomCodes[stayIndex]}
-                                </p>
+                                <label className="flex items-center gap-2 text-xs font-semibold text-primary">
+                                  Phòng {stayIndex + 1}
+                                  <select
+                                    value={selectedCode}
+                                    onChange={(event) =>
+                                      setRoomCode(
+                                        item.id,
+                                        stayIndex,
+                                        event.target.value,
+                                      )
+                                    }
+                                    onClick={(event) => event.stopPropagation()}
+                                    className="rounded-lg border border-input bg-white px-2 py-1.5 text-xs font-bold"
+                                  >
+                                    {visibleRoomCodes.map((code) => (
+                                      <option
+                                        key={code}
+                                        value={code}
+                                        disabled={
+                                          selectedRoomCodes[item.id]?.some(
+                                            (selected, index) =>
+                                              index !== stayIndex &&
+                                              selected === code,
+                                          ) ||
+                                          isRoomCodeUnavailable(item.id, code, stayDates)
+                                        }
+                                      >
+                                        {code}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -825,6 +1209,59 @@ export default function HotelRooms() {
                                     className="mt-1 w-full rounded-lg border border-input bg-white p-2"
                                   />
                                 </label>
+                              </div>
+                              <div className="mt-3 rounded-lg border border-primary/10 bg-white p-2 text-xs text-muted-foreground">
+                                <p>
+                                  {currentRefundNotice(
+                                    selectedPlan.cancellationType,
+                                    stayDates.checkIn,
+                                    stayDates.checkOut,
+                                    selectedPlan.price,
+                                  )}
+                                </p>
+                                <p className="mt-1 font-semibold text-primary">
+                                  {daysUntilCheckIn(stayDates.checkIn) > 0
+                                    ? `Còn ${daysUntilCheckIn(stayDates.checkIn)} ngày đến ngày nhận phòng`
+                                    : "Ngày nhận phòng đã đến hoặc đã qua"}
+                                </p>
+                              </div>
+                              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                {item.offers.map((offer) => (
+                                  <button
+                                    key={offer.id}
+                                    type="button"
+                                    onClick={() =>
+                                      setRoomOffer(item.id, stayIndex, offer.id)
+                                    }
+                                    className={`rounded-lg border p-2 text-left text-xs transition ${selectedPlan.id === offer.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-white text-muted-foreground hover:border-primary/50"}`}
+                                  >
+                                    <span className="flex items-center justify-between gap-2 font-semibold">
+                                      <span>{offer.nameVi}</span>
+                                      <span>{formatVnd(offer.price)}</span>
+                                    </span>
+                                    <span className="mt-1 block leading-4 opacity-80">
+                                      {offer.benefits.slice(0, 2).join(" · ")}
+                                    </span>
+                                    <span className="mt-1 block leading-4 opacity-80">
+                                      {offer.cancellationPolicyVi}
+                                    </span>
+                                    <span className="mt-1 block font-semibold text-primary">
+                                      {(() => {
+                                        const refund = getOfferRefund(
+                                          offer.cancellationType,
+                                          stayDates.checkIn,
+                                          stayDates.checkOut,
+                                          offer.price,
+                                        );
+                                        return `Hiện tại hoàn ${refund.refundPercent}% · Hoàn ${formatVnd(refund.refundAmount)}`;
+                                      })()}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                              <div className="mt-3 rounded-lg border border-primary/10 bg-white p-2 text-xs text-muted-foreground">
+                                <span className="font-semibold text-primary">Đang chọn: </span>
+                                {selectedCode} · {selectedPlan.nameVi} · {formatVnd(selectedPlan.price)}/đêm
                               </div>
                               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                                 <label className="text-xs text-muted-foreground">
@@ -912,7 +1349,7 @@ export default function HotelRooms() {
                               {calendarOpen && (
                                 <RoomAvailabilityCalendar
                                   roomIndex={index}
-                                  basePrice={item.price}
+                                  basePrice={selectedPlan.price}
                                   requestedRooms={1}
                                   selectedStartDate={stayDates.checkIn}
                                   selectedEndDate={stayDates.checkOut}
@@ -944,8 +1381,7 @@ export default function HotelRooms() {
           departureTime={departureTime}
           totals={{
             subtotal: roomSubtotal,
-            total:
-              roomSubtotal + earlySurcharge + lateSurcharge + extraGuestTotal,
+            total: roomSubtotal + extraGuestTotal,
           }}
           emptyState={
             <p className="mt-4 text-sm text-muted-foreground">

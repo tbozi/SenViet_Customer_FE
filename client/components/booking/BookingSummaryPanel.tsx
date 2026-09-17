@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import { CalendarDays, Users } from "lucide-react";
 import { formatVnd } from "@/data/hotels";
 import {
-  calculateEarlyCheckInSurcharge,
-  calculateLateCheckOutSurcharge,
   type BookingService,
   type RoomSelection,
   type RoomStay,
@@ -45,8 +43,6 @@ type RoomBreakdown = {
   selection: RoomSelection;
   stay: RoomStay;
   roomPrice: number;
-  earlySurcharge: number;
-  lateSurcharge: number;
   extraGuestSurcharge: number;
   services: BookingService[];
   subtotal: number;
@@ -63,6 +59,10 @@ function selectionStays(selection: RoomSelection): RoomStay[] {
       selection.guestForms[0] || { adults: 1, children: 0, infants: 0 },
     extraGuestCharge:
       selection.extraGuestCharge / Math.max(1, selection.quantity),
+    nightlyPrice: selection.nightlyPrice,
+    offerId: selection.offerId,
+    offerName: selection.offerName,
+    offerCancellationPolicy: selection.offerCancellationPolicy,
   }));
 }
 
@@ -89,15 +89,8 @@ export default function BookingSummaryPanel({
 }: BookingSummaryPanelProps) {
   const roomBreakdowns = selections.flatMap((selection, selectionIndex) =>
     selectionStays(selection).map((stay, stayIndex) => {
-      const roomPrice = selection.nightlyPrice * Math.max(0, stay.nights);
-      const earlySurcharge = calculateEarlyCheckInSurcharge(
-        selection.nightlyPrice,
-        arrivalTime,
-      );
-      const lateSurcharge = calculateLateCheckOutSurcharge(
-        selection.nightlyPrice,
-        departureTime,
-      );
+      const nightlyPrice = stay.nightlyPrice || selection.nightlyPrice;
+      const roomPrice = nightlyPrice * Math.max(0, stay.nights);
       const extraGuestSurcharge =
         Number(stay.extraGuestCharge || 0) * Math.max(0, stay.nights);
       const concreteStayIndex =
@@ -117,16 +110,9 @@ export default function BookingSummaryPanel({
         selection,
         stay,
         roomPrice,
-        earlySurcharge,
-        lateSurcharge,
         extraGuestSurcharge,
         services,
-        subtotal:
-          roomPrice +
-          earlySurcharge +
-          lateSurcharge +
-          extraGuestSurcharge +
-          serviceTotal,
+        subtotal: roomPrice + extraGuestSurcharge + serviceTotal,
       } satisfies RoomBreakdown;
     }),
   );
@@ -187,6 +173,11 @@ export default function BookingSummaryPanel({
                     <h3 className="mt-1 font-semibold text-primary">
                       {stay.roomCode}
                     </h3>
+                    {(stay.offerName || selection.offerName) && (
+                      <p className="mt-1 text-xs font-medium text-muted-foreground">
+                        {stay.offerName || selection.offerName}
+                      </p>
+                    )}
                   </div>
                   <span className="text-sm font-bold text-primary">
                     {formatVnd(breakdown.subtotal)}
@@ -213,14 +204,6 @@ export default function BookingSummaryPanel({
                   <div className="flex justify-between gap-3">
                     <span>Tiền phòng</span>
                     <span>{formatVnd(breakdown.roomPrice)}</span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Phụ thu nhận phòng sớm</span>
-                    <span>{formatVnd(breakdown.earlySurcharge)}</span>
-                  </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Phụ thu trả phòng muộn</span>
-                    <span>{formatVnd(breakdown.lateSurcharge)}</span>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span>Phụ thu khách thêm</span>
