@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
-import { useRegisterRequestMutation, useResendOtpMutation, useVerifyOtpMutation } from "@/services/authApi";
+import { useCheckCustomerRegistrationMutation, useRegisterRequestMutation, useResendOtpMutation, useVerifyOtpMutation } from "@/services/authApi";
 
 const errorMessages: Record<string, string> = {
   invalid: "Email hoặc mật khẩu chưa đúng.",
@@ -18,6 +18,22 @@ const errorMessages: Record<string, string> = {
 
 const accountAlreadyRegisteredMessage = "Tài khoản này đã được đăng ký.";
 const OTP_EXPIRY_SECONDS = 5 * 60;
+
+function RegistrationProgress({ step }: { step: 1 | 2 | 3 }) {
+  const steps = ["Thông tin khách hàng", "Thông tin tài khoản", "Xác thực mã OTP"];
+  return <div className="mb-7 grid grid-cols-3 gap-2" aria-label="Tiến trình đăng ký">
+    {steps.map((label, index) => {
+      const number = index + 1;
+      const active = number === step;
+      const completed = number < step;
+      return <div key={label} className="relative text-center">
+        {index > 0 && <span className={`absolute right-1/2 top-3 h-px w-full -translate-y-1/2 ${completed ? "bg-primary" : "bg-border"}`} aria-hidden="true" />}
+        <span className={`relative z-10 mx-auto grid h-6 w-6 place-items-center rounded-full text-xs font-bold ${active || completed ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{completed ? "✓" : number}</span>
+        <span className={`mt-2 block text-[10px] leading-tight sm:text-xs ${active ? "font-bold text-primary" : "text-muted-foreground"}`}>{label}</span>
+      </div>;
+    })}
+  </div>;
+}
 
 const getBackendErrorMessage = (requestError: any) => {
   const data = requestError?.data;
@@ -83,6 +99,7 @@ const isEmailAlreadyRegisteredError = (requestError: any) => {
 export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const { t } = useLanguage();
   const { login } = useAuth();
+  const [checkCustomerRegistration, { isLoading: isCheckingCustomer }] = useCheckCustomerRegistrationMutation();
   const [registerRequest, { isLoading: isRegistering }] = useRegisterRequestMutation();
   const [verifyOtp, { isLoading: isVerifying }] = useVerifyOtpMutation();
   const [resendOtpRequest, { isLoading: isResending }] = useResendOtpMutation();
@@ -100,6 +117,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const [otp, setOtp] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationStep, setVerificationStep] = useState(false);
+  const [accountStep, setAccountStep] = useState(false);
   const [error, setError] = useState("");
   const [successInfo, setSuccessInfo] = useState((location.state as any)?.successMessage || "");
   const [resendMessage, setResendMessage] = useState("");
@@ -129,6 +147,22 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
 
     if (mode === "register") {
       if (!/^\d{12}$/.test(cccd)) return setError("CCCD phải gồm 12 chữ số.");
+      if (!accountStep) {
+        try {
+          const response = await checkCustomerRegistration({ fullName: name, phone, cccd }).unwrap();
+          const result = response.result;
+          if (result.status === "ALREADY_REGISTERED") {
+            return setError(result.email ? `Khách hàng đã đăng ký bằng email ${result.email}.` : "Khách hàng này đã đăng ký tài khoản.");
+          }
+          setSuccessInfo(result.message || "Kiểm tra hồ sơ thành công.");
+          setAccountStep(true);
+          setError("");
+        } catch (requestError: any) {
+          return setError(getBackendErrorMessage(requestError) || "Không thể kiểm tra hồ sơ khách hàng.");
+        }
+        return;
+      }
+      if (!email.trim()) return setError("Vui lòng nhập email.");
       if (password.length < 6) return setError("Mật khẩu cần có ít nhất 6 ký tự.");
       if (password !== confirmPassword) return setError("Mật khẩu xác nhận không khớp.");
       registerLocked.current = true;
@@ -231,6 +265,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
       <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-secondary/50 px-4 py-14">
         <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-xl sm:p-10">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-gold"><LockKeyhole className="h-6 w-6" /></div>
+          <RegistrationProgress step={3} />
           <h1 className="mt-6 font-display text-3xl font-bold text-primary">Xác thực tài khoản</h1>
           <p className="mt-2 text-sm text-muted-foreground">Nhập mã OTP đã gửi đến {verificationEmail}.</p>
           <p className={`mt-3 text-center text-sm font-semibold ${otpSecondsRemaining === 0 ? "text-red-600" : "text-primary"}`}>
@@ -269,10 +304,11 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
     <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-secondary/50 px-4 py-14">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-xl sm:p-10">
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-gold"><Flower2 className="h-6 w-6" /></div>
-        <h1 className="mt-6 font-display text-3xl font-bold text-primary">{mode === "login" ? t("auth.loginTitle") : t("auth.registerTitle")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{mode === "login" ? t("auth.loginSubtitle") : t("auth.registerSubtitle")}</p>
+        {mode === "register" && <RegistrationProgress step={accountStep ? 2 : 1} />}
+        <h1 className="mt-6 font-display text-3xl font-bold text-primary">{mode === "login" ? t("auth.loginTitle") : accountStep ? t("auth.accountInfoTitle") : t("auth.registerTitle")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{mode === "login" ? t("auth.loginSubtitle") : accountStep ? t("auth.accountInfoSubtitle") : t("auth.registerSubtitle")}</p>
         <form onSubmit={submit} className="mt-8 space-y-4">
-          {mode === "register" && <>
+          {mode === "register" && !accountStep && <>
             <label className="block text-sm font-medium text-primary">{t("auth.name")} <span className="text-red-500" aria-hidden="true">*</span>
               <div className="relative mt-1"><UserRound className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input required value={name} onChange={(event) => setName(event.target.value)} className="w-full rounded-xl border border-input p-3 pl-10" /></div>
             </label>
@@ -283,18 +319,30 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
               <div className="relative mt-1"><CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input required inputMode="numeric" maxLength={12} pattern="[0-9]{12}" value={cccd} onChange={(event) => setCccd(event.target.value.replace(/\D/g, ""))} className="w-full rounded-xl border border-input p-3 pl-10" placeholder="012345678901" /></div>
             </label>
           </>}
-          <label className="block text-sm font-medium text-primary">{t("auth.email")} {mode === "register" && <span className="text-red-500" aria-hidden="true">*</span>}
+          {mode === "register" && accountStep && <>
+            <label className="block text-sm font-medium text-primary">{t("auth.email")} <span className="text-red-500" aria-hidden="true">*</span>
+              <div className="relative mt-1"><Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-xl border border-input p-3 pl-10" /></div>
+            </label>
+            <label className="block text-sm font-medium text-primary">{t("auth.password")} <span className="text-red-500" aria-hidden="true">*</span>
+              <div className="relative mt-1"><input required type={showPassword ? "text" : "password"} minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-input p-3 pr-11" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
+            </label>
+            <label className="block text-sm font-medium text-primary">{t("auth.confirmPassword")} <span className="text-red-500" aria-hidden="true">*</span>
+              <div className="relative mt-1"><input required type={showConfirmPassword ? "text" : "password"} minLength={6} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-xl border border-input p-3 pr-11" /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showConfirmPassword ? "Ẩn mật khẩu xác nhận" : "Hiện mật khẩu xác nhận"}>{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
+            </label>
+          </>}
+          {mode === "login" && <label className="block text-sm font-medium text-primary">{t("auth.email")}
             <div className="relative mt-1"><Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className="w-full rounded-xl border border-input p-3 pl-10" /></div>
-          </label>
-          <label className="block text-sm font-medium text-primary">{t("auth.password")} {mode === "register" && <span className="text-red-500" aria-hidden="true">*</span>}
+          </label>}
+          {mode === "login" && <label className="block text-sm font-medium text-primary">{t("auth.password")}
             <div className="relative mt-1"><input required type={showPassword ? "text" : "password"} minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-input p-3 pr-11" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
-          </label>
-          {mode === "register" && <label className="block text-sm font-medium text-primary">{t("auth.confirmPassword")} <span className="text-red-500" aria-hidden="true">*</span>
+          </label>}
+          {false && <label className="block text-sm font-medium text-primary">{t("auth.confirmPassword")} <span className="text-red-500" aria-hidden="true">*</span>
             <div className="relative mt-1"><input required type={showConfirmPassword ? "text" : "password"} minLength={6} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-xl border border-input p-3 pr-11" /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showConfirmPassword ? "Ẩn mật khẩu xác nhận" : "Hiện mật khẩu xác nhận"}>{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
           </label>}
           {successInfo && <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{successInfo}</p>}
           {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          <Button type="submit" disabled={mode === "register" && (registerLocked.current || isRegistering)} className="w-full rounded-xl">{mode === "register" && isRegistering ? "Đang gửi mã OTP..." : mode === "login" ? t("auth.loginButton") : t("auth.registerButton")}</Button>
+          {mode === "register" && accountStep && <button type="button" onClick={() => { setAccountStep(false); setError(""); }} className="w-full text-center text-sm font-semibold text-primary underline">Quay lại thông tin khách hàng</button>}
+          <Button type="submit" disabled={mode === "register" && (registerLocked.current || isRegistering || isCheckingCustomer)} className="w-full rounded-xl">{mode === "register" && isCheckingCustomer ? "Đang kiểm tra hồ sơ..." : mode === "register" && isRegistering ? "Đang tạo hồ sơ..." : mode === "login" ? t("auth.loginButton") : accountStep ? t("auth.continueButton") : "Tiếp tục"}</Button>
         </form>
         <p className="mt-6 text-center text-sm text-muted-foreground">{mode === "login" ? "Chưa có tài khoản?" : "Đã có tài khoản?"}{" "}
           <Link to={mode === "login" ? "/register" : "/login"} className="font-semibold text-primary underline">{mode === "login" ? "Đăng ký" : "Đăng nhập"}</Link>

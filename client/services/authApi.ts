@@ -36,6 +36,18 @@ interface RegisterRequest {
   password: string;
 }
 
+export interface CustomerCheckRequest {
+  fullName: string;
+  phone: string;
+  cccd: string;
+}
+
+export interface CustomerCheckResponse {
+  status: "NEW_CUSTOMER" | "WALK_IN_CUSTOMER_NEEDS_ACCOUNT" | "ALREADY_REGISTERED";
+  email?: string;
+  message?: string;
+}
+
 export const authApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<AuthenticationResult, LoginRequest>({
@@ -43,15 +55,22 @@ export const authApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<AuthenticationResult>) =>
         response.result,
     }),
+    checkCustomerRegistration: builder.mutation<ApiResponse<CustomerCheckResponse>, CustomerCheckRequest>({
+      query: (body) => ({
+        url: "/customer/check-registration",
+        method: "POST",
+        data: body,
+      }),
+    }),
     registerRequest: builder.mutation<void, RegisterRequest>({
       query: (body) => ({
-        url: "/auth/register-request",
+        url: "/customer/register-request",
         method: "POST",
         data: body,
       }),
     }),
     verifyOtp: builder.mutation<void, VerifyOtpRequest>({
-      query: (body) => ({ url: "/auth/verify-otp", method: "POST", data: body }),
+      query: (body) => ({ url: "/customer/verify-register", method: "POST", data: body }),
     }),
     resendOtp: builder.mutation<void, ResendOtpRequest>({
       query: (body) => ({ url: "/auth/resend-otp", method: "POST", data: body }),
@@ -70,6 +89,7 @@ export const authApi = baseApi.injectEndpoints({
 
 export const {
   useLoginMutation,
+  useCheckCustomerRegistrationMutation,
   useRegisterRequestMutation,
   useVerifyOtpMutation,
   useResendOtpMutation,

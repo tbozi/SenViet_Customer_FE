@@ -1,4 +1,5 @@
 import { createRoot, Root } from "react-dom/client";
+import { useEffect } from "react";
 import "@/global.css";
 import { BrowserRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import { Provider as ReduxProvider } from "react-redux";
@@ -8,6 +9,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { disconnectCustomerSocket, initCustomerSocket } from "@/lib/socket";
 import SiteLayout from "@/components/layout/SiteLayout";
 import Index from "@/pages/Index";
 import Hotels from "@/pages/Hotels";
@@ -37,6 +39,19 @@ function ServicesRoute() {
     return <BookingServices />;
   }
   return <Services />;
+}
+
+function CustomerSocketLifecycle() {
+  const { token, user } = useAuth();
+
+  useEffect(() => {
+    if (token) initCustomerSocket(token, user?.userId);
+    else disconnectCustomerSocket();
+
+    return () => disconnectCustomerSocket();
+  }, [token, user?.userId]);
+
+  return null;
 }
 
 function ProtectedProfile() {
@@ -79,6 +94,7 @@ function App() {
           <Sonner />
           <LanguageProvider>
             <AuthProvider>
+              <CustomerSocketLifecycle />
               <BrowserRouter>
                 <SiteLayout>
                   <Routes>
