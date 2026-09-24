@@ -1,4 +1,4 @@
-﻿import { baseApi } from "./baseApi";
+import { baseApi } from "./baseApi";
 
 export interface BookingServiceRequestDto {
   serviceId: number;
@@ -25,6 +25,7 @@ export interface BookingDetailRequestDto {
 
 export interface BookingCreateRequestDto {
   customerId: number;
+  hotelId?: number;
   employeeId?: number;
   bookingChannel: "ONLINE" | "WALK_IN";
   customerPromotionId?: number | null;

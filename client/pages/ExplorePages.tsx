@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   ArrowRight,
   Bookmark,
@@ -29,6 +30,10 @@ import {
 import { useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import {
+  getSavedPromotionCodes,
+  toggleSavedPromotion,
+} from "@/lib/savedPromotions";
+import {
   useGetActivePromotionsQuery,
   useGetMySavedPromotionsQuery,
   useSavePromotionMutation,
@@ -44,6 +49,7 @@ const offers = [
     description: "Tận hưởng kỳ nghỉ dài ngày với một đêm miễn phí tại các điểm đến ven biển.",
     descriptionEn: "Extend your getaway with one complimentary night at our coastal destinations.",
     code: "STAY3FREE",
+    image: "https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1000",
     detail: "Áp dụng tại Sen Việt Đà Nẵng và Nha Trang",
     detailEn: "Available at Sen Việt Da Nang and Nha Trang",
     usage: "Nhập mã STAY3FREE tại ô Mã khuyến mãi trong bước tìm kiếm hoặc thanh toán.",
@@ -52,8 +58,8 @@ const offers = [
     conditionsEn: ["Book at least 3 consecutive nights", "Valid for standard rooms and above", "Cannot be combined with another code"],
     hotels: ["Sen Việt Đà Nẵng", "Sen Việt Nha Trang"],
     hotelsEn: ["Sen Việt Da Nang", "Sen Việt Nha Trang"],
-    valid: "01/05/2026 – 31/08/2026",
-    validEn: "01/05/2026 – 31/08/2026",
+    valid: "01/09/2026 – 31/12/2026",
+    validEn: "01/09/2026 – 31/12/2026",
     accent: "from-blue-50 to-white",
   },
   {
@@ -64,6 +70,7 @@ const offers = [
     description: "Giảm 15% giá phòng và nhận phòng sớm dành riêng cho thành viên.",
     descriptionEn: "Enjoy 15% off rooms and early check-in, exclusively for members.",
     code: "SENMEMBER",
+    image: "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?q=80&w=1000",
     detail: "Đăng nhập tài khoản để nhận ưu đãi",
     detailEn: "Sign in to unlock this member benefit",
     usage: "Đăng nhập tài khoản Sen Việt trước khi chọn phòng và nhập mã khi thanh toán.",
@@ -72,8 +79,8 @@ const offers = [
     conditionsEn: ["For registered accounts", "Up to 15% off room charges", "Valid for up to 3 rooms per booking"],
     hotels: ["Tất cả khách sạn Sen Việt"],
     hotelsEn: ["All Sen Việt hotels"],
-    valid: "01/01/2026 – 31/12/2026",
-    validEn: "01/01/2026 – 31/12/2026",
+    valid: "01/09/2026 – 31/12/2026",
+    validEn: "01/09/2026 – 31/12/2026",
     accent: "from-amber-50 to-white",
   },
   {
@@ -84,6 +91,7 @@ const offers = [
     description: "Phòng nghỉ, bữa sáng buffet và trải nghiệm địa phương trong một gói hoàn chỉnh.",
     descriptionEn: "A complete package with a room, breakfast and a local experience.",
     code: "WEEKEND",
+    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1000",
     detail: "Lưu trú từ thứ Sáu đến Chủ nhật",
     detailEn: "Valid for stays from Friday to Sunday",
     usage: "Chọn ngày nhận phòng vào thứ Sáu hoặc thứ Bảy, sau đó nhập mã WEEKEND.",
@@ -92,8 +100,8 @@ const offers = [
     conditionsEn: ["Valid for weekend stays", "Includes breakfast for 2 guests", "Must be booked at least 2 days in advance"],
     hotels: ["Sen Việt Gò Công", "Sen Việt An Nhơn", "Sen Việt Hà Nội"],
     hotelsEn: ["Sen Việt Go Cong", "Sen Việt An Nhon", "Sen Việt Ha Noi"],
-    valid: "01/06/2026 – 30/09/2026",
-    validEn: "01/06/2026 – 30/09/2026",
+    valid: "01/09/2026 – 31/12/2026",
+    validEn: "01/09/2026 – 31/12/2026",
     accent: "from-emerald-50 to-white",
   },
   {
@@ -104,6 +112,7 @@ const offers = [
     description: "Tặng bữa sáng buffet cho hai khách trong mỗi đêm lưu trú.",
     descriptionEn: "Enjoy complimentary buffet breakfast for two guests every night.",
     code: "BREAKFAST",
+    image: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?q=80&w=1000",
     detail: "Áp dụng tại khách sạn có nhà hàng buffet",
     detailEn: "Available at hotels with buffet restaurants",
     usage: "Nhập mã BREAKFAST khi đặt phòng và chọn số lượng khách chính xác.",
@@ -112,8 +121,8 @@ const offers = [
     conditionsEn: ["Valid for stays of 2 nights or more", "Up to 2 breakfasts per room per day", "Cannot be exchanged for cash"],
     hotels: ["Sen Việt Đà Nẵng", "Sen Việt Nha Trang", "Sen Việt Sài Gòn"],
     hotelsEn: ["Sen Việt Da Nang", "Sen Việt Nha Trang", "Sen Việt Saigon"],
-    valid: "01/01/2026 – 31/12/2026",
-    validEn: "01/01/2026 – 31/12/2026",
+    valid: "01/09/2026 – 31/12/2026",
+    validEn: "01/09/2026 – 31/12/2026",
     accent: "from-orange-50 to-white",
   },
   {
@@ -124,6 +133,7 @@ const offers = [
     description: "Giảm 20% liệu trình spa khi đặt phòng nghỉ dưỡng tại Sen Việt.",
     descriptionEn: "Save 20% on spa treatments when booking a Sen Việt stay.",
     code: "SPA20",
+    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1000",
     detail: "Ưu đãi cho dịch vụ spa và massage",
     detailEn: "Offer for spa and massage services",
     usage: "Nhập mã SPA20 khi đặt phòng, sau đó chọn dịch vụ Spa ở bước bổ sung.",
@@ -132,8 +142,8 @@ const offers = [
     conditionsEn: ["20% off spa services", "Advance reservation with reception required", "Subject to available time slots"],
     hotels: ["Sen Việt Đà Nẵng", "Sen Việt Nha Trang"],
     hotelsEn: ["Sen Việt Da Nang", "Sen Việt Nha Trang"],
-    valid: "01/03/2026 – 31/12/2026",
-    validEn: "01/03/2026 – 31/12/2026",
+    valid: "01/09/2026 – 31/12/2026",
+    validEn: "01/09/2026 – 31/12/2026",
     accent: "from-violet-50 to-white",
   },
   {
@@ -144,6 +154,7 @@ const offers = [
     description: "Ưu đãi dành cho gia đình với phòng rộng hơn và quà tặng cho trẻ em.",
     descriptionEn: "A family-friendly stay with larger rooms and a welcome gift for children.",
     code: "FAMILY10",
+    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=1000",
     detail: "Dành cho đặt phòng có trẻ em",
     detailEn: "For bookings that include children",
     usage: "Khai báo số trẻ em trong tìm kiếm, chọn phòng phù hợp và nhập mã FAMILY10.",
@@ -152,8 +163,8 @@ const offers = [
     conditionsEn: ["At least 1 child in the booking", "10% off room charges", "Subject to room capacity"],
     hotels: ["Sen Việt Gò Công", "Sen Việt Đà Nẵng", "Sen Việt Nha Trang"],
     hotelsEn: ["Sen Việt Go Cong", "Sen Việt Da Nang", "Sen Việt Nha Trang"],
-    valid: "01/06/2026 – 31/08/2026",
-    validEn: "01/06/2026 – 31/08/2026",
+    valid: "01/09/2026 – 31/12/2026",
+    validEn: "01/09/2026 – 31/12/2026",
     accent: "from-rose-50 to-white",
   },
   {
@@ -164,6 +175,7 @@ const offers = [
     description: "Giảm 12% cho những hành trình dài ngày từ 7 đêm trở lên.",
     descriptionEn: "Save 12% on extended stays of 7 nights or more.",
     code: "LONGSTAY12",
+    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=1000",
     detail: "Phù hợp cho nghỉ dưỡng dài ngày hoặc công tác",
     detailEn: "Ideal for long holidays or business stays",
     usage: "Chọn khoảng lưu trú từ 7 đêm, sau đó nhập mã LONGSTAY12 tại thanh toán.",
@@ -172,8 +184,8 @@ const offers = [
     conditionsEn: ["Minimum 7 consecutive nights", "12% off room charges", "Prepayment may be required"],
     hotels: ["Tất cả khách sạn Sen Việt"],
     hotelsEn: ["All Sen Việt hotels"],
-    valid: "01/01/2026 – 31/12/2026",
-    validEn: "01/01/2026 – 31/12/2026",
+    valid: "01/09/2026 – 31/12/2026",
+    validEn: "01/09/2026 – 31/12/2026",
     accent: "from-cyan-50 to-white",
   },
 ];
@@ -194,33 +206,73 @@ export function Offers() {
   const [savePromo, { isLoading: isSaving }] = useSavePromotionMutation();
   const [unsavePromo, { isLoading: isUnsaving }] = useUnsavePromotionMutation();
 
+  const [savedCodes, setSavedCodes] = useState<string[]>(() =>
+    getSavedPromotionCodes(user?.email),
+  );
+
+  useEffect(() => {
+    const update = () => {
+      setSavedCodes(getSavedPromotionCodes(user?.email));
+    };
+    update();
+    window.addEventListener("senviet_saved_promotions_changed", update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener("senviet_saved_promotions_changed", update);
+      window.removeEventListener("storage", update);
+    };
+  }, [user?.email]);
+
   const isSavedCode = (code: string) => {
-    return Boolean(savedPromos?.some((sp) => sp.code.toUpperCase() === code.toUpperCase()));
+    const upper = code.trim().toUpperCase();
+    return (
+      savedCodes.some((c) => c.toUpperCase() === upper) ||
+      Boolean(savedPromos?.some((sp) => sp.code.toUpperCase() === upper))
+    );
   };
 
   const handleToggleSave = async (code: string) => {
-    if (!user) {
-      navigate("/login", { state: { from: "/offers" } });
-      return;
+    const upperCode = code.trim().toUpperCase();
+    const updated = toggleSavedPromotion(user?.email, upperCode);
+    setSavedCodes(updated);
+
+    const isNowSaved = updated.some((c) => c.toUpperCase() === upperCode);
+    if (isNowSaved) {
+      toast.success(
+        isVietnamese
+          ? `Đã lưu voucher "${upperCode}" vào ví ưu đãi của bạn!`
+          : `Saved voucher "${upperCode}" to your wallet!`,
+      );
+    } else {
+      toast.info(
+        isVietnamese
+          ? `Đã bỏ lưu voucher "${upperCode}"`
+          : `Removed voucher "${upperCode}"`,
+      );
     }
 
-    const saved = savedPromos?.find((sp) => sp.code.toUpperCase() === code.toUpperCase());
-    if (saved) {
-      try {
-        await unsavePromo(saved.promotionId).unwrap();
-      } catch {
-        // bỏ qua lỗi
-      }
-      return;
-    }
-
-    // Tìm id khuyến mãi bên BE
-    const matched = activePromos?.find((p) => p.code.toUpperCase() === code.toUpperCase());
-    if (matched) {
-      try {
-        await savePromo(matched.id).unwrap();
-      } catch {
-        // bỏ qua lỗi
+    // Đồng thời đồng bộ sang backend nếu đã login
+    if (user) {
+      const saved = savedPromos?.find(
+        (sp) => sp.code.toUpperCase() === upperCode,
+      );
+      if (saved) {
+        try {
+          await unsavePromo(saved.promotionId).unwrap();
+        } catch {
+          // bỏ qua lỗi
+        }
+      } else {
+        const matched = activePromos?.find(
+          (p) => p.code.toUpperCase() === upperCode,
+        );
+        if (matched) {
+          try {
+            await savePromo(matched.id).unwrap();
+          } catch {
+            // bỏ qua lỗi
+          }
+        }
       }
     }
   };
@@ -228,6 +280,9 @@ export function Offers() {
   const copyCode = async (code: string) => {
     await navigator.clipboard?.writeText(code);
     setCopiedCode(code);
+    toast.success(
+      isVietnamese ? `Đã sao chép mã ${code}` : `Copied code ${code}`,
+    );
     window.setTimeout(() => setCopiedCode(""), 1800);
   };
 
@@ -281,48 +336,59 @@ export function Offers() {
                       </p>
                       <p className="mt-1 font-bold tracking-wider text-primary">{offer.code}</p>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleSave(offer.code)}
-                        disabled={isSaving || isUnsaving}
-                        className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-                          isSaved
-                            ? "bg-amber-100 text-amber-900 border border-amber-300"
-                            : "bg-secondary text-primary hover:bg-secondary/80"
-                        }`}
-                        title={isSaved ? "Bỏ lưu khỏi ví" : "Lưu vào ví voucher"}
-                      >
-                        {isSaved ? (
-                          <>
-                            <BookmarkCheck className="h-3.5 w-3.5 text-amber-700" />
-                            <span>Đã lưu</span>
-                          </>
-                        ) : (
-                          <>
-                            <Bookmark className="h-3.5 w-3.5" />
-                            <span>Lưu voucher</span>
-                          </>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => copyCode(offer.code)}
-                        className="rounded-lg p-2 text-primary transition hover:bg-secondary"
-                        aria-label={isVietnamese ? "Sao chép mã" : "Copy code"}
-                      >
-                        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyCode(offer.code)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-primary shadow-xs transition hover:bg-secondary"
+                      aria-label={isVietnamese ? "Sao chép mã" : "Copy code"}
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          <span className="text-emerald-600">Đã chép</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>Sao chép</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                   <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                     <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" />
                     {isVietnamese ? offer.detail : offer.detailEn}
                   </p>
+
+                  {/* NÚT LƯU VOUCHER NẰM TRÊN NÚT XEM CHI TIẾT */}
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSave(offer.code)}
+                    disabled={isSaving || isUnsaving}
+                    className={`mt-5 flex w-full items-center justify-center gap-2 rounded-full border py-2.5 text-sm font-semibold transition ${
+                      isSaved
+                        ? "border-amber-400 bg-amber-100 text-amber-950 shadow-xs hover:bg-amber-200/80"
+                        : "border-amber-300/80 bg-amber-50/80 text-amber-900 shadow-xs hover:border-amber-400 hover:bg-amber-100/90"
+                    }`}
+                  >
+                    {isSaved ? (
+                      <>
+                        <BookmarkCheck className="h-4 w-4 text-amber-700" />
+                        <span>{isVietnamese ? "Đã lưu vào ví voucher" : "Saved to wallet"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bookmark className="h-4 w-4 text-amber-700" />
+                        <span>{isVietnamese ? "Lưu voucher" : "Save voucher"}</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* NÚT XEM CHI TIẾT */}
                   <button
                     type="button"
                     onClick={() => setSelectedOffer(offer)}
-                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+                    className="mt-2.5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
                   >
                     {isVietnamese ? "Xem chi tiết" : "View details"}
                     <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
@@ -337,6 +403,16 @@ export function Offers() {
       <Dialog open={Boolean(selectedOffer)} onOpenChange={(open) => !open && setSelectedOffer(null)}>
         {selectedOffer && (
           <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl p-5 sm:p-7">
+            {selectedOffer.image && (
+              <div className="relative -mx-5 -mt-5 mb-5 h-48 overflow-hidden rounded-t-2xl sm:-mx-7 sm:-mt-7 sm:h-60">
+                <img
+                  src={selectedOffer.image}
+                  alt={isVietnamese ? selectedOffer.title : selectedOffer.titleEn}
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              </div>
+            )}
             <DialogHeader className="pr-6">
               <div className="flex items-start gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
@@ -391,9 +467,44 @@ export function Offers() {
               </div>
             </div>
 
-            <div className="mt-2 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setSelectedOffer(null)} className="rounded-full border border-input px-5 py-2.5 text-sm font-semibold text-primary hover:bg-secondary">{isVietnamese ? "Đóng" : "Close"}</button>
-              <Link to={`/search?promo=${encodeURIComponent(selectedOffer.code)}`} onClick={() => setSelectedOffer(null)} className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90">{isVietnamese ? "Dùng ưu đãi này" : "Use this offer"}<ArrowRight className="h-4 w-4" /></Link>
+            <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedOffer(null)}
+                className="rounded-full border border-input px-5 py-2.5 text-sm font-semibold text-primary hover:bg-secondary"
+              >
+                {isVietnamese ? "Đóng" : "Close"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleSave(selectedOffer.code)}
+                disabled={isSaving || isUnsaving}
+                className={`inline-flex items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition ${
+                  isSavedCode(selectedOffer.code)
+                    ? "border-amber-400 bg-amber-100 text-amber-950 hover:bg-amber-200/80"
+                    : "border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100"
+                }`}
+              >
+                {isSavedCode(selectedOffer.code) ? (
+                  <>
+                    <BookmarkCheck className="h-4 w-4 text-amber-700" />
+                    <span>{isVietnamese ? "Đã lưu vào ví" : "Saved"}</span>
+                  </>
+                ) : (
+                  <>
+                    <Bookmark className="h-4 w-4 text-amber-700" />
+                    <span>{isVietnamese ? "Lưu voucher này" : "Save voucher"}</span>
+                  </>
+                )}
+              </button>
+              <Link
+                to={`/search?promo=${encodeURIComponent(selectedOffer.code)}`}
+                onClick={() => setSelectedOffer(null)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                {isVietnamese ? "Dùng ưu đãi này" : "Use this offer"}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </DialogContent>
         )}

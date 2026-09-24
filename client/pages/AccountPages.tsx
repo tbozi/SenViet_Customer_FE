@@ -91,15 +91,17 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [cccd, setCccd] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState((location.state as any)?.email || "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [registrationPassword, setRegistrationPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [otp, setOtp] = useState("");
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationStep, setVerificationStep] = useState(false);
   const [error, setError] = useState("");
+  const [successInfo, setSuccessInfo] = useState((location.state as any)?.successMessage || "");
   const [resendMessage, setResendMessage] = useState("");
   const [otpSecondsRemaining, setOtpSecondsRemaining] = useState(OTP_EXPIRY_SECONDS);
   const registerLocked = useRef(false);
@@ -130,6 +132,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
       if (password.length < 6) return setError("Mật khẩu cần có ít nhất 6 ký tự.");
       if (password !== confirmPassword) return setError("Mật khẩu xác nhận không khớp.");
       registerLocked.current = true;
+      setRegistrationPassword(password);
       try {
         await registerRequest({ fullName: name, email, phone, address: "", cccd, password }).unwrap();
         setVerificationEmail(email);
@@ -183,7 +186,23 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
     verifyLocked.current = true;
     try {
       await verifyOtp({ email: verificationEmail, otp }).unwrap();
-      navigate(from);
+      // Tự động đăng nhập ngay để cập nhật session khách hàng
+      if (registrationPassword) {
+        const autoLoginResult = await login(verificationEmail, registrationPassword);
+        if (autoLoginResult.ok) {
+          navigate(from);
+          return;
+        }
+      }
+      // Nếu không có mật khẩu tạm hoặc đăng nhập thất bại thì chuyển về trang đăng nhập với thông báo
+      navigate("/login", {
+        replace: true,
+        state: {
+          from,
+          email: verificationEmail,
+          successMessage: "Đăng ký tài khoản thành công! Vui lòng nhập mật khẩu để đăng nhập.",
+        },
+      });
     } catch (requestError: any) {
       verifyLocked.current = false;
       setError(getOtpErrorMessage(requestError));
@@ -273,6 +292,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
           {mode === "register" && <label className="block text-sm font-medium text-primary">{t("auth.confirmPassword")} <span className="text-red-500" aria-hidden="true">*</span>
             <div className="relative mt-1"><input required type={showConfirmPassword ? "text" : "password"} minLength={6} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-xl border border-input p-3 pr-11" /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showConfirmPassword ? "Ẩn mật khẩu xác nhận" : "Hiện mật khẩu xác nhận"}>{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
           </label>}
+          {successInfo && <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{successInfo}</p>}
           {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           <Button type="submit" disabled={mode === "register" && (registerLocked.current || isRegistering)} className="w-full rounded-xl">{mode === "register" && isRegistering ? "Đang gửi mã OTP..." : mode === "login" ? t("auth.loginButton") : t("auth.registerButton")}</Button>
         </form>

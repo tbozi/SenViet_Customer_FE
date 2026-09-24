@@ -1,17 +1,25 @@
+import { useState, useEffect } from "react";
 import {
   CheckCircle2,
   Clock3,
-  Download,
+  CreditCard,
+  FileText,
   Hotel as HotelIcon,
+  Loader2,
+  QrCode,
+  ShieldCheck,
+  Wallet,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/data/hotels";
 import {
   getBookings,
   isRoomSpecificFee,
+  updateBooking,
   type Booking,
 } from "@/lib/bookings";
+import { toast } from "sonner";
 
 function dateTime(date: string, time: string) {
   return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString("vi-VN")}`;
@@ -19,7 +27,86 @@ function dateTime(date: string, time: string) {
 
 export default function BookingSuccess() {
   const { bookingId } = useParams();
-  const booking = getBookings().find((item) => item.id === bookingId);
+  const [searchParams] = useSearchParams();
+  const targetId = bookingId || searchParams.get("id") || searchParams.get("bookingId");
+
+  const [bookingsList, setBookingsList] = useState<Booking[]>(() => getBookings());
+  const foundBooking = targetId
+    ? bookingsList.find((item) => String(item.id) === String(targetId))
+    : bookingsList[0];
+
+  const [booking, setBooking] = useState<Booking | undefined>(foundBooking);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"BANK" | "EWALLET" | "CASH">("BANK");
+
+  useEffect(() => {
+    const list = getBookings();
+    setBookingsList(list);
+    const b = targetId
+      ? list.find((item) => String(item.id) === String(targetId))
+      : list[0];
+    setBooking(b);
+  }, [targetId]);
+
+  const handlePayment = async () => {
+    if (!booking) return;
+    setIsPaying(true);
+    try {
+      let orderId: number | null = null;
+      let payAmount = booking.total;
+
+      // 1. Tra cứu Order của booking từ Backend
+      try {
+        const orderRes = await fetch(`http://localhost:8081/orders/booking/${booking.id}`);
+        if (orderRes.ok) {
+          const orderJson = await orderRes.json();
+          if (orderJson.result?.id) {
+            orderId = orderJson.result.id;
+            if (orderJson.result.remainingAmount) {
+              payAmount = orderJson.result.remainingAmount;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Không tra cứu được Order từ backend:", e);
+      }
+
+      // 2. Gửi request thanh toán lên Backend nếu có orderId
+      if (orderId) {
+        try {
+          const paymentRes = await fetch("http://localhost:8081/orders/payments", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              orderId,
+              amount: payAmount,
+              paymentType: paymentMethod,
+              cashFlowType: "RECEIPT",
+              note: "Khách thanh toán trực tuyến trên website",
+            }),
+          });
+          if (!paymentRes.ok) {
+            console.warn("Backend payment trả về status:", paymentRes.status);
+          }
+        } catch (e) {
+          console.warn("Gửi payment backend thất bại:", e);
+        }
+      }
+
+      // 3. Cập nhật trạng thái thành công trong local storage và state
+      updateBooking(booking.id, { status: "confirmed" });
+      setBooking((prev) => (prev ? { ...prev, status: "confirmed" } : undefined));
+      toast.success("Thanh toán đơn đặt phòng thành công!");
+    } catch (err) {
+      console.error("Lỗi khi xử lý thanh toán:", err);
+      toast.error("Thanh toán thất bại, vui lòng thử lại!");
+    } finally {
+      setIsPaying(false);
+    }
+  };
+
   if (!booking)
     return (
       <main className="container flex min-h-[55vh] items-center justify-center py-16">
@@ -33,6 +120,7 @@ export default function BookingSuccess() {
         </div>
       </main>
     );
+
   const pending = booking.status === "pending_payment";
   const roomLines = booking.roomSelections || [];
   const hasRoomServices = roomLines.some((selection) =>
@@ -60,12 +148,12 @@ export default function BookingSuccess() {
             Sen Việt booking
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold text-primary">
-            {pending ? "Đơn đang chờ thanh toán" : "Đặt phòng thành công"}
+            {pending ? "Đơn đang chờ thanh toán" : "Đặt phòng & Thanh toán thành công"}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
             {pending
               ? "Phòng đang được giữ trong 15 phút. Vui lòng hoàn tất thanh toán để xác nhận booking."
-              : "Cảm ơn bạn đã lựa chọn Sen Việt Hotels & Resorts."}
+              : "Cảm ơn bạn đã lựa chọn Sen Việt Hotels & Resorts. Đơn đặt phòng của bạn đã được thanh toán thành công."}
           </p>
         </header>
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
@@ -215,6 +303,12 @@ export default function BookingSuccess() {
                 ))}
               </div>
             ) : null}
+            {booking.cancellationPolicy && (
+              <div className="mt-5 rounded-xl border border-amber-200/70 bg-amber-50/50 p-4 text-xs">
+                <p className="font-semibold text-amber-900">Chính sách hủy phòng áp dụng</p>
+                <p className="mt-1 text-amber-800/90">{booking.cancellationPolicy}</p>
+              </div>
+            )}
           </section>
           <aside className="rounded-2xl border border-border bg-white p-6 shadow-lg lg:sticky lg:top-6">
             <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
@@ -245,8 +339,8 @@ export default function BookingSuccess() {
                 </div>
               ))}
               <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
-                <span>VAT & phí hệ thống</span>
-                <strong>{formatVnd(booking.vat + booking.serviceFee)}</strong>
+                <span>Thuế VAT (8%)</span>
+                <strong>{formatVnd(booking.vat)}</strong>
               </div>
               {booking.discount > 0 && (
                 <div className="flex justify-between gap-3 text-emerald-700">
@@ -259,15 +353,121 @@ export default function BookingSuccess() {
                 <span>{formatVnd(booking.total)}</span>
               </div>
             </div>
+
+            {pending && (
+              <div className="mt-5 space-y-3 rounded-xl border border-primary/15 bg-secondary/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  Phương thức thanh toán
+                </p>
+                <div className="space-y-2 text-xs">
+                  <label
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition ${
+                      paymentMethod === "BANK"
+                        ? "border-primary bg-white shadow-sm font-semibold text-primary"
+                        : "border-border bg-white/60 text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="BANK"
+                      checked={paymentMethod === "BANK"}
+                      onChange={() => setPaymentMethod("BANK")}
+                      className="accent-primary"
+                    />
+                    <QrCode className="h-4 w-4 text-primary" />
+                    <span>Chuyển khoản / Quét mã QR</span>
+                  </label>
+
+                  <label
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition ${
+                      paymentMethod === "EWALLET"
+                        ? "border-primary bg-white shadow-sm font-semibold text-primary"
+                        : "border-border bg-white/60 text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="EWALLET"
+                      checked={paymentMethod === "EWALLET"}
+                      onChange={() => setPaymentMethod("EWALLET")}
+                      className="accent-primary"
+                    />
+                    <Wallet className="h-4 w-4 text-primary" />
+                    <span>Ví MoMo / VNPay</span>
+                  </label>
+
+                  <label
+                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition ${
+                      paymentMethod === "CASH"
+                        ? "border-primary bg-white shadow-sm font-semibold text-primary"
+                        : "border-border bg-white/60 text-muted-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="CASH"
+                      checked={paymentMethod === "CASH"}
+                      onChange={() => setPaymentMethod("CASH")}
+                      className="accent-primary"
+                    />
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    <span>Thanh toán tại quầy lễ tân</span>
+                  </label>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handlePayment}
+                  disabled={isPaying}
+                  className="mt-3 w-full rounded-full bg-emerald-600 py-6 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700"
+                >
+                  {isPaying ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang xử lý thanh toán...
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="mr-2 h-5 w-5" />
+                      Thanh toán ngay ({formatVnd(booking.total)})
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+
+            {!pending && (
+              <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Đã thanh toán thành công
+                </p>
+                <p className="mt-1 text-[11px] text-emerald-600">
+                  Đơn đặt phòng của bạn đã được thanh toán và xác nhận đảm bảo giữ phòng.
+                </p>
+              </div>
+            )}
+
             <div className="mt-6 flex flex-col gap-3">
               <Button asChild className="rounded-full">
                 <Link to={`/bookings?created=${booking.id}`}>
                   Xem lịch sử đặt phòng
                 </Link>
               </Button>
+              {!pending && (
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link to={`/invoices/${booking.id}`}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Xem & in hóa đơn
+                  </Link>
+                </Button>
+              )}
               <Button asChild variant="outline" className="rounded-full">
                 <Link to="/hotels">
-                  <Download className="mr-2 h-4 w-4" />
+                  <HotelIcon className="mr-2 h-4 w-4" />
                   Đặt thêm phòng
                 </Link>
               </Button>

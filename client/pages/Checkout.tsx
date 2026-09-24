@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
-import { formatVnd, hotels } from "@/data/hotels";
+import { formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
 import {
   getCancellationPolicy,
   isRoomSpecificFee,
@@ -28,8 +28,10 @@ import {
 } from "@/lib/bookings";
 import { useAuth } from "@/lib/auth";
 import {
+  PROMOTION_RULES,
   getPromotionDiscount,
   getSavedPromotionCodes,
+  isPromotionApplicableToHotel,
   promotionNames,
 } from "@/lib/savedPromotions";
 import { useLanguage } from "@/lib/i18n";
@@ -120,9 +122,25 @@ function selectionStays(selection: RoomSelection): RoomStay[] {
 }
 
 const cancellationDeadlineFor = (checkIn: string) => {
-  const deadline = new Date(`${checkIn}T00:00:00`);
-  deadline.setDate(deadline.getDate() - 7);
-  return deadline.toISOString();
+  if (!checkIn) return "";
+  const checkInDate = new Date(`${checkIn}T00:00:00`);
+  const today = new Date();
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const daysBefore = Math.floor(
+    (checkInDate.getTime() - todayDate.getTime()) / 86400000,
+  );
+
+  if (daysBefore >= 7) {
+    const deadline = new Date(checkInDate);
+    deadline.setDate(deadline.getDate() - 7);
+    return deadline.toISOString();
+  }
+  if (daysBefore >= 3) {
+    const deadline = new Date(checkInDate);
+    deadline.setDate(deadline.getDate() - 3);
+    return deadline.toISOString();
+  }
+  return "";
 };
 
 export default function Checkout() {
@@ -136,15 +154,70 @@ export default function Checkout() {
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [email, setEmail] = useState(user?.email || "");
+  const [cccd, setCccd] = useState(user?.cccd || user?.identityNumber || "");
   const [request, setRequest] = useState("");
+
+  useEffect(() => {
+    if (user) {
+      if (user.name) setName(user.name);
+      if (user.phone) setPhone(user.phone);
+      if (user.email) setEmail(user.email);
+      if (user.cccd || user.identityNumber) setCccd(user.cccd || user.identityNumber || "");
+    }
+  }, [user]);
   const [promo, setPromo] = useState(params.get("promo") || "");
-  const [savedPromotionCodes, setSavedPromotionCodes] = useState<string[]>([]);
+  const [savedPromotionCodes, setSavedPromotionCodes] = useState<string[]>(() =>
+    getSavedPromotionCodes(user?.email),
+  );
   const [payment, setPayment] = useState<Booking["paymentMethod"]>("qr");
   const [error, setError] = useState("");
   const [paymentState, setPaymentState] = useState<"idle" | "processing">(
     "idle",
   );
-  const selections = useMemo(() => parseSelections(params), [params]);
+  const [selections, setSelections] = useState<RoomSelection[]>(() =>
+    parseSelections(params),
+  );
+  useEffect(() => {
+    setSelections(parseSelections(params));
+  }, [params]);
+
+  const handleRemoveRoom = (
+    roomId: string,
+    stayIndex: number,
+    roomCode?: string,
+  ) => {
+    setSelections((current) => {
+      const next: RoomSelection[] = [];
+      for (const sel of current) {
+        if (sel.roomId !== roomId) {
+          next.push(sel);
+          continue;
+        }
+        if (sel.quantity <= 1) {
+          continue;
+        }
+        const nextQty = sel.quantity - 1;
+        const nextStays = sel.stays
+          ? sel.stays.filter((_, i) => i !== stayIndex)
+          : undefined;
+        const nextGuestForms = (sel.guestForms || []).filter(
+          (_, i) => i !== stayIndex,
+        );
+        const nextRoomCodes = (sel.roomCodes || []).filter(
+          (_, i) => i !== stayIndex,
+        );
+        next.push({
+          ...sel,
+          quantity: nextQty,
+          stays: nextStays,
+          guestForms: nextGuestForms,
+          roomCodes: nextRoomCodes,
+        });
+      }
+      return next;
+    });
+  };
+
   const services = useMemo(() => parseServices(params), [params]);
   const [createCustomerBooking] = useCreateCustomerBookingMutation();
 
@@ -153,11 +226,47 @@ export default function Checkout() {
   });
 
   useEffect(() => {
-    const localCodes = user ? getSavedPromotionCodes(user.email) : [];
-    const backendCodes = savedPromosBackend ? savedPromosBackend.map((sp) => sp.code) : [];
-    const allCodes = Array.from(new Set([...backendCodes, ...localCodes]));
-    setSavedPromotionCodes(allCodes);
+    const update = () => {
+      const localCodes = getSavedPromotionCodes(user?.email);
+      const backendCodes = savedPromosBackend
+        ? savedPromosBackend.map((sp) => sp.code)
+        : [];
+      const allCodes = Array.from(new Set([...backendCodes, ...localCodes]));
+      setSavedPromotionCodes(allCodes);
+    };
+
+    update();
+    window.addEventListener("senviet_saved_promotions_changed", update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener("senviet_saved_promotions_changed", update);
+      window.removeEventListener("storage", update);
+    };
   }, [user?.email, savedPromosBackend]);
+
+  const hotelTarget = hotel.slug || hotel.name;
+
+  const savedPromotionItems = useMemo(() => {
+    return savedPromotionCodes.map((code) => {
+      const rule = PROMOTION_RULES[code.trim().toUpperCase()];
+      const { applicable, reason } = isPromotionApplicableToHotel(
+        code,
+        hotelTarget,
+      );
+      return {
+        code,
+        name: rule?.name || promotionNames[code] || "Ưu đãi Sen Việt",
+        discountText: rule?.discountText,
+        applicable,
+        reason,
+      };
+    });
+  }, [savedPromotionCodes, hotelTarget]);
+
+  const promoApplicability = useMemo(() => {
+    if (!promo) return { applicable: true };
+    return isPromotionApplicableToHotel(promo, hotelTarget);
+  }, [promo, hotelTarget]);
   const arrivalTime = params.get("arrivalTime") || "14:00";
   const departureTime = params.get("departureTime") || "12:00";
   const roomCount = selections.reduce(
@@ -215,14 +324,15 @@ export default function Checkout() {
     serviceTotal,
     nights: totalNights,
     roomCount,
+    hotelSlugOrName: hotelTarget,
   });
   const taxableSubtotal = Math.max(
     0,
     roomSubtotal + extraGuestCharge + serviceTotal - discount,
   );
   const vat = Math.round(taxableSubtotal * 0.08);
-  const serviceFee = Math.round(taxableSubtotal * 0.05);
-  const total = taxableSubtotal + vat + serviceFee;
+  const serviceFee = 0;
+  const total = taxableSubtotal + vat;
   const firstCheckIn =
     selections
       .flatMap((selection) =>
@@ -340,6 +450,8 @@ export default function Checkout() {
     event.preventDefault();
     if (!name || !phone || !email)
       return setError("Vui lòng điền đủ thông tin người đại diện nhận phòng.");
+    if (!cccd)
+      return setError("Vui lòng nhập số CCCD / CMND của người đại diện nhận phòng.");
     setError("");
     setPaymentState("processing");
 
@@ -347,8 +459,19 @@ export default function Checkout() {
     const bookingDetailsPayload = selections.flatMap((selection) => {
       const stays = selectionStays(selection);
       return stays.map((stay) => {
-        const parsedRoomId = Number(selection.roomId);
-        const roomId = !isNaN(parsedRoomId) && parsedRoomId > 0 ? parsedRoomId : 1;
+        // Ưu tiên stay.roomId (id phòng thực khách đã chọn trong dropdown)
+        // fallback về selection.roomId (id đại diện loại phòng)
+        const resolvedRoomId = stay.roomId ?? Number(selection.roomId);
+        const roomTypeMap: Record<string, number> = {
+          standard: 1,
+          superior: 2,
+          deluxe: 3,
+          suite: 4,
+        };
+        const roomId =
+          resolvedRoomId > 0
+            ? resolvedRoomId
+            : roomTypeMap[selection.roomId] || 1;
         const checkInTime = `${stay.checkIn || firstCheckIn}T${arrivalTime}:00`;
         const checkOutTime = `${stay.checkOut || lastCheckOut}T${departureTime}:00`;
         const numAdults = stay.guest?.adults ?? 1;
@@ -362,10 +485,11 @@ export default function Checkout() {
         const serviceRequests = (stay.services || []).map((srv) => ({
           serviceId: Number(srv.id) || 1,
           quantity: srv.quantity || 1,
-          price: srv.price,
+          unitPrice: srv.unitPrice || 0,
+          totalPrice: srv.total || ((srv.unitPrice || 0) * (srv.quantity || 1)),
         }));
         const serviceSubTotal = (stay.services || []).reduce(
-          (s, item) => s + item.price * item.quantity,
+          (s, item) => s + (item.total || (item.unitPrice || 0) * (item.quantity || 1)),
           0,
         );
         const totalPrice = roomSubTotal + serviceSubTotal;
@@ -386,12 +510,14 @@ export default function Checkout() {
       });
     });
 
-    let generatedId = `SV-${Date.now().toString().slice(-8)}`;
+    let generatedId = "";
 
     try {
       const customerId = (user as any)?.customerId || (user as any)?.userId || 1;
+      const hotelId = hotel.id || (hotel.slug ? hotelSlugToId[hotel.slug] : 1) || 1;
       const res = await createCustomerBooking({
         customerId,
+        hotelId,
         bookingChannel: "ONLINE",
         customerPromotionId: null,
         promotionId: null,
@@ -399,10 +525,19 @@ export default function Checkout() {
       }).unwrap();
 
       if (res && res.bookingId) {
-        generatedId = `SV-${res.bookingId}`;
+        generatedId = String(res.bookingId);
+      } else {
+        throw new Error("Backend không trả về bookingId hợp lệ");
       }
     } catch (err: any) {
-      console.warn("Lưu booking vào Backend:", err);
+      console.error("Lưu booking vào Backend thất bại:", err);
+      setPaymentState("idle");
+      const errorMsg =
+        err?.data?.message ||
+        err?.message ||
+        "Không thể kết nối đến Backend (Port 8081). Hãy đảm bảo Backend trong IntelliJ đang chạy!";
+      setError(`Đặt phòng chưa thành công: ${errorMsg}`);
+      return;
     }
 
     const booking: Booking = {
@@ -445,10 +580,10 @@ export default function Checkout() {
       guestName: name,
       phone,
       email,
+      cccd,
       specialRequest: request,
       cancellationDeadline: cancellationDeadlineFor(firstCheckIn),
-      cancellationPolicy:
-        "7+ ngày hoàn 100%; 3 đến dưới 7 ngày hoàn 50%; dưới 3 ngày hoặc no-show không hoàn.",
+      cancellationPolicy: getCancellationPolicy(firstCheckIn).policy,
       holdUntil: new Date(Date.now() + 15 * 60000).toISOString(),
       arrivalTime,
       departureTime,
@@ -506,13 +641,23 @@ export default function Checkout() {
                     className="mt-1 w-full rounded-xl border border-input p-3"
                   />
                 </label>
-                <label className="text-sm font-medium text-primary sm:col-span-2">
+                <label className="text-sm font-medium text-primary">
                   Email
                   <input
                     required
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
+                    className="mt-1 w-full rounded-xl border border-input p-3"
+                  />
+                </label>
+                <label className="text-sm font-medium text-primary">
+                  Số CCCD / CMND
+                  <input
+                    required
+                    value={cccd}
+                    onChange={(event) => setCccd(event.target.value)}
+                    placeholder="Nhập số CCCD (12 số)"
                     className="mt-1 w-full rounded-xl border border-input p-3"
                   />
                 </label>
@@ -563,6 +708,7 @@ export default function Checkout() {
             selections={selections}
             arrivalTime={arrivalTime}
             departureTime={departureTime}
+            onRemoveRoom={handleRemoveRoom}
             fallbackServices={services}
             totals={{
               subtotal: subtotalBeforeDiscount,
@@ -571,30 +717,53 @@ export default function Checkout() {
                 amount: fee.amount,
                 detail: fee.detail,
               })),
-              vatAndSystemFee: vat + serviceFee,
+              vatAndSystemFee: vat,
               discount,
               total,
             }}
             promo={
-              <label className="mt-5 block text-sm font-medium text-primary">
-                Mã khuyến mãi
-                <input
-                  value={promo}
-                  onChange={(event) => setPromo(event.target.value.toUpperCase())}
-                  placeholder="Nhập hoặc chọn mã đã lưu"
-                  className="mt-1 w-full rounded-xl border border-input p-3 uppercase"
-                />
-                {promo && discount === 0 && (
-                  <span className="mt-1 block text-xs font-normal text-amber-700">
-                    Mã chưa đủ điều kiện cho đơn đặt phòng này.
-                  </span>
+              <div className="mt-5 space-y-2">
+                <label className="block text-sm font-medium text-primary">
+                  Mã khuyến mãi
+                  <div className="mt-1 flex gap-2">
+                    <input
+                      value={promo}
+                      onChange={(event) =>
+                        setPromo(event.target.value.toUpperCase().trim())
+                      }
+                      placeholder="Nhập hoặc chọn mã ưu đãi"
+                      className="w-full rounded-xl border border-input p-3 font-mono font-bold uppercase tracking-wider text-primary"
+                    />
+                    {promo && (
+                      <button
+                        type="button"
+                        onClick={() => setPromo("")}
+                        className="shrink-0 whitespace-nowrap rounded-xl border border-input px-4 text-xs font-medium text-muted-foreground transition hover:bg-secondary hover:text-primary"
+                      >
+                        Xóa
+                      </button>
+                    )}
+                  </div>
+                </label>
+                {promo && !promoApplicability.applicable && (
+                  <p className="rounded-lg bg-rose-50 p-2 text-xs font-medium text-rose-700">
+                    ✕ {promoApplicability.reason || "Mã không áp dụng cho khách sạn này."}
+                  </p>
                 )}
-              </label>
+                {promo && promoApplicability.applicable && discount === 0 && (
+                  <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
+                    ⚠ Mã chưa đủ điều kiện cho đơn này (ví dụ: số đêm tối thiểu).
+                  </p>
+                )}
+                {promo && discount > 0 && (
+                  <p className="rounded-lg bg-emerald-50 p-2 text-xs font-semibold text-emerald-700">
+                    ✓ Áp dụng thành công: giảm {formatVnd(discount)}
+                  </p>
+                )}
+              </div>
             }
-            savedPromotions={savedPromotionCodes.map((code) => ({
-              code,
-              name: promotionNames[code] || "Ưu đãi Sen Việt",
-            }))}
+            savedPromotions={savedPromotionItems}
+            selectedPromotionCode={promo}
             onSelectPromotion={setPromo}
             cta={
               <>

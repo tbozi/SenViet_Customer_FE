@@ -6,12 +6,19 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import {
+  AlertCircle,
+  Bed,
   BedDouble,
+  Building,
   CalendarDays,
   Check,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Info,
   MapPin,
+  ShieldAlert,
+  Sparkles,
   Star,
   Users,
   X,
@@ -20,12 +27,14 @@ import { Button } from "@/components/ui/button";
 import QuickSearch from "@/components/QuickSearch";
 import RoomAvailabilityCalendar from "@/components/RoomAvailabilityCalendar";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
-import { rooms } from "@/data/rooms";
+import { rooms as defaultRooms, type RoomType } from "@/data/rooms";
+import { fetchRoomsByHotel } from "@/services/roomApi";
 import { formatVnd, hotels } from "@/data/hotels";
 import {
+  calculateEarlyCheckInSurcharge,
+  calculateLateCheckOutSurcharge,
   calculateNights,
-  getBookings,
-  getCancellationPolicy,
+  getCancellationNotice,
   getCancellationSchedule,
   getMockRoomAvailability,
   type GuestForm,
@@ -50,7 +59,7 @@ function nextDate(date: string) {
   return dateValue(next);
 }
 
-function extraGuests(room: (typeof rooms)[number], guest: GuestForm) {
+function extraGuests(room: RoomType, guest: GuestForm) {
   const extraAdults = Math.max(0, guest.adults - room.capacity.adults);
   const extraChildren = Math.max(0, guest.children - room.capacity.children);
   return {
@@ -63,20 +72,30 @@ function extraGuests(room: (typeof rooms)[number], guest: GuestForm) {
 
 function RoomDetailsModal({
   room,
+  remainingRooms,
+  checkInDate,
   onClose,
 }: {
-  room: (typeof rooms)[number];
+  room: RoomType;
+  remainingRooms?: number;
+  checkInDate?: string;
   onClose: () => void;
 }) {
   const [imageIndex, setImageIndex] = useState(0);
   const images = [
     room.image,
-    ...rooms.filter((item) => item.id !== room.id).map((item) => item.image),
+    ...defaultRooms.filter((item) => item.id !== room.id).map((item) => item.image),
   ].slice(0, 3);
+
   const moveImage = (amount: number) =>
     setImageIndex(
       (current) => (current + amount + images.length) % images.length,
     );
+
+  const notice = checkInDate ? getCancellationNotice(checkInDate) : null;
+  const availableCount =
+    remainingRooms !== undefined ? remainingRooms : room.inventory;
+
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-3 sm:p-6"
@@ -86,113 +105,302 @@ function RoomDetailsModal({
       onClick={onClose}
     >
       <div
-        className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Đóng chi tiết phòng"
-          className="absolute right-3 top-3 z-10 rounded-full bg-white p-2 text-slate-700 shadow-md transition hover:bg-slate-100"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-md backdrop-blur transition hover:bg-rose-50 hover:text-rose-600"
         >
           <X className="h-5 w-5" />
         </button>
-        <div className="grid md:grid-cols-[minmax(280px,.95fr)_1.15fr]">
-          <div className="relative flex min-h-[250px] items-center bg-slate-100 p-4 sm:p-6">
-            <img
-              src={images[imageIndex]}
-              alt={`${room.nameVi} - ảnh ${imageIndex + 1}`}
-              className="aspect-[4/3] max-h-[460px] w-full rounded-xl object-cover"
-            />
-            <button
-              type="button"
-              onClick={() => moveImage(-1)}
-              aria-label="Ảnh trước"
-              className="absolute left-6 rounded-full bg-white/95 p-2 text-primary shadow"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => moveImage(1)}
-              aria-label="Ảnh sau"
-              className="absolute right-6 rounded-full bg-white/95 p-2 text-primary shadow"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-            <div className="absolute bottom-8 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-slate-950/50 px-2 py-1">
-              {images.map((image, index) => (
+
+        <div className="grid lg:grid-cols-[minmax(320px,1fr)_1.25fr]">
+          {/* CỘT TRÁI: HÌNH ẢNH & SLIDER */}
+          <div className="relative flex flex-col justify-between bg-slate-900 p-4 sm:p-6">
+            <div className="relative flex min-h-[280px] flex-1 items-center justify-center">
+              <img
+                src={images[imageIndex]}
+                alt={`${room.nameVi} - ảnh ${imageIndex + 1}`}
+                className="aspect-[4/3] max-h-[460px] w-full rounded-xl object-cover shadow-lg"
+              />
+              <button
+                type="button"
+                onClick={() => moveImage(-1)}
+                aria-label="Ảnh trước"
+                className="absolute left-3 rounded-full bg-white/90 p-2 text-primary shadow-md hover:bg-white sm:left-4"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => moveImage(1)}
+                aria-label="Ảnh sau"
+                className="absolute right-3 rounded-full bg-white/90 p-2 text-primary shadow-md hover:bg-white sm:right-4"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-slate-950/60 px-2.5 py-1 backdrop-blur-sm">
+                {images.map((image, index) => (
+                  <button
+                    key={image}
+                    type="button"
+                    aria-label={`Chọn ảnh ${index + 1}`}
+                    onClick={() => setImageIndex(index)}
+                    className={`h-2 w-2 rounded-full transition-all ${
+                      imageIndex === index
+                        ? "w-5 bg-gold"
+                        : "bg-white/50 hover:bg-white"
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Thumbnail selector */}
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {images.map((img, idx) => (
                 <button
-                  key={image}
+                  key={img}
                   type="button"
-                  aria-label={`Chọn ảnh ${index + 1}`}
-                  onClick={() => setImageIndex(index)}
-                  className={`h-1.5 w-1.5 rounded-full ${imageIndex === index ? "bg-white" : "bg-white/50"}`}
-                />
+                  onClick={() => setImageIndex(idx)}
+                  className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition ${
+                    imageIndex === idx
+                      ? "border-gold shadow-md"
+                      : "border-transparent opacity-60 hover:opacity-100"
+                  }`}
+                >
+                  <img
+                    src={img}
+                    alt="thumbnail"
+                    className="h-full w-full object-cover"
+                  />
+                </button>
               ))}
             </div>
           </div>
+
+          {/* CỘT PHẢI: NỘI DUNG CHI TIẾT */}
           <div className="p-5 sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[.14em] text-gold">
-              {room.name}
-            </p>
-            <h2
-              id="room-detail-title"
-              className="mt-2 font-display text-3xl font-bold text-primary"
-            >
-              {room.nameVi}
-            </h2>
-            <p className="mt-2 text-sm font-medium text-muted-foreground">
-              {room.size} · Tòa {room.building} · Tầng {room.floor}
-            </p>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-secondary/50 p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                  <BedDouble className="h-4 w-4 text-gold" /> Giường
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{room.bedsVi}</p>
+            {/* Header phòng & Giá */}
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[.14em] text-gold">
+                  {room.name}
+                </p>
+                <h2
+                  id="room-detail-title"
+                  className="mt-1 font-display text-2xl font-bold text-primary sm:text-3xl"
+                >
+                  {room.nameVi}
+                </h2>
               </div>
-              <div className="rounded-xl bg-secondary/50 p-3">
-                <div className="flex items-center gap-2 text-xs font-semibold text-primary">
-                  <Users className="h-4 w-4 text-gold" /> Sức chứa tối đa
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {room.capacity.adults} người lớn · {room.capacity.children} trẻ em · {room.capacity.infants} em bé
+              <div className="text-right">
+                <span className="text-xs text-muted-foreground">Giá từ</span>
+                <p className="text-2xl font-black text-primary">
+                  {formatVnd(room.price)}
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {" "}
+                    / đêm
+                  </span>
                 </p>
               </div>
             </div>
-            <p className="mt-4 text-sm leading-7 text-muted-foreground">
+
+            {/* Khối Thông số cơ bản (Giường, Người, Diện tích, Vị trí) */}
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <BedDouble className="h-4 w-4 text-gold" /> Loại giường
+                </span>
+                <p className="mt-1 text-xs font-bold text-slate-800">
+                  {room.bedsVi}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="h-4 w-4 text-gold" /> Sức chứa
+                </span>
+                <p className="mt-1 text-xs font-bold text-slate-800">
+                  Tối đa {room.capacity.adults} người lớn
+                  {room.capacity.children > 0
+                    ? `, ${room.capacity.children} trẻ`
+                    : ""}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Building className="h-4 w-4 text-gold" /> Diện tích
+                </span>
+                <p className="mt-1 text-xs font-bold text-slate-800">
+                  {room.size}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <MapPin className="h-4 w-4 text-gold" /> Vị trí
+                </span>
+                <p className="mt-1 text-xs font-bold text-slate-800">
+                  Tòa {room.building} · Tầng {room.floor}
+                </p>
+              </div>
+            </div>
+
+            {/* Tình trạng phòng & Mô tả */}
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={`rounded-full px-3 py-1 font-bold ${
+                  availableCount > 0
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
+                }`}
+              >
+                {availableCount > 0
+                  ? `Còn ${availableCount} phòng trống`
+                  : "Hết phòng"}
+              </span>
+              <span className="text-muted-foreground">
+                Tòa {room.building} · Tầng {room.floor} · Giá cố định
+              </span>
+            </div>
+
+            <p className="mt-3 text-sm leading-relaxed text-slate-600">
               {room.description}
             </p>
-            <p className="mt-3 rounded-xl border border-primary/10 bg-primary/[.03] p-3 text-sm text-muted-foreground">
-              <span className="font-semibold text-primary">Phù hợp với: </span>
-              {room.targetGuests}
-            </p>
-            <div className="mt-5 rounded-xl border border-border p-3">
-              <h3 className="text-sm font-bold text-primary">Gói giá</h3>
-              <div className="mt-2 space-y-2">
-                {room.offers.map((plan) => (
-                  <div key={plan.id} className="flex items-center justify-between gap-3 text-xs">
-                    <p className="font-semibold text-primary">{plan.nameVi}</p>
-                    <span className="shrink-0 font-bold text-primary">{formatVnd(plan.price)}/đêm</span>
+
+            {/* CHÍNH SÁCH HỦY PHÒNG */}
+            <div className="mt-5 rounded-xl border border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-amber-50/40 to-white p-4 text-xs">
+              <div className="flex items-center gap-2 font-bold text-amber-900">
+                <Clock className="h-4 w-4 text-amber-600" />
+                <span>Chính sách hủy phòng & hoàn tiền:</span>
+              </div>
+
+              <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-2.5">
+                  <span className="font-extrabold text-emerald-700">100% Hoàn tiền</span>
+                  <p className="mt-0.5 text-[11px] text-emerald-900/80">
+                    Hủy trước từ 7 ngày trở lên
+                  </p>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-2.5">
+                  <span className="font-extrabold text-amber-700">50% Hoàn tiền</span>
+                  <p className="mt-0.5 text-[11px] text-amber-900/80">
+                    Hủy từ 3 đến dưới 7 ngày
+                  </p>
+                </div>
+                <div className="rounded-lg border border-rose-200 bg-rose-50/80 p-2.5">
+                  <span className="font-extrabold text-rose-700">0% Không hoàn tiền</span>
+                  <p className="mt-0.5 text-[11px] text-rose-900/80">
+                    Hủy dưới 3 ngày nhận phòng
+                  </p>
+                </div>
+              </div>
+
+              {notice && (
+                <div
+                  className={`mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${notice.badgeClass}`}
+                >
+                  {notice.type === "free" ? (
+                    <Check className="h-3.5 w-3.5 shrink-0" />
+                  ) : notice.type === "partial" ? (
+                    <span className="text-xs">⚠️</span>
+                  ) : (
+                    <span className="text-xs font-bold">✕</span>
+                  )}
+                  <span>{notice.text}</span>
+                </div>
+              )}
+            </div>
+
+            {/* CHÍNH SÁCH PHỤ THU CHO KHÁCH HÀNG */}
+            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50/40 p-4 text-xs">
+              <div className="flex items-center gap-2 font-bold text-blue-950">
+                <Info className="h-4 w-4 text-blue-600" />
+                <span className="text-sm">Chính sách phụ thu cho khách hàng:</span>
+              </div>
+
+              <div className="mt-3 space-y-2.5 text-slate-700">
+                <div className="flex items-start justify-between gap-3 border-b border-blue-100 pb-2">
+                  <div>
+                    <span className="font-bold text-slate-900">
+                      • Phụ thu người lớn thêm (vượt sức chứa chuẩn):
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Đã bao gồm tiện ích phòng & bữa sáng (nếu gói có kèm ăn sáng)
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-bold text-primary">
+                    500.000₫ / người / đêm
+                  </span>
+                </div>
+
+                <div className="flex items-start justify-between gap-3 border-b border-blue-100 pb-2">
+                  <div>
+                    <span className="font-bold text-slate-900">
+                      • Trẻ em từ 2 đến dưới 12 tuổi:
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Em bé dưới 2 tuổi: Miễn phí lưu trú (ngủ cùng giường với bố mẹ)
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-bold text-primary">
+                    250.000₫ / trẻ / đêm
+                  </span>
+                </div>
+
+                <div className="flex items-start justify-between gap-3 border-b border-blue-100 pb-2">
+                  <div>
+                    <span className="font-bold text-slate-900">
+                      • Nhận phòng sớm (Check-in sớm):
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Trước 06:00: 100% giá 1 đêm · Từ 06:00 – 09:00: 50% · Từ 09:00 – 14:00: 30%
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-bold text-slate-800">
+                    30% – 100% giá 1 đêm
+                  </span>
+                </div>
+
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <span className="font-bold text-slate-900">
+                      • Trả phòng trễ (Check-out trễ):
+                    </span>
+                    <p className="text-[11px] text-slate-500">
+                      Từ 12:00 – 15:00: 30% · Từ 15:00 – 18:00: 50% · Sau 18:00: 100% giá 1 đêm
+                    </p>
+                  </div>
+                  <span className="shrink-0 font-bold text-slate-800">
+                    30% – 100% giá 1 đêm
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tiện ích trong phòng */}
+            <div className="mt-5">
+              <h3 className="text-sm font-bold text-primary">
+                Tiện ích & trang thiết bị có sẵn trong phòng:
+              </h3>
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+                {room.amenities.map((amenity) => (
+                  <div
+                    key={amenity}
+                    className="flex items-center gap-2 text-xs text-slate-600"
+                  >
+                    <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                    <span>{amenity}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <h3 className="mt-6 text-sm font-bold text-primary">
-              Tiện ích trong phòng:
-            </h3>
-            <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3">
-              {room.amenities.map((amenity) => (
-                <div
-                  key={amenity}
-                  className="flex items-center gap-2 text-xs text-slate-600"
-                >
-                  <Check className="h-4 w-4 shrink-0 text-primary" />
-                  {amenity}
-                </div>
-              ))}
-            </div>
+
           </div>
         </div>
       </div>
@@ -206,6 +414,22 @@ export default function HotelRooms() {
   const { language } = useLanguage();
   const [searchParams] = useSearchParams();
   const hotel = hotels.find((item) => item.slug === slug) || hotels[0];
+  const [rooms, setRooms] = useState<RoomType[]>(defaultRooms);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (slug || hotel.slug) {
+      fetchRoomsByHotel(slug || hotel.slug).then((fetched) => {
+        if (isMounted && fetched && fetched.length > 0) {
+          setRooms(fetched);
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [slug, hotel.slug]);
+
   const initialCheckIn = searchParams.get("checkIn") || dateValue(today);
   const initialCheckOut =
     searchParams.get("checkOut") || nextDate(initialCheckIn);
@@ -214,19 +438,19 @@ export default function HotelRooms() {
     checkOut: initialCheckOut,
   });
   const [roomStays, setRoomStays] = useState<Record<string, StayDates[]>>(() =>
-    Object.fromEntries(rooms.map((room) => [room.id, []])),
+    Object.fromEntries(defaultRooms.map((room) => [room.id, []])),
   );
   const [arrivalTime, setArrivalTime] = useState("14:00");
   const [departureTime, setDepartureTime] = useState("12:00");
   const oldRoom = (searchParams.get("room") || "").toLowerCase();
-  const oldRoomIndex = rooms.findIndex(
+  const oldRoomIndex = defaultRooms.findIndex(
     (room) =>
       oldRoom.includes(room.id) || oldRoom.includes(room.nameVi.toLowerCase()),
   );
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
-    const initial = Object.fromEntries(rooms.map((room) => [room.id, 0]));
+    const initial = Object.fromEntries(defaultRooms.map((room) => [room.id, 0]));
     const legacyIndex = oldRoomIndex >= 0 ? oldRoomIndex : 0;
-    initial[rooms[legacyIndex].id] = Math.min(
+    initial[defaultRooms[legacyIndex].id] = Math.min(
       4,
       Math.max(0, Number(searchParams.get("rooms") || 0)),
     );
@@ -235,32 +459,39 @@ export default function HotelRooms() {
   const [guestForms, setGuestForms] = useState<Record<string, GuestForm[]>>(
     () => {
       const initial = Object.fromEntries(
-        rooms.map((room) => [room.id, [] as GuestForm[]]),
+        defaultRooms.map((room) => [room.id, [] as GuestForm[]]),
       );
       const legacyIndex = oldRoomIndex >= 0 ? oldRoomIndex : 0;
       const quantity = Math.min(
         4,
         Math.max(0, Number(searchParams.get("rooms") || 0)),
       );
-      initial[rooms[legacyIndex].id] = Array.from({ length: quantity }, () =>
+      initial[defaultRooms[legacyIndex].id] = Array.from({ length: quantity }, () =>
         defaultGuest(searchParams),
       );
       return initial;
     },
   );
+  const [selectedRoomCodes, setSelectedRoomCodes] = useState<
+    Record<string, string[]>
+  >(() => {
+    const initial = Object.fromEntries(
+      defaultRooms.map((room) => [room.id, [] as string[]]),
+    );
+    const legacyIndex = oldRoomIndex >= 0 ? oldRoomIndex : 0;
+    const quantity = Math.min(
+      4,
+      Math.max(0, Number(searchParams.get("rooms") || 0)),
+    );
+    initial[defaultRooms[legacyIndex].id] = defaultRooms[legacyIndex].roomCodes.slice(
+      0,
+      quantity,
+    );
+    return initial;
+  });
   const [selectedRoom, setSelectedRoom] = useState(
     oldRoomIndex >= 0 ? oldRoomIndex : 0,
   );
-  const [selectedOffers, setSelectedOffers] = useState<
-    Record<string, string[]>
-  >(() =>
-    Object.fromEntries(
-      rooms.map((room) => [room.id, [room.offers[0].id]]),
-    ),
-  );
-  const [selectedRoomCodes, setSelectedRoomCodes] = useState<
-    Record<string, string[]>
-  >(() => Object.fromEntries(rooms.map((room) => [room.id, [...room.roomCodes]])));
   const [calendarTarget, setCalendarTarget] = useState<CalendarTarget | null>(
     null,
   );
@@ -270,174 +501,18 @@ export default function HotelRooms() {
   const getDates = (roomId: string, index: number) =>
     roomStays[roomId]?.[index] || defaultDates;
 
-  const getOffer = (roomId: string, index: number) => {
-    const room = rooms.find((item) => item.id === roomId) || rooms[0];
-    const planId =
-      selectedOffers[roomId]?.[index] ||
-      selectedOffers[roomId]?.[0] ||
-      room.offers[0].id;
-    return room.offers.find((plan) => plan.id === planId) || room.offers[0];
-  };
-
-  const getRoomCode = (roomId: string, index: number) => {
-    const room = rooms.find((item) => item.id === roomId) || rooms[0];
-    return selectedRoomCodes[roomId]?.[index] || room.roomCodes[index];
-  };
-
-  const setRoomOffer = (roomId: string, stayIndex: number, planId: string) => {
-    setSelectedOffers((current) => {
-      const room = rooms.find((item) => item.id === roomId) || rooms[0];
-      const plans = Array.from(
-        { length: Math.max(quantities[roomId] || 0, stayIndex + 1) },
-        (_, index) =>
-          current[roomId]?.[index] ||
-          current[roomId]?.[0] ||
-          room.offers[0].id,
-      );
-      plans[stayIndex] = planId;
-      return { ...current, [roomId]: plans };
-    });
-  };
-
-  const setRoomTypeOffer = (roomId: string, planId: string) => {
-    setSelectedOffers((current) => {
-      const quantity = Math.max(1, quantities[roomId] || 0);
-      return {
-        ...current,
-        [roomId]: Array.from({ length: quantity }, () => planId),
-      };
-    });
-  };
-
-  const setRoomCode = (roomId: string, stayIndex: number, roomCode: string) => {
-    setSelectedRoomCodes((current) => {
-      const room = rooms.find((item) => item.id === roomId) || rooms[0];
-      const codes = Array.from(
-        { length: Math.max(quantities[roomId] || 0, stayIndex + 1) },
-        (_, index) => current[roomId]?.[index] || room.roomCodes[index],
-      );
-      codes[stayIndex] = roomCode;
-      return { ...current, [roomId]: codes };
-    });
-  };
-
-  const getOfferRefund = (
-    cancellationType: "flexible" | "non-refundable",
-    checkIn: string,
-    checkOut: string,
-    offerPrice: number,
-  ) => {
-    const refundPercent =
-      cancellationType === "flexible"
-        ? getCancellationPolicy(checkIn).refundPercent
-        : 0;
-    const nights = Math.max(0, calculateNights(checkIn, checkOut));
-    return {
-      refundPercent,
-      refundAmount: Math.round((offerPrice * nights * refundPercent) / 100),
-    };
-  };
-
-  const currentRefundNotice = (
-    cancellationType: "flexible" | "non-refundable",
-    checkIn: string,
-    checkOut: string,
-    offerPrice: number,
-  ) => {
-    const refund = getOfferRefund(
-      cancellationType,
-      checkIn,
-      checkOut,
-      offerPrice,
-    );
-    return `Hiện tại: hoàn ${refund.refundPercent}% · Tạm tính hoàn ${formatVnd(refund.refundAmount)}/phòng`;
-  };
-
-  const daysUntilCheckIn = (checkIn: string) =>
-    Math.ceil(
-      (new Date(`${checkIn}T00:00:00`).getTime() -
-        new Date().setHours(0, 0, 0, 0)) /
-        86400000,
-    );
-
-  const getSharedAvailability = (
-    roomIndex: number,
-    roomId: string,
-    dates: StayDates,
-  ) => {
-    const base = getMockRoomAvailability(
+  const maxAvailable = (roomIndex: number, dates: StayDates) => {
+    const room = rooms[roomIndex];
+    if (room && room.availableRooms !== undefined) {
+      return room.availableRooms.length;
+    }
+    const result = getMockRoomAvailability(
       roomIndex,
       1,
       dates.checkIn,
       dates.checkOut,
     );
-    const reservedRooms = getBookings()
-      .filter(
-        (booking) =>
-          booking.hotelSlug === hotel.slug &&
-          booking.status !== "cancelled" &&
-          (booking.status !== "pending_payment" ||
-            new Date(booking.holdUntil).getTime() > Date.now()),
-      )
-      .reduce(
-        (total, booking) =>
-          total +
-          (booking.roomSelections || []).reduce(
-            (selectionTotal, selection) =>
-              selectionTotal +
-              (selection.roomId === roomId
-                ? (selection.stays || []).filter(
-                    (stay) =>
-                      stay.checkIn < dates.checkOut &&
-                      dates.checkIn < stay.checkOut,
-                  ).length
-                : 0),
-            0,
-          ),
-        0,
-      );
-    const remaining = Math.max(0, base.remaining - reservedRooms);
-    return { available: remaining > 0, remaining };
-  };
-
-  const maxAvailable = (
-    roomIndex: number,
-    dates: StayDates,
-    roomId: string,
-  ) => Math.max(0, getSharedAvailability(roomIndex, roomId, dates).remaining);
-
-  const isRoomCodeUnavailable = (
-    roomId: string,
-    roomCode: string,
-    dates: StayDates,
-  ) =>
-    getBookings().some(
-      (booking) =>
-        booking.hotelSlug === hotel.slug &&
-        booking.status !== "cancelled" &&
-        (booking.status !== "pending_payment" ||
-          new Date(booking.holdUntil).getTime() > Date.now()) &&
-        (booking.roomSelections || []).some(
-          (selection) =>
-            selection.roomId === roomId &&
-            (selection.stays || []).some(
-              (stay) =>
-                stay.roomCode === roomCode &&
-                stay.checkIn < dates.checkOut &&
-                dates.checkIn < stay.checkOut,
-            ),
-        ),
-    );
-
-  const getAvailableRoomCodes = (
-    roomIndex: number,
-    roomId: string,
-    dates: StayDates,
-  ) => {
-    const room = rooms[roomIndex];
-    return room.roomCodes.filter(
-      (code) => !isRoomCodeUnavailable(roomId, code, dates),
-    );
+    return Math.max(0, result.remaining);
   };
 
   const setRoomQuantity = (roomId: string, requestedQuantity: number) => {
@@ -445,7 +520,7 @@ export default function HotelRooms() {
     const currentDates = roomStays[roomId]?.[0] || defaultDates;
     const quantity = Math.min(
       Math.max(0, requestedQuantity),
-      maxAvailable(roomIndex, currentDates, roomId),
+      maxAvailable(roomIndex, currentDates),
     );
     setQuantities((current) => ({ ...current, [roomId]: quantity }));
     setGuestForms((current) => ({
@@ -462,67 +537,59 @@ export default function HotelRooms() {
         (_, index) => current[roomId]?.[index] || { ...defaultDates },
       ),
     }));
-    const availableCodes = getAvailableRoomCodes(
-      roomIndex,
-      roomId,
-      currentDates,
-    );
+    setSelectedRoomCodes((current) => {
+      const existing = current[roomId] || [];
+      const roomDef = rooms.find((r) => r.id === roomId);
+      const allCodes = roomDef?.roomCodes || [];
+      const updated: string[] = [];
+      for (let i = 0; i < quantity; i++) {
+        if (existing[i] && !updated.includes(existing[i])) {
+          updated.push(existing[i]);
+        } else {
+          const availableCode =
+            allCodes.find((c) => !updated.includes(c)) ||
+            allCodes[0] ||
+            `Phòng ${i + 1}`;
+          updated.push(availableCode);
+        }
+      }
+      return { ...current, [roomId]: updated };
+    });
+  };
+
+  const removeRoomStay = (roomId: string, stayIndex: number) => {
+    const currentQty = quantities[roomId] || 0;
+    if (currentQty <= 1) {
+      setRoomQuantity(roomId, 0);
+      return;
+    }
+    const newQty = currentQty - 1;
+    setQuantities((current) => ({ ...current, [roomId]: newQty }));
+    setGuestForms((current) => ({
+      ...current,
+      [roomId]: (current[roomId] || []).filter((_, i) => i !== stayIndex),
+    }));
+    setRoomStays((current) => ({
+      ...current,
+      [roomId]: (current[roomId] || []).filter((_, i) => i !== stayIndex),
+    }));
     setSelectedRoomCodes((current) => ({
       ...current,
-      [roomId]: Array.from(
-        { length: quantity },
-        (_, index) =>
-          current[roomId]?.[index] ||
-          availableCodes[index] ||
-          rooms[roomIndex].roomCodes[index],
-      ),
-    }));
-    setSelectedOffers((current) => ({
-      ...current,
-      [roomId]: Array.from(
-        { length: quantity },
-        (_, index) => current[roomId]?.[index] || current[roomId]?.[0] || rooms[roomIndex].offers[0].id,
-      ),
+      [roomId]: (current[roomId] || []).filter((_, i) => i !== stayIndex),
     }));
   };
 
-  useEffect(() => {
-    setQuantities((current) => {
-      let changed = false;
-      const next = { ...current };
-      rooms.forEach((room, roomIndex) => {
-        const dates = roomStays[room.id]?.[0] || defaultDates;
-        const maximum = maxAvailable(roomIndex, dates, room.id);
-        const capped = Math.min(current[room.id] || 0, maximum);
-        if (capped !== (current[room.id] || 0)) {
-          next[room.id] = capped;
-          changed = true;
-        }
-      });
-      return changed ? next : current;
-    });
+  const updateStayRoomCode = (
+    roomId: string,
+    stayIndex: number,
+    newRoomCode: string,
+  ) => {
     setSelectedRoomCodes((current) => {
-      let changed = false;
-      const next = { ...current };
-      rooms.forEach((room, roomIndex) => {
-        const dates = roomStays[room.id]?.[0] || defaultDates;
-        const visibleCodes = room.roomCodes.slice(
-          0,
-          Math.max(0, maxAvailable(roomIndex, dates, room.id)),
-        );
-        const currentCodes = current[room.id] || [];
-        const nextCodes = currentCodes.map(
-          (code, index) =>
-            visibleCodes.includes(code) ? code : visibleCodes[index] || code,
-        );
-        if (nextCodes.some((code, index) => code !== currentCodes[index])) {
-          next[room.id] = nextCodes;
-          changed = true;
-        }
-      });
-      return changed ? next : current;
+      const list = [...(current[roomId] || [])];
+      list[stayIndex] = newRoomCode;
+      return { ...current, [roomId]: list };
     });
-  }, [defaultDates, roomStays, hotel.slug]);
+  };
 
   const updateGuest = (
     roomId: string,
@@ -582,24 +649,26 @@ export default function HotelRooms() {
         if (!quantity) return [];
         const dates = roomStays[room.id] || [];
         const forms = (guestForms[room.id] || []).slice(0, quantity);
+        const codes = selectedRoomCodes[room.id] || [];
         const stays: RoomStay[] = Array.from(
           { length: quantity },
           (_, index) => {
             const stayDates = dates[index] || defaultDates;
             const guest = forms[index] || defaultGuest(searchParams);
             const extra = extraGuests(room, guest);
+            const roomCode =
+              codes[index] || room.roomCodes[index] || `Phòng ${index + 1}`;
+            // Lookup roomId thực từ availableRooms dựa trên code được chọn
+            const matchedRoom = room.availableRooms?.find((r) => r.code === roomCode);
+            const stayRoomId = matchedRoom?.id ?? room.roomId;
             return {
-              roomCode: getRoomCode(room.id, index),
+              roomCode,
+              roomId: stayRoomId,
               checkIn: stayDates.checkIn,
               checkOut: stayDates.checkOut,
               nights: calculateNights(stayDates.checkIn, stayDates.checkOut),
               guest,
               extraGuestCharge: extra.extraGuestCharge,
-              nightlyPrice: getOffer(room.id, index).price,
-              offerId: getOffer(room.id, index).id,
-              offerName: getOffer(room.id, index).nameVi,
-              offerCancellationPolicy:
-                getOffer(room.id, index).cancellationPolicyVi,
             };
           },
         );
@@ -627,11 +696,7 @@ export default function HotelRooms() {
             roomName: room.name,
             roomNameVi: room.nameVi,
             quantity,
-            nightlyPrice: firstStay.nightlyPrice || room.offers[0].price,
-            offerId: firstStay.offerId || room.offers[0].id,
-            offerName: firstStay.offerName || room.offers[0].nameVi,
-            offerCancellationPolicy:
-              firstStay.offerCancellationPolicy || room.offers[0].cancellationPolicyVi,
+            nightlyPrice: room.price,
             guestForms: forms,
             includedCapacity: room.capacity,
             checkIn: firstStay.checkIn,
@@ -649,7 +714,6 @@ export default function HotelRooms() {
       quantities,
       roomStays,
       searchParams,
-      selectedOffers,
       selectedRoomCodes,
     ],
   );
@@ -659,9 +723,7 @@ export default function HotelRooms() {
       sum +
       (selection.stays || []).reduce(
         (staySum, stay) =>
-          staySum +
-          (stay.nightlyPrice || selection.nightlyPrice) *
-            Math.max(0, stay.nights),
+          staySum + selection.nightlyPrice * Math.max(0, stay.nights),
         0,
       ),
     0,
@@ -674,6 +736,20 @@ export default function HotelRooms() {
           staySum + stay.extraGuestCharge * Math.max(0, stay.nights),
         0,
       ),
+    0,
+  );
+  const earlySurcharge = selections.reduce(
+    (sum, selection) =>
+      sum +
+      calculateEarlyCheckInSurcharge(selection.nightlyPrice, arrivalTime) *
+        selection.quantity,
+    0,
+  );
+  const lateSurcharge = selections.reduce(
+    (sum, selection) =>
+      sum +
+      calculateLateCheckOutSurcharge(selection.nightlyPrice, departureTime) *
+        selection.quantity,
     0,
   );
   const allGuestsComplete =
@@ -696,18 +772,14 @@ export default function HotelRooms() {
     0,
   );
   const selectedAvailabilities = selections.flatMap((selection) =>
-    (selection.stays || []).map((stay) => ({
-      availability: getSharedAvailability(
+    (selection.stays || []).map((stay) =>
+      getMockRoomAvailability(
         rooms.findIndex((room) => room.id === selection.roomId),
-        selection.roomId,
-        { checkIn: stay.checkIn, checkOut: stay.checkOut },
+        1,
+        stay.checkIn,
+        stay.checkOut,
       ),
-      codeUnavailable: isRoomCodeUnavailable(
-        selection.roomId,
-        stay.roomCode,
-        { checkIn: stay.checkIn, checkOut: stay.checkOut },
-      ),
-    })),
+    ),
   );
 
   const goCheckout = () => {
@@ -721,14 +793,9 @@ export default function HotelRooms() {
       )
     )
       return setError("Ngày trả phòng phải sau ngày nhận phòng ở từng phòng.");
-    if (
-      selectedAvailabilities.some(
-        ({ availability, codeUnavailable }) =>
-          !availability.available || codeUnavailable,
-      )
-    )
+    if (selectedAvailabilities.some((availability) => !availability.available))
       return setError(
-        "Mã phòng đã chọn không còn trống trong khoảng ngày này. Vui lòng chọn mã phòng khác.",
+        "Một phòng đã hết phòng trong khoảng ngày bạn chọn. Vui lòng chọn ngày khác.",
       );
     setError("");
     const first = selections[0];
@@ -740,7 +807,10 @@ export default function HotelRooms() {
       nights: String(first.nights || 0),
       rooms: String(totalRooms),
       roomPrice: String(first.nightlyPrice),
-      total: String(roomSubtotal + extraGuestTotal),
+      surcharge: String(earlySurcharge + lateSurcharge),
+      total: String(
+        roomSubtotal + earlySurcharge + lateSurcharge + extraGuestTotal,
+      ),
       promo: searchParams.get("promo") || "",
       roomSelections: JSON.stringify(selections),
       arrivalTime,
@@ -844,7 +914,7 @@ export default function HotelRooms() {
               className="mt-1 w-full rounded-xl border border-input p-2.5"
             />
             <span className="mt-1 block text-xs text-muted-foreground">
-              Chỉ để khách sạn tham khảo, không tính phụ thu khi đặt trước
+              Sau 22:00 vui lòng ghi chú lễ tân
             </span>
           </label>
           <label className="text-sm font-medium text-primary">
@@ -855,9 +925,6 @@ export default function HotelRooms() {
               onChange={(event) => setDepartureTime(event.target.value)}
               className="mt-1 w-full rounded-xl border border-input p-2.5"
             />
-            <span className="mt-1 block text-xs text-muted-foreground">
-              Chỉ để khách sạn tham khảo, không tính phụ thu khi đặt trước
-            </span>
           </label>
         </div>
       </section>
@@ -882,28 +949,27 @@ export default function HotelRooms() {
           )}
           <div className="mt-5 space-y-5">
             {rooms.map((item, index) => {
-              const requestedQuantity = quantities[item.id] || 0;
+              const quantity = quantities[item.id] || 0;
               const dates = getDates(item.id, 0);
-              const selectedOffer = getOffer(item.id, 0);
-              const availability = getSharedAvailability(
+              const availability = getMockRoomAvailability(
                 index,
-                item.id,
-                dates,
+                1,
+                dates.checkIn,
+                dates.checkOut,
               );
-              const maxQuantity = maxAvailable(index, dates, item.id);
-              const quantity = Math.min(requestedQuantity, maxQuantity);
+              const maxQuantity = maxAvailable(index, dates);
               return (
                 <article
                   key={item.id}
                   className={`overflow-hidden rounded-2xl border bg-card transition ${selectedRoom === index ? "border-primary ring-2 ring-primary/20" : "border-border"}`}
                   onClick={() => setSelectedRoom(index)}
                 >
-                  <div className="grid md:grid-cols-[220px_minmax(0,1fr)]">
+                  <div className="grid md:grid-cols-[190px_1fr_auto]">
                     <div className="relative">
                       <img
                         src={item.image}
                         alt={item.nameVi}
-                        className="aspect-[4/3] h-full w-full object-cover md:h-[180px] md:aspect-auto"
+                        className="aspect-[4/3] h-full w-full object-cover md:aspect-auto"
                       />
                       <div className="absolute bottom-3 left-3 flex gap-1">
                         <button
@@ -951,16 +1017,33 @@ export default function HotelRooms() {
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                         <span
-                          className={`rounded-full px-3 py-1 font-semibold ${availability.remaining > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                          className={`rounded-full px-3 py-1 font-semibold ${maxQuantity > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
                         >
-                          {availability.remaining > 0
-                            ? `Còn ${availability.remaining} phòng`
+                          {maxQuantity > 0
+                            ? `Còn ${maxQuantity} phòng`
                             : "Hết phòng"}
                         </span>
                         <span className="text-muted-foreground">
-                          Tòa {item.building} · Tầng {item.floor}
+                          Tòa {item.building} · Tầng {item.floor} · Giá cố định
                         </span>
                       </div>
+                      {(() => {
+                        const notice = getCancellationNotice(dates.checkIn);
+                        return (
+                          <div
+                            className={`mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${notice.badgeClass}`}
+                          >
+                            {notice.type === "free" ? (
+                              <Check className="h-3.5 w-3.5 shrink-0" />
+                            ) : notice.type === "partial" ? (
+                              <span className="text-xs">⚠️</span>
+                            ) : (
+                              <span className="text-xs font-bold">✕</span>
+                            )}
+                            <span>{notice.text}</span>
+                          </div>
+                        );
+                      })()}
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -974,89 +1057,15 @@ export default function HotelRooms() {
                         </button>
                       </div>
                     </div>
-                  </div>
-                  <div className="border-t border-border bg-secondary/30 p-5">
-                    <p className="text-xs text-muted-foreground">Giá từ</p>
+                    <div className="border-t border-border bg-secondary/30 p-5 md:border-l md:border-t-0">
+                      <p className="text-xs text-muted-foreground">Giá từ</p>
                       <p className="mt-1 text-2xl font-bold text-primary">
-                        {formatVnd(
-                          Math.min(...item.offers.map((plan) => plan.price)),
-                        )}
+                        {formatVnd(item.price)}
                         <span className="text-xs font-normal text-muted-foreground">
                           {" "}
                           / đêm
                         </span>
                       </p>
-                      <div className="mt-4">
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold uppercase tracking-[.08em] text-primary">
-                            Gói tiêu chuẩn ({item.offers.length})
-                          </p>
-                          <span className="text-[11px] text-muted-foreground">
-                            Chọn một gói ưu đãi
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          {item.offers.map((offer) => (
-                            <button
-                              key={offer.id}
-                              type="button"
-                              disabled={availability.remaining < 1}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setRoomTypeOffer(item.id, offer.id);
-                              }}
-                              className={`w-full rounded-xl border p-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${selectedOffer.id === offer.id ? "border-gold bg-amber-50/40 shadow-sm" : "border-border bg-white hover:border-gold/70"}`}
-                            >
-                              <div className="flex items-start gap-2">
-                                <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${selectedOffer.id === offer.id ? "border-gold bg-gold text-white" : "border-border"}`}>
-                                  {selectedOffer.id === offer.id ? "✓" : ""}
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <div>
-                                      <p className="text-xs font-bold text-primary">{offer.nameVi}</p>
-                                      <p className="mt-1 text-[11px] font-semibold text-muted-foreground">{offer.highlight}</p>
-                                    </div>
-                                    <span className="rounded-md bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-800">
-                                      {offer.highlight}
-                                    </span>
-                                  </div>
-                                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                                    {offer.benefits.map((benefit) => (
-                                      <p key={benefit} className="flex gap-2">
-                                        <span className="text-gold">●</span>
-                                        <span>{benefit}</span>
-                                      </p>
-                                    ))}
-                                    <p className="flex gap-2">
-                                      <span className="text-gold">●</span>
-                                      <span>{offer.cancellationPolicyVi}</span>
-                                    </p>
-                                  </div>
-                                  <p className="mt-2 text-[11px] text-muted-foreground">{offer.conditions}</p>
-                                  <div className="mt-2 flex flex-wrap items-end justify-between gap-2 border-t border-border/70 pt-2">
-                                    <div className="text-[11px] text-muted-foreground">
-                                      <p>Giá công bố <span className="font-bold text-primary">{formatVnd(offer.price)}</span> / đêm</p>
-                                      <p>Giá thành viên <span className="text-base font-bold text-primary">{formatVnd(offer.memberPrice)}</span> / đêm</p>
-                                    </div>
-                                    <p className="text-[11px] font-semibold text-primary">
-                                      {(() => {
-                                        const refund = getOfferRefund(
-                                          offer.cancellationType,
-                                          dates.checkIn,
-                                          dates.checkOut,
-                                          offer.price,
-                                        );
-                                        return `Hiện tại hoàn ${refund.refundPercent}% · Hoàn ${formatVnd(refund.refundAmount)}`;
-                                      })()}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                       <label className="mt-4 block text-xs font-semibold text-primary">
                         Số phòng
                         <select
@@ -1086,6 +1095,7 @@ export default function HotelRooms() {
                         Tối đa {maxQuantity} phòng theo ngày đang chọn
                       </p>
                     </div>
+                  </div>
                   {quantity > 0 && (
                     <div
                       className="border-t border-border bg-white p-5"
@@ -1110,12 +1120,6 @@ export default function HotelRooms() {
                           const guest =
                             guestForms[item.id]?.[stayIndex] ||
                             defaultGuest(searchParams);
-                          const selectedCode = getRoomCode(item.id, stayIndex);
-                          const selectedPlan = getOffer(item.id, stayIndex);
-                          const visibleRoomCodes = item.roomCodes.slice(
-                            0,
-                            Math.max(0, maxQuantity),
-                          );
                           const calendarOpen =
                             calendarTarget?.roomId === item.id &&
                             calendarTarget.stayIndex === stayIndex;
@@ -1125,38 +1129,51 @@ export default function HotelRooms() {
                               className="rounded-xl border border-border bg-secondary/30 p-3"
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <label className="flex items-center gap-2 text-xs font-semibold text-primary">
-                                  Phòng {stayIndex + 1}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-primary">
+                                    Phòng {stayIndex + 1}:
+                                  </span>
                                   <select
-                                    value={selectedCode}
+                                    value={
+                                      selectedRoomCodes[item.id]?.[stayIndex] ||
+                                      item.roomCodes[stayIndex] ||
+                                      ""
+                                    }
                                     onChange={(event) =>
-                                      setRoomCode(
+                                      updateStayRoomCode(
                                         item.id,
                                         stayIndex,
                                         event.target.value,
                                       )
                                     }
-                                    onClick={(event) => event.stopPropagation()}
-                                    className="rounded-lg border border-input bg-white px-2 py-1.5 text-xs font-bold"
+                                    className="rounded-lg border border-primary/30 bg-white px-2.5 py-1 text-xs font-bold text-primary shadow-sm hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                                   >
-                                    {visibleRoomCodes.map((code) => (
-                                      <option
-                                        key={code}
-                                        value={code}
-                                        disabled={
-                                          selectedRoomCodes[item.id]?.some(
-                                            (selected, index) =>
-                                              index !== stayIndex &&
-                                              selected === code,
-                                          ) ||
-                                          isRoomCodeUnavailable(item.id, code, stayDates)
-                                        }
-                                      >
-                                        {code}
-                                      </option>
-                                    ))}
+                                    {/* Dùng availableRooms (chỉ phòng READY từ backend) nếu có, fallback về roomCodes */}
+                                    {(item.availableRooms
+                                      ? item.availableRooms.map((r) => r.code)
+                                      : item.roomCodes
+                                    ).map((code) => {
+                                      const isChosenByOther = (
+                                        selectedRoomCodes[item.id] || []
+                                      ).some(
+                                        (c, idx) =>
+                                          idx !== stayIndex && c === code,
+                                      );
+                                      return (
+                                        <option
+                                          key={code}
+                                          value={code}
+                                          disabled={isChosenByOther}
+                                        >
+                                          {code}
+                                          {isChosenByOther
+                                            ? " (Đã chọn)"
+                                            : ""}
+                                        </option>
+                                      );
+                                    })}
                                   </select>
-                                </label>
+                                </div>
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1174,6 +1191,23 @@ export default function HotelRooms() {
                                     : "Chọn khoảng ngày"}
                                 </button>
                               </div>
+                              {(() => {
+                                const notice = getCancellationNotice(stayDates.checkIn);
+                                return (
+                                  <div
+                                    className={`mt-2 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${notice.badgeClass}`}
+                                  >
+                                    {notice.type === "free" ? (
+                                      <Check className="h-3 w-3 shrink-0" />
+                                    ) : notice.type === "partial" ? (
+                                      <span className="text-xs">⚠️</span>
+                                    ) : (
+                                      <span className="text-xs font-bold">✕</span>
+                                    )}
+                                    <span>{notice.text}</span>
+                                  </div>
+                                );
+                              })()}
                               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                 <label className="text-xs font-semibold text-primary">
                                   Nhận phòng
@@ -1209,59 +1243,6 @@ export default function HotelRooms() {
                                     className="mt-1 w-full rounded-lg border border-input bg-white p-2"
                                   />
                                 </label>
-                              </div>
-                              <div className="mt-3 rounded-lg border border-primary/10 bg-white p-2 text-xs text-muted-foreground">
-                                <p>
-                                  {currentRefundNotice(
-                                    selectedPlan.cancellationType,
-                                    stayDates.checkIn,
-                                    stayDates.checkOut,
-                                    selectedPlan.price,
-                                  )}
-                                </p>
-                                <p className="mt-1 font-semibold text-primary">
-                                  {daysUntilCheckIn(stayDates.checkIn) > 0
-                                    ? `Còn ${daysUntilCheckIn(stayDates.checkIn)} ngày đến ngày nhận phòng`
-                                    : "Ngày nhận phòng đã đến hoặc đã qua"}
-                                </p>
-                              </div>
-                              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                {item.offers.map((offer) => (
-                                  <button
-                                    key={offer.id}
-                                    type="button"
-                                    onClick={() =>
-                                      setRoomOffer(item.id, stayIndex, offer.id)
-                                    }
-                                    className={`rounded-lg border p-2 text-left text-xs transition ${selectedPlan.id === offer.id ? "border-primary bg-primary/10 text-primary" : "border-border bg-white text-muted-foreground hover:border-primary/50"}`}
-                                  >
-                                    <span className="flex items-center justify-between gap-2 font-semibold">
-                                      <span>{offer.nameVi}</span>
-                                      <span>{formatVnd(offer.price)}</span>
-                                    </span>
-                                    <span className="mt-1 block leading-4 opacity-80">
-                                      {offer.benefits.slice(0, 2).join(" · ")}
-                                    </span>
-                                    <span className="mt-1 block leading-4 opacity-80">
-                                      {offer.cancellationPolicyVi}
-                                    </span>
-                                    <span className="mt-1 block font-semibold text-primary">
-                                      {(() => {
-                                        const refund = getOfferRefund(
-                                          offer.cancellationType,
-                                          stayDates.checkIn,
-                                          stayDates.checkOut,
-                                          offer.price,
-                                        );
-                                        return `Hiện tại hoàn ${refund.refundPercent}% · Hoàn ${formatVnd(refund.refundAmount)}`;
-                                      })()}
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
-                              <div className="mt-3 rounded-lg border border-primary/10 bg-white p-2 text-xs text-muted-foreground">
-                                <span className="font-semibold text-primary">Đang chọn: </span>
-                                {selectedCode} · {selectedPlan.nameVi} · {formatVnd(selectedPlan.price)}/đêm
                               </div>
                               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                                 <label className="text-xs text-muted-foreground">
@@ -1349,10 +1330,17 @@ export default function HotelRooms() {
                               {calendarOpen && (
                                 <RoomAvailabilityCalendar
                                   roomIndex={index}
-                                  basePrice={selectedPlan.price}
+                                  basePrice={item.price}
                                   requestedRooms={1}
                                   selectedStartDate={stayDates.checkIn}
                                   selectedEndDate={stayDates.checkOut}
+                                  availableCount={
+                                    item.availableRooms
+                                      ? item.availableRooms.length
+                                      : item.inventory
+                                  }
+                                  roomId={item.roomId || item.id}
+                                  roomCodes={item.roomCodes}
                                   onSelectRange={(start, end) =>
                                     selectCalendarRange(
                                       item.id,
@@ -1379,9 +1367,11 @@ export default function HotelRooms() {
           selections={selections}
           arrivalTime={arrivalTime}
           departureTime={departureTime}
+          onRemoveRoom={removeRoomStay}
           totals={{
             subtotal: roomSubtotal,
-            total: roomSubtotal + extraGuestTotal,
+            total:
+              roomSubtotal + earlySurcharge + lateSurcharge + extraGuestTotal,
           }}
           emptyState={
             <p className="mt-4 text-sm text-muted-foreground">
@@ -1409,6 +1399,10 @@ export default function HotelRooms() {
       {detailRoom !== null && (
         <RoomDetailsModal
           room={rooms[detailRoom]}
+          remainingRooms={
+            maxAvailable(detailRoom, getDates(rooms[detailRoom].id, 0))
+          }
+          checkInDate={getDates(rooms[detailRoom].id, 0).checkIn}
           onClose={() => setDetailRoom(null)}
         />
       )}

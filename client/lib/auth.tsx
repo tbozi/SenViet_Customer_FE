@@ -12,6 +12,10 @@ export interface AuthUser {
   phone?: string;
   birthDate?: string;
   identityNumber?: string;
+  cccd?: string;
+  preferredHotel?: string;
+  roomPreference?: string;
+  dietaryPreference?: string;
 }
 
 interface AuthContextValue {
@@ -81,18 +85,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       persistSession(loggedUser, jwtToken);
 
-      // Lấy thêm thông tin profile đầy đủ (userId, cccd, dateOfBirth...)
       try {
-        const profileRes = await axiosInstance.get("/users/me/profile");
+        const profileRes = await axiosInstance.get("/customer/me/profile").catch(() => axiosInstance.get("/users/me/profile"));
         const profile = profileRes.data.result;
         const fullUser: AuthUser = {
-          userId: profile.userId,
+          userId: profile.userId || profile.id || 0,
           accountId: profile.accountId,
           name: profile.fullName,
           email: profile.email,
           phone: profile.phone,
-          birthDate: profile.dateOfBirth,
+          birthDate: profile.dateOfBirth || loggedUser.birthDate || "",
           identityNumber: profile.cccd,
+          cccd: profile.cccd,
         };
         persistSession(fullUser, jwtToken);
       } catch {
@@ -166,19 +170,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ============================================================
   const updateProfile: AuthContextValue["updateProfile"] = async (data) => {
     try {
-      const res = await axiosInstance.put("/users/me/profile", {
+      const payload = {
         fullName: data.name,
         phone: data.phone,
         cccd: data.identityNumber,
-        dateOfBirth: data.birthDate,
-      });
+        birthDate: data.birthDate,
+      };
+      let res;
+      try {
+        res = await axiosInstance.put("/customer/me/profile", payload);
+      } catch (e: any) {
+        if (e.response?.status === 404 || e.response?.data?.message?.includes("No static resource")) {
+          res = await axiosInstance.put("/users/me/profile", payload);
+        } else {
+          throw e;
+        }
+      }
       const profile = res.data.result;
       const updated: AuthUser = {
         ...user!,
-        name: profile.fullName,
-        phone: profile.phone,
-        identityNumber: profile.cccd,
-        birthDate: profile.dateOfBirth,
+        name: profile?.fullName || data.name,
+        phone: profile?.phone || data.phone,
+        identityNumber: profile?.cccd || data.identityNumber || data.cccd,
+        cccd: profile?.cccd || data.cccd || data.identityNumber,
+        birthDate: data.birthDate || user?.birthDate || "",
       };
       persistSession(updated, token);
       return { ok: true };

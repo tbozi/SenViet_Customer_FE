@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
-import { CalendarDays, Users } from "lucide-react";
+import { AlertCircle, BookmarkCheck, CalendarDays, Check, Tag, Users, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import { formatVnd } from "@/data/hotels";
 import {
+  getCancellationNotice,
+  getCancellationSchedule,
   type BookingService,
   type RoomSelection,
   type RoomStay,
@@ -22,6 +25,14 @@ export interface BookingSummaryTotals {
   subtotalLabel?: string;
 }
 
+export interface SavedPromotionSummaryItem {
+  code: string;
+  name: string;
+  discountText?: string;
+  applicable?: boolean;
+  reason?: string;
+}
+
 interface BookingSummaryPanelProps {
   hotelName: string;
   selections: RoomSelection[];
@@ -30,13 +41,15 @@ interface BookingSummaryPanelProps {
   totals?: BookingSummaryTotals;
   fallbackServices?: BookingService[];
   promo?: ReactNode;
-  savedPromotions?: Array<{ code: string; name: string }>;
+  savedPromotions?: SavedPromotionSummaryItem[];
+  selectedPromotionCode?: string;
   onSelectPromotion?: (code: string) => void;
   callout?: ReactNode;
   children?: ReactNode;
   emptyState?: ReactNode;
   cta?: ReactNode;
   className?: string;
+  onRemoveRoom?: (roomId: string, stayIndex: number, roomCode?: string) => void;
 }
 
 type RoomBreakdown = {
@@ -46,6 +59,7 @@ type RoomBreakdown = {
   extraGuestSurcharge: number;
   services: BookingService[];
   subtotal: number;
+  stayIndex?: number;
 };
 
 function selectionStays(selection: RoomSelection): RoomStay[] {
@@ -80,12 +94,14 @@ export default function BookingSummaryPanel({
   fallbackServices = [],
   promo,
   savedPromotions = [],
+  selectedPromotionCode,
   onSelectPromotion,
   callout,
   children,
   emptyState,
   cta,
   className = "",
+  onRemoveRoom,
 }: BookingSummaryPanelProps) {
   const roomBreakdowns = selections.flatMap((selection, selectionIndex) =>
     selectionStays(selection).map((stay, stayIndex) => {
@@ -109,6 +125,7 @@ export default function BookingSummaryPanel({
       return {
         selection,
         stay,
+        stayIndex,
         roomPrice,
         extraGuestSurcharge,
         services,
@@ -159,13 +176,31 @@ export default function BookingSummaryPanel({
       {roomCount ? (
         <div className="mt-4 space-y-4">
           {roomBreakdowns.map((breakdown) => {
-            const { selection, stay } = breakdown;
+            const { selection, stay, stayIndex = 0 } = breakdown;
             return (
               <section
-                key={`${selection.roomId}-${stay.roomCode}`}
-                className="rounded-xl border border-primary/10 bg-secondary/30 p-4"
+                key={`${selection.roomId}-${stay.roomCode}-${stayIndex}`}
+                className="relative rounded-xl border border-primary/10 bg-secondary/30 p-4 transition-all hover:border-primary/20"
               >
-                <div className="flex items-start justify-between gap-3">
+                {onRemoveRoom && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRemoveRoom(selection.roomId, stayIndex, stay.roomCode)
+                    }
+                    title={`Hủy ${stay.roomCode || selection.roomNameVi}`}
+                    aria-label={`Hủy ${stay.roomCode || selection.roomNameVi}`}
+                    className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:bg-rose-100 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+
+                <div
+                  className={`flex items-start justify-between gap-3 ${
+                    onRemoveRoom ? "pr-8" : ""
+                  }`}
+                >
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[.1em] text-gold">
                       {selection.roomNameVi}
@@ -198,6 +233,29 @@ export default function BookingSummaryPanel({
                     {stay.guest.adults} người lớn · {stay.guest.children} trẻ em
                     · {stay.guest.infants} em bé · {stay.nights} đêm
                   </p>
+                  {stay.checkIn ? (() => {
+                    const notice = getCancellationNotice(stay.checkIn);
+                    return (
+                      <p
+                        className={`flex items-center gap-1.5 text-[11px] font-medium ${
+                          notice.type === "free"
+                            ? "text-emerald-700"
+                            : notice.type === "partial"
+                              ? "text-amber-700"
+                              : "text-rose-700"
+                        }`}
+                      >
+                        {notice.type === "free" ? (
+                          <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                        ) : notice.type === "partial" ? (
+                          <span className="text-xs">⚠️</span>
+                        ) : (
+                          <span className="text-xs font-bold">✕</span>
+                        )}
+                        <span>{notice.text}</span>
+                      </p>
+                    );
+                  })() : null}
                 </div>
 
                 <div className="mt-3 space-y-2 border-t border-primary/10 pt-3 text-xs">
@@ -250,28 +308,97 @@ export default function BookingSummaryPanel({
         <>
           {promo}
           {savedPromotions.length > 0 && onSelectPromotion ? (
-            <div className="mt-4 rounded-xl border border-gold/30 bg-amber-50/60 p-3">
-              <p className="text-xs font-semibold uppercase tracking-[.12em] text-gold-foreground">
-                Ưu đãi đã lưu
-              </p>
-              <div className="mt-2 space-y-2">
-                {savedPromotions.map((promotion) => (
-                  <button
-                    key={promotion.code}
-                    type="button"
-                    onClick={() => onSelectPromotion(promotion.code)}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-gold/20 bg-white px-3 py-2 text-left text-xs transition hover:border-primary"
-                  >
-                    <span>
-                      <strong className="block text-primary">{promotion.code}</strong>
-                      <span className="text-muted-foreground">{promotion.name}</span>
-                    </span>
-                    <span className="shrink-0 font-semibold text-primary">Áp dụng</span>
-                  </button>
-                ))}
+            <div className="mt-4 rounded-xl border border-amber-300/80 bg-amber-50/60 p-3.5 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-amber-900">
+                  <BookmarkCheck className="h-4 w-4 text-amber-700" />
+                  <p className="text-xs font-bold uppercase tracking-wider">
+                    Ưu đãi đã lưu ({savedPromotions.length})
+                  </p>
+                </div>
+                <span className="text-[11px] text-muted-foreground">Chọn để áp dụng</span>
+              </div>
+              <div className="mt-2.5 space-y-2">
+                {savedPromotions.map((promotion) => {
+                  const isApplicable = promotion.applicable !== false;
+                  const isSelected =
+                    Boolean(selectedPromotionCode) &&
+                    selectedPromotionCode.toUpperCase() ===
+                      promotion.code.toUpperCase();
+
+                  return (
+                    <div
+                      key={promotion.code}
+                      className={`relative flex items-start justify-between gap-2.5 rounded-lg border p-2.5 text-left text-xs transition ${
+                        !isApplicable
+                          ? "border-slate-200 bg-slate-100/80 opacity-45 cursor-not-allowed"
+                          : isSelected
+                            ? "border-emerald-500 bg-emerald-50/90 shadow-2xs"
+                            : "border-amber-200/90 bg-white hover:border-primary hover:shadow-2xs"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <strong className="font-mono text-xs font-bold tracking-wider text-primary">
+                            {promotion.code}
+                          </strong>
+                          {isSelected && (
+                            <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              Đang áp dụng
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 font-medium text-slate-800 line-clamp-1">
+                          {promotion.name}
+                        </p>
+                        {promotion.discountText && (
+                          <p className="text-[10px] font-semibold text-amber-800">
+                            {promotion.discountText}
+                          </p>
+                        )}
+                        {!isApplicable && promotion.reason && (
+                          <p className="mt-1 flex items-start gap-1 text-[10px] text-slate-600 italic leading-tight">
+                            <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-slate-500" />
+                            <span>{promotion.reason}</span>
+                          </p>
+                        )}
+                      </div>
+
+                      {isApplicable ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onSelectPromotion(isSelected ? "" : promotion.code)
+                          }
+                          className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                            isSelected
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : "bg-primary text-primary-foreground hover:bg-primary/90"
+                          }`}
+                        >
+                          {isSelected ? "Bỏ chọn" : "Áp dụng"}
+                        </button>
+                      ) : (
+                        <span className="shrink-0 rounded-md border border-slate-200 bg-slate-200/80 px-2.5 py-1 text-xs font-medium text-slate-500">
+                          Không áp dụng
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="mt-3 text-xs text-muted-foreground">
+              Chưa lưu mã giảm giá?{" "}
+              <Link
+                to="/offers"
+                className="font-semibold text-primary underline hover:text-gold"
+              >
+                Xem & lưu voucher
+              </Link>
+            </div>
+          )}
           {callout}
           {children}
 
@@ -302,7 +429,7 @@ export default function BookingSummaryPanel({
                 ))}
                 {vatAndSystemFee > 0 && (
                   <div className="flex justify-between gap-3">
-                    <span>VAT & phí hệ thống</span>
+                    <span>Thuế VAT (8%)</span>
                     <span>{formatVnd(vatAndSystemFee)}</span>
                   </div>
                 )}

@@ -57,13 +57,13 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: "/auth/resend-otp", method: "POST", data: body }),
     }),
     getMyProfile: builder.query<Record<string, unknown>, void>({
-      query: () => ({ url: "/users/me/profile", method: "GET" }),
+      query: () => ({ url: "/customer/me/profile", method: "GET" }),
       transformResponse: (response: ApiResponse<Record<string, unknown>>) =>
         response.result,
       providesTags: ["User"],
     }),
     changePassword: builder.mutation<void, ChangePasswordRequest>({
-      query: (body) => ({ url: "/users/me/change-password", method: "PATCH", data: body }),
+      query: (body) => ({ url: "/customer/me/change-password", method: "PATCH", data: body }),
     }),
   }),
 });

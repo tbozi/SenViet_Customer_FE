@@ -30,7 +30,19 @@ export default defineConfig(({ mode }) => ({
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
       },
+      "/rooms": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+      },
+      "/orders": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+      },
       "/customer": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+      },
+      "/reviews": {
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
       },

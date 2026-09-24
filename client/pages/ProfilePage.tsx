@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
@@ -20,6 +21,9 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
@@ -58,11 +62,16 @@ export default function ProfilePage() {
     }
     setPasswordLoading(true);
     try {
-      await axiosInstance.patch("/users/me/change-password", {
-        currentPassword,
-        newPassword,
-        confirmPassword,
-      });
+      const payload = { currentPassword, newPassword, confirmPassword };
+      try {
+        await axiosInstance.patch("/customer/me/change-password", payload);
+      } catch (e: any) {
+        if (e.response?.status === 404 || e.response?.data?.message?.includes("No static resource")) {
+          await axiosInstance.patch("/users/me/change-password", payload);
+        } else {
+          throw e;
+        }
+      }
       setPasswordMsg("Đổi mật khẩu thành công!");
       setCurrentPassword("");
       setNewPassword("");
@@ -149,38 +158,71 @@ export default function ProfilePage() {
         <form onSubmit={submitChangePassword} className="mt-5 rounded-2xl border border-border bg-card p-6">
           <h2 className="font-semibold text-primary">Bảo mật tài khoản — Đổi mật khẩu</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-medium text-primary sm:col-span-2">
-              Mật khẩu hiện tại
-              <input
-                type="password"
-                required
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input p-3"
-              />
-            </label>
-            <label className="text-sm font-medium text-primary">
-              Mật khẩu mới
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input p-3"
-              />
-            </label>
-            <label className="text-sm font-medium text-primary">
-              Xác nhận mật khẩu mới
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input p-3"
-              />
-            </label>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-primary">Mật khẩu hiện tại</label>
+              <div className="relative mt-1">
+                <input
+                  type={showCurrentPassword ? "text" : "password"}
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full rounded-xl border border-input p-3 pr-11"
+                  placeholder="Nhập mật khẩu hiện tại"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition"
+                  aria-label={showCurrentPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary">Mật khẩu mới</label>
+              <div className="relative mt-1">
+                <input
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full rounded-xl border border-input p-3 pr-11"
+                  placeholder="Ít nhất 6 ký tự"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition"
+                  aria-label={showNewPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary">Xác nhận mật khẩu mới</label>
+              <div className="relative mt-1">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-xl border border-input p-3 pr-11"
+                  placeholder="Nhập lại mật khẩu mới"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition"
+                  aria-label={showConfirmPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
           </div>
           {passwordError && (
             <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{passwordError}</p>

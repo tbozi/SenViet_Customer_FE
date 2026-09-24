@@ -1,6 +1,6 @@
 import { createRoot, Root } from "react-dom/client";
 import "@/global.css";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, useSearchParams } from "react-router-dom";
 import { Provider as ReduxProvider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,9 +14,11 @@ import Hotels from "@/pages/Hotels";
 import SearchResults from "@/pages/SearchResults";
 import HotelRooms from "@/pages/HotelRooms";
 import HotelDetails from "@/pages/HotelDetails";
+import BookingServices from "@/pages/BookingServices";
 import Checkout from "@/pages/Checkout";
 import BookingSuccess from "@/pages/BookingSuccess";
 import BookingHistory from "@/pages/BookingHistory";
+import InvoicePage from "@/pages/InvoicePage";
 import ProfilePage from "@/pages/ProfilePage";
 import CustomerAccount from "@/pages/CustomerAccount";
 import ReviewPage from "@/pages/ReviewPage";
@@ -29,15 +31,94 @@ import { store } from "@/store";
 
 const queryClient = new QueryClient();
 
+function ServicesRoute() {
+  const [params] = useSearchParams();
+  if (params.get("hotel") || params.get("roomSelections") || params.get("room")) {
+    return <BookingServices />;
+  }
+  return <Services />;
+}
+
 function ProtectedProfile() {
   const { user } = useAuth();
   const { t } = useLanguage();
   if (!user) return <AuthPage mode="login" />;
-  return <main className="container py-16"><div className="mx-auto max-w-2xl"><p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">Sen Việt member</p><h1 className="mt-3 font-display text-4xl font-bold text-primary">{t("profile.title")}</h1><div className="mt-8 rounded-2xl border border-border bg-card p-6"><h2 className="font-display text-xl font-bold text-primary">{t("profile.personalInfo")}</h2><div className="mt-5 grid gap-4 sm:grid-cols-2"><div><p className="text-xs text-muted-foreground">{t("auth.name")}</p><p className="mt-1 font-medium">{user.name}</p></div><div><p className="text-xs text-muted-foreground">{t("auth.email")}</p><p className="mt-1 font-medium">{user.email}</p></div></div></div><div className="mt-5 rounded-2xl border border-border bg-card p-6"><h2 className="font-display text-xl font-bold text-primary">{t("profile.bookingHistory")}</h2><p className="mt-4 text-sm text-muted-foreground">{t("profile.noBookings")}</p></div></div></main>;
+  return (
+    <main className="container py-16">
+      <div className="mx-auto max-w-2xl">
+        <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">Sen Việt member</p>
+        <h1 className="mt-3 font-display text-4xl font-bold text-primary">{t("profile.title")}</h1>
+        <div className="mt-8 rounded-2xl border border-border bg-card p-6">
+          <h2 className="font-display text-xl font-bold text-primary">{t("profile.personalInfo")}</h2>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="text-xs text-muted-foreground">{t("auth.name")}</p>
+              <p className="mt-1 font-medium">{user.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">{t("auth.email")}</p>
+              <p className="mt-1 font-medium">{user.email}</p>
+            </div>
+          </div>
+        </div>
+        <div className="mt-5 rounded-2xl border border-border bg-card p-6">
+          <h2 className="font-display text-xl font-bold text-primary">{t("profile.bookingHistory")}</h2>
+          <p className="mt-4 text-sm text-muted-foreground">{t("profile.noBookings")}</p>
+        </div>
+      </div>
+    </main>
+  );
 }
 
 function App() {
-  return <ReduxProvider store={store}><QueryClientProvider client={queryClient}><TooltipProvider><Toaster /><Sonner /><LanguageProvider><AuthProvider><BrowserRouter><SiteLayout><Routes><Route path="/" element={<Index />} /><Route path="/hotels" element={<Hotels />} /><Route path="/search" element={<SearchResults />} /><Route path="/hotels/:slug" element={<HotelRooms />} /><Route path="/hotels/:slug/details" element={<HotelDetails />} /><Route path="/checkout" element={<Checkout />} /><Route path="/booking-success/:bookingId" element={<BookingSuccess />} /><Route path="/bookings" element={<BookingHistory />} /><Route path="/offers" element={<Offers />} /><Route path="/services" element={<Services />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} /><Route path="/account" element={<CustomerAccount />} /><Route path="/loyalty" element={<LoyaltyPage />} /><Route path="/crm" element={<CustomerCRM />} /><Route path="/reviews/:bookingId" element={<ReviewPage />} /><Route path="/profile" element={<ProfilePage />} /><Route path="/forgot-password" element={<Placeholder title="Quên mật khẩu / OTP" />} /><Route path="/change-password" element={<Placeholder title="Đổi mật khẩu" />} /><Route path="/about" element={<Placeholder title="About Sen Việt" />} /><Route path="/contact" element={<Placeholder title="Contact Sen Việt" />} /><Route path="/admin" element={<Placeholder title="Chain management" />} /><Route path="*" element={<NotFound />} /></Routes></SiteLayout></BrowserRouter></AuthProvider></LanguageProvider></TooltipProvider></QueryClientProvider></ReduxProvider>;
+  return (
+    <ReduxProvider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <LanguageProvider>
+            <AuthProvider>
+              <BrowserRouter>
+                <SiteLayout>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/hotels" element={<Hotels />} />
+                    <Route path="/search" element={<SearchResults />} />
+                    <Route path="/hotels/:slug" element={<HotelRooms />} />
+                    <Route path="/hotels/:slug/details" element={<HotelDetails />} />
+                    <Route path="/hotels/:slug/services" element={<BookingServices />} />
+                    <Route path="/booking-services" element={<BookingServices />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/booking-success" element={<BookingSuccess />} />
+                    <Route path="/booking-success/:bookingId" element={<BookingSuccess />} />
+                    <Route path="/bookings" element={<BookingHistory />} />
+                    <Route path="/invoices" element={<InvoicePage />} />
+                    <Route path="/invoices/:id" element={<InvoicePage />} />
+                    <Route path="/offers" element={<Offers />} />
+                    <Route path="/services" element={<ServicesRoute />} />
+                    <Route path="/login" element={<AuthPage mode="login" />} />
+                    <Route path="/register" element={<AuthPage mode="register" />} />
+                    <Route path="/account" element={<CustomerAccount />} />
+                    <Route path="/loyalty" element={<LoyaltyPage />} />
+                    <Route path="/crm" element={<CustomerCRM />} />
+                    <Route path="/reviews/:bookingId" element={<ReviewPage />} />
+                    <Route path="/profile" element={<ProfilePage />} />
+                    <Route path="/forgot-password" element={<Placeholder title="Quên mật khẩu / OTP" />} />
+                    <Route path="/change-password" element={<Placeholder title="Đổi mật khẩu" />} />
+                    <Route path="/about" element={<Placeholder title="About Sen Việt" />} />
+                    <Route path="/contact" element={<Placeholder title="Contact Sen Việt" />} />
+                    <Route path="/admin" element={<Placeholder title="Chain management" />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </SiteLayout>
+              </BrowserRouter>
+            </AuthProvider>
+          </LanguageProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ReduxProvider>
+  );
 }
 
 const container = document.getElementById("root") as (HTMLElement & { __senvietReactRoot?: Root }) | null;

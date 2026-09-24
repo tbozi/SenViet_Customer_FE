@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -19,8 +19,10 @@ import {
   Wifi,
 } from "lucide-react";
 import HotelCard from "@/components/HotelCard";
-import { formatVnd, hotels } from "@/data/hotels";
-import { rooms } from "@/data/rooms";
+import { formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
+import { rooms as fallbackRooms, type RoomType } from "@/data/rooms";
+import { fetchRoomsByHotel } from "@/services/roomApi";
+import { fetchHotelReviews, type HotelReviewSummary } from "@/services/reviewApi";
 
 const fallbackGallery = [
   "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?q=80&w=1400&auto=format&fit=crop",
@@ -67,8 +69,45 @@ export default function HotelDetails() {
   const [roomsCount, setRoomsCount] = useState(1);
   const [promo, setPromo] = useState("");
 
+  const [roomList, setRoomList] = useState<RoomType[]>(fallbackRooms);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (slug) {
+      fetchRoomsByHotel(slug).then((rooms) => {
+        if (isMounted && rooms && rooms.length > 0) {
+          setRoomList(rooms);
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [slug]);
+
+  const [reviewSummary, setReviewSummary] = useState<HotelReviewSummary | null>(null);
+  const [starFilter, setStarFilter] = useState<number>(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const hotelId = (hotel as any)?.id || (slug ? hotelSlugToId[slug] : undefined) || 1;
+    fetchHotelReviews(hotelId).then((res) => {
+      if (isMounted && res) {
+        setReviewSummary(res);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [slug, hotel]);
+
   const galleryImages = useMemo(() => Array.from(new Set([hotel?.image, ...fallbackGallery].filter(Boolean) as string[])), [hotel?.image]);
-  const sortedRooms = useMemo(() => [...rooms].sort((a, b) => a.price - b.price), []);
+  const sortedRooms = useMemo(() => [...roomList].sort((a, b) => a.price - b.price), [roomList]);
+  const filteredReviews = useMemo(() => {
+    if (!reviewSummary?.reviews) return [];
+    if (starFilter === 0) return reviewSummary.reviews;
+    return reviewSummary.reviews.filter((r) => r.rating === starFilter);
+  }, [reviewSummary, starFilter]);
 
   if (!hotel) {
     return (
@@ -171,6 +210,183 @@ export default function HotelDetails() {
       <section id="rooms" className="mt-16 scroll-mt-6"><SectionHeading eyebrow="Sen Việt rooms" title="Chọn căn phòng phù hợp" description="Bốn hạng phòng hiện có, sắp xếp theo giá từ thấp đến cao. Không bao gồm ăn uống." /><div className="mt-7 space-y-5">
         {sortedRooms.map((room) => <article key={room.id} className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm transition hover:shadow-md"><div className="grid md:grid-cols-[230px_minmax(0,1fr)_190px]"><img src={room.image} alt={room.nameVi} className="h-56 w-full object-cover md:h-full" /><div className="p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[.12em] text-gold">{room.name}</p><h3 className="mt-1 font-display text-2xl font-bold text-primary">{room.nameVi}</h3></div><span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">Không bao gồm ăn uống</span></div><div className="mt-4 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2"><p className="flex items-center gap-2"><Building2 className="h-4 w-4 text-gold" /> Tòa {room.building} · Tầng {room.floor}</p><p className="flex items-center gap-2"><BedDouble className="h-4 w-4 text-gold" /> {room.bedsVi}</p><p className="flex items-center gap-2"><Navigation className="h-4 w-4 text-gold" /> {room.size}</p><p className="flex items-center gap-2"><Users className="h-4 w-4 text-gold" /> {room.capacity.adults} người lớn · {room.capacity.children} trẻ em</p></div><p className="mt-4 text-sm leading-relaxed text-muted-foreground">{room.description}</p><p className="mt-4 text-xs text-muted-foreground">Mã phòng mẫu: <span className="font-semibold text-primary">{room.roomCodes.slice(0, 2).join(", ")}</span></p></div><div className="flex flex-col justify-between border-t border-border bg-secondary/40 p-5 md:border-l md:border-t-0"><div><p className="text-xs text-muted-foreground">Giá từ / đêm</p><p className="mt-1 text-2xl font-bold text-primary">{formatVnd(room.price)}</p><p className="mt-1 text-xs text-muted-foreground">Còn {room.inventory} phòng mẫu</p></div><Link to={`/hotels/${hotel.slug}?${new URLSearchParams({ checkIn, checkOut, adults: String(adults), children: "0", rooms: "1", room: room.id }).toString()}`} className="mt-5 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground transition hover:bg-primary/90">Chọn phòng <ArrowRight className="h-4 w-4" /></Link></div></div></article>)}
       </div></section>
+
+      {/* ====== Khối Đánh giá từ khách hàng ====== */}
+      <section id="reviews" className="mt-16 scroll-mt-6 border-t border-border pt-12">
+        <SectionHeading
+          eyebrow="Xếp hạng & Đánh giá"
+          title="Đánh giá chất lượng dịch vụ"
+          description="Điểm xếp hạng sao từ du khách sau khi hoàn tất thủ tục trả phòng tại Sen Việt."
+        />
+
+        {reviewSummary && (
+          <div className="mt-8 grid gap-8 lg:grid-cols-[340px_1fr]">
+            {/* Cột trái: Thống kê điểm số và tiêu chí */}
+            <div className="rounded-3xl border border-border bg-white p-6 shadow-sm">
+              <div className="flex items-baseline gap-3">
+                <span className="font-display text-5xl font-extrabold text-primary">
+                  {reviewSummary.averageRating}
+                </span>
+                <div>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={`h-4 w-4 ${
+                          s <= Math.round(reviewSummary.averageRating)
+                            ? "fill-gold text-gold"
+                            : "text-muted-foreground/30"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                    Dựa trên {reviewSummary.totalReviews} đánh giá đã xác thực
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Thước đo tiêu chí */}
+              <div className="mt-6 space-y-3.5 border-t border-border pt-5">
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-primary">
+                    <span>Vệ sinh & Sạch sẽ</span>
+                    <span className="text-gold font-bold">{reviewSummary.avgCleanliness} / 5</span>
+                  </div>
+                  <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-gold"
+                      style={{ width: `${(reviewSummary.avgCleanliness / 5) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-primary">
+                    <span>Thái độ & Phục vụ</span>
+                    <span className="text-gold font-bold">{reviewSummary.avgService} / 5</span>
+                  </div>
+                  <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-gold"
+                      style={{ width: `${(reviewSummary.avgService / 5) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-primary">
+                    <span>Tiện nghi phòng nghỉ</span>
+                    <span className="text-gold font-bold">{reviewSummary.avgFacilities} / 5</span>
+                  </div>
+                  <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-gold"
+                      style={{ width: `${(reviewSummary.avgFacilities / 5) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs font-semibold text-primary">
+                    <span>Vị trí & Cảnh quan</span>
+                    <span className="text-gold font-bold">{reviewSummary.avgLocation} / 5</span>
+                  </div>
+                  <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-gold"
+                      style={{ width: `${(reviewSummary.avgLocation / 5) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Lọc theo số sao */}
+              <div className="mt-6 border-t border-border pt-5">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Lọc theo số sao</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStarFilter(0)}
+                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                      starFilter === 0
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-primary hover:bg-secondary/80"
+                    }`}
+                  >
+                    Tất cả ({reviewSummary.totalReviews})
+                  </button>
+                  {[5, 4, 3].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setStarFilter(star)}
+                      className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                        starFilter === star
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-primary hover:bg-secondary/80"
+                      }`}
+                    >
+                      {star} <Star className="h-3 w-3 fill-gold text-gold" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Cột phải: Danh sách nhận xét của khách hàng */}
+            <div className="space-y-4">
+              {filteredReviews.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
+                  Chưa có đánh giá nào cho mức lọc này.
+                </div>
+              ) : (
+                filteredReviews.map((rev) => (
+                  <article
+                    key={rev.id}
+                    className="rounded-3xl border border-border bg-white p-6 shadow-sm transition hover:shadow-md"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-display text-base font-bold text-primary">{rev.customerName}</h4>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Đã xác thực kỳ nghỉ
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {rev.roomTypeName || "Phòng nghỉ Sen Việt"} · {rev.createdAt}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`h-4 w-4 ${
+                              s <= rev.rating ? "fill-gold text-gold" : "text-muted-foreground/30"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {rev.title && (
+                      <h5 className="mt-3 font-semibold text-primary">{rev.title}</h5>
+                    )}
+
+                    {rev.comment && rev.comment.trim().length > 0 && (
+                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                        {rev.comment}
+                      </p>
+                    )}
+                  </article>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </section>
 
       <section className="mt-16 border-t border-border pt-12"><SectionHeading eyebrow="Bạn có thể thích" title="Khám phá thêm Sen Việt" description="Những điểm đến khác trong cùng hệ thống, mỗi nơi mang một sắc thái riêng của Việt Nam." /><div className="mt-7 grid gap-6 md:grid-cols-2 lg:grid-cols-3">{similarHotels.map((item) => <HotelCard hotel={item} key={item.slug} />)}</div><Link to="/hotels" className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:text-gold">Xem toàn bộ hệ thống <ArrowRight className="h-4 w-4" /></Link></section>
     </main>

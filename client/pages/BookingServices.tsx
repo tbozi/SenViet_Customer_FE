@@ -141,6 +141,57 @@ export default function BookingServices() {
     (service) => service.category === activeCategory,
   );
 
+  const handleRemoveRoom = (
+    roomId: string,
+    stayIndex: number,
+    roomCode?: string,
+  ) => {
+    setSelections((current) => {
+      const next: RoomSelection[] = [];
+      for (const sel of current) {
+        if (sel.roomId !== roomId) {
+          next.push(sel);
+          continue;
+        }
+        if (sel.quantity <= 1) {
+          continue;
+        }
+        const nextQty = sel.quantity - 1;
+        const nextStays = sel.stays
+          ? sel.stays.filter((_, i) => i !== stayIndex)
+          : undefined;
+        const nextGuestForms = (sel.guestForms || []).filter(
+          (_, i) => i !== stayIndex,
+        );
+        const nextRoomCodes = (sel.roomCodes || []).filter(
+          (_, i) => i !== stayIndex,
+        );
+        next.push({
+          ...sel,
+          quantity: nextQty,
+          stays: nextStays,
+          guestForms: nextGuestForms,
+          roomCodes: nextRoomCodes,
+        });
+      }
+      return next;
+    });
+
+    setTimeout(() => {
+      setSelections((latest) => {
+        const remainingStays = latest.flatMap((s) => selectionStays(s));
+        if (remainingStays.length > 0) {
+          if (!remainingStays.some((s) => s.roomCode === activeRoomCode)) {
+            setActiveRoomCode(remainingStays[0].roomCode);
+          }
+        } else {
+          setActiveRoomCode("");
+        }
+        return latest;
+      });
+    }, 0);
+  };
+
   const updateService = (
     roomCode: string,
     service: ServiceCatalogItem,
@@ -513,11 +564,13 @@ export default function BookingServices() {
             selections={selections}
             arrivalTime={arrivalTime}
             departureTime={departureTime}
+            onRemoveRoom={handleRemoveRoom}
             cta={
               <Button
                 type="button"
                 onClick={continueToCheckout}
                 className="w-full"
+                disabled={!selections.length}
               >
                 Tiếp tục đến thanh toán
               </Button>

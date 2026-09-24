@@ -17,6 +17,9 @@ interface RoomAvailabilityCalendarProps {
   selectedStartDate: string;
   selectedEndDate: string;
   onSelectRange: (startDate: string, endDate: string) => void;
+  availableCount?: number;
+  roomId?: string | number;
+  roomCodes?: string[];
 }
 
 type CalendarDay = {
@@ -41,6 +44,9 @@ export default function RoomAvailabilityCalendar({
   selectedStartDate,
   selectedEndDate,
   onSelectRange,
+  availableCount,
+  roomId,
+  roomCodes,
 }: RoomAvailabilityCalendarProps) {
   const selected = selectedStartDate
     ? parseDate(selectedStartDate)
@@ -144,6 +150,8 @@ export default function RoomAvailabilityCalendar({
             roomIndex,
             date,
             requestedRooms,
+            availableCount,
+            { id: roomId, codes: roomCodes },
           );
           const price = getDailyRoomPrice(basePrice, roomIndex, date);
           const past = date < today;

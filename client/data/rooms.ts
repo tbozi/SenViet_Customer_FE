@@ -38,6 +38,9 @@ export interface RoomType {
   description: string;
   amenities: string[];
   inventory: number;
+  roomId?: number | string;
+  /** Danh sách phòng TRỐNG thực tế từ backend, dùng cho dropdown chọn mã phòng */
+  availableRooms?: { id: number | string; code: string }[];
 }
 
 export const sharedAmenities = [
@@ -60,10 +63,35 @@ export const sharedAmenities = [
 ];
 
 const roomCodes = {
-  standard: ["1-A-07", "1-A-02", "1-A-11", "1-A-04"],
-  superior: ["2-A-14", "2-A-03", "2-A-09"],
-  deluxe: ["3-A-18", "3-A-06"],
-  suite: ["3-B-12", "3-B-05"],
+  standard: [
+    "1-A-01",
+    "1-A-02",
+    "1-A-04",
+    "1-A-07",
+    "1-A-08",
+    "1-A-11",
+  ],
+  superior: [
+    "2-A-01",
+    "2-A-03",
+    "2-A-05",
+    "2-A-09",
+    "2-A-12",
+    "2-A-14",
+  ],
+  deluxe: [
+    "3-A-02",
+    "3-A-04",
+    "3-A-06",
+    "3-A-10",
+    "3-A-18",
+  ],
+  suite: [
+    "3-B-01",
+    "3-B-03",
+    "3-B-05",
+    "3-B-12",
+  ],
 } as const;
 
 const cancellationPolicies = {
@@ -131,7 +159,7 @@ export const rooms: RoomType[] = [
     targetGuests: "Cặp đôi hoặc khách công tác đi một mình",
     description: "Không gian nghỉ ngơi gọn gàng, tiện dụng ở tầng thấp, phù hợp cho kỳ lưu trú ngắn ngày.",
     amenities: sharedAmenities,
-    inventory: 4,
+    inventory: 6,
   },
   {
     id: "superior",
@@ -150,7 +178,7 @@ export const rooms: RoomType[] = [
     targetGuests: "Gia đình nhỏ hoặc hai người lớn cần hai giường riêng",
     description: "Phòng hai giường đơn thoải mái hơn, dành cho gia đình nhỏ và nhóm bạn.",
     amenities: sharedAmenities,
-    inventory: 3,
+    inventory: 6,
   },
   {
     id: "deluxe",
@@ -169,7 +197,7 @@ export const rooms: RoomType[] = [
     targetGuests: "Cặp đôi hoặc gia đình cần không gian rộng rãi",
     description: "Phòng king rộng rãi ở tầng cao, mang lại trải nghiệm lưu trú thư thái và riêng tư.",
     amenities: sharedAmenities,
-    inventory: 2,
+    inventory: 5,
   },
   {
     id: "suite",
@@ -188,7 +216,7 @@ export const rooms: RoomType[] = [
     targetGuests: "Gia đình hoặc nhóm bạn cần phòng suite nhiều giường",
     description: "Suite rộng từ 60 m² với hai loại giường, phù hợp cho nhóm khách muốn ở cùng một không gian.",
     amenities: sharedAmenities,
-    inventory: 2,
+    inventory: 4,
   },
 ];
 

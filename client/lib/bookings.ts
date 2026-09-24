@@ -9,6 +9,8 @@ export interface GuestForm {
 
 export interface RoomStay {
   roomCode: string;
+  /** ID thực của phòng từ backend, tương ứng với roomCode được chọn */
+  roomId?: number;
   checkIn: string;
   checkOut: string;
   nights: number;
@@ -94,6 +96,7 @@ export interface Booking {
   guestName: string;
   phone: string;
   email: string;
+  cccd?: string;
   specialRequest: string;
   cancellationDeadline: string;
   cancellationPolicy?: string;
@@ -143,7 +146,7 @@ export function calculateNights(checkIn: string, checkOut: string) {
   );
 }
 
-const roomInventory = [4, 3, 2, 2];
+const roomInventory = [6, 6, 5, 4];
 
 function stableDateSeed(roomIndex: number, date: string) {
   return Array.from(`${roomIndex}-${date}`).reduce(
@@ -156,14 +159,40 @@ export function getDailyRoomAvailability(
   roomIndex: number,
   date: string,
   requestedRooms = 1,
+  overrideInventory?: number,
+  roomIdentifier?: { id?: string | number; codes?: string[] },
 ) {
-  const baseInventory = roomInventory[roomIndex] || 1;
-  const seed = stableDateSeed(roomIndex, date);
-  const isMockSoldOutDate = seed % 29 === 0;
-  const heldRooms = baseInventory > 1 ? seed % 2 : 0;
-  const remaining = isMockSoldOutDate
-    ? 0
-    : Math.max(0, baseInventory - heldRooms);
+  const baseInventory =
+    overrideInventory !== undefined
+      ? overrideInventory
+      : roomInventory[roomIndex] || 1;
+
+  // Tính số lượng phòng đã bị đặt trên khoảng ngày này
+  let bookedCount = 0;
+  try {
+    const activeBookings = getBookings().filter(
+      (b) => b.status !== "cancelled" && b.checkIn <= date && date < b.checkOut,
+    );
+    for (const b of activeBookings) {
+      if (b.roomSelections) {
+        for (const sel of b.roomSelections) {
+          const matchId =
+            roomIdentifier?.id !== undefined &&
+            String(sel.roomId) === String(roomIdentifier.id);
+          const matchCodes =
+            roomIdentifier?.codes &&
+            sel.roomCodes?.some((c) => roomIdentifier.codes!.includes(c));
+          if (matchId || matchCodes) {
+            bookedCount += sel.quantity || 1;
+          }
+        }
+      }
+    }
+  } catch {
+    bookedCount = 0;
+  }
+
+  const remaining = Math.max(0, baseInventory - bookedCount);
   return { available: remaining >= requestedRooms, remaining };
 }
 
@@ -180,6 +209,8 @@ export function getMockRoomAvailability(
   requestedRooms: number,
   checkIn: string,
   checkOut: string,
+  overrideInventory?: number,
+  roomIdentifier?: { id?: string | number; codes?: string[] },
 ) {
   if (
     !checkIn ||
@@ -197,7 +228,13 @@ export function getMockRoomAvailability(
     },
   );
   const daily = dates.map((date) =>
-    getDailyRoomAvailability(roomIndex, date, requestedRooms),
+    getDailyRoomAvailability(
+      roomIndex,
+      date,
+      requestedRooms,
+      overrideInventory,
+      roomIdentifier,
+    ),
   );
   return {
     available: daily.every((item) => item.available),
@@ -230,22 +267,121 @@ export function getCancellationScheduleText(checkIn: string) {
   return `Hoàn 100% nếu hủy trước hoặc trong ngày ${schedule.fullRefundUntil}; hoàn 50% từ ${schedule.halfRefundFrom} đến ${schedule.halfRefundUntil}; từ ${schedule.noRefundFrom} hoặc no-show: không hoàn.`;
 }
 
-export function getCancellationPolicy(checkIn: string, now = new Date()) {
-  const daysBefore =
-    (new Date(`${checkIn}T00:00:00`).getTime() - now.getTime()) / 86400000;
-  if (daysBefore >= 7)
+export function getCancellationNotice(checkIn: string, now = new Date()) {
+  if (!checkIn) {
     return {
+      type: "free" as const,
+      text: "Miễn phí hủy trước ngày nhận phòng 7 ngày",
+      badgeClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/60",
+      statusText: "Hoàn 100%",
+      detail: "Hủy trước 7 ngày nhận phòng",
+    };
+  }
+
+  const checkInDate = new Date(`${checkIn}T00:00:00`);
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Hạn hủy hoàn 100% (7 ngày trước nhận phòng)
+  const fullRefundUntil = new Date(checkInDate);
+  fullRefundUntil.setDate(fullRefundUntil.getDate() - 7);
+
+  // Hạn hủy hoàn 50% (3 ngày trước nhận phòng)
+  const halfRefundUntil = new Date(checkInDate);
+  halfRefundUntil.setDate(halfRefundUntil.getDate() - 3);
+
+  const format = (date: Date) => date.toLocaleDateString("vi-VN");
+
+  // TH1: Hạn hoàn 100% vẫn còn trong tương lai hoặc hôm nay
+  if (fullRefundUntil.getTime() >= todayDate.getTime()) {
+    return {
+      type: "free" as const,
+      text: `Miễn phí hủy trước ngày ${format(fullRefundUntil)}`,
+      badgeClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/60",
+      statusText: "Hoàn 100%",
+      detail: "Hủy trước 7 ngày nhận phòng",
+    };
+  }
+
+  // TH2: Đã quá hạn 100%, nhưng vẫn còn trước hạn hoàn 50% (từ 3 đến dưới 7 ngày)
+  if (halfRefundUntil.getTime() >= todayDate.getTime()) {
+    return {
+      type: "partial" as const,
+      text: `Hủy trước ngày ${format(halfRefundUntil)}: hoàn 50%`,
+      badgeClass: "text-amber-700 bg-amber-50/80 border-amber-200/60",
+      statusText: "Hoàn 50%",
+      detail: "Đã quá hạn miễn phí hủy 100%",
+    };
+  }
+
+  // TH3: Đặt sát ngày (dưới 3 ngày trước nhận phòng)
+  return {
+    type: "non-refundable" as const,
+    text: "Không hoàn tiền khi hủy (dưới 3 ngày)",
+    badgeClass: "text-rose-700 bg-rose-50/80 border-rose-200/60",
+    statusText: "Không hoàn tiền",
+    detail: "Hủy dưới 3 ngày trước nhận phòng: hoàn 0%",
+  };
+}
+
+export function getCancellationPolicy(checkIn: string, now = new Date()) {
+  if (!checkIn) {
+    return {
+      canCancel: true,
       refundPercent: 100,
       policy: "Hủy từ 7 ngày trước ngày nhận phòng: hoàn 100%.",
+      daysBefore: 999,
+    };
+  }
+  const checkInDate = new Date(`${checkIn}T00:00:00`);
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysBefore = Math.floor(
+    (checkInDate.getTime() - todayDate.getTime()) / 86400000,
+  );
+  if (daysBefore >= 7)
+    return {
+      canCancel: true,
+      refundPercent: 100,
+      policy: "Hủy từ 7 ngày trước ngày nhận phòng: hoàn 100%.",
+      daysBefore,
     };
   if (daysBefore >= 3)
     return {
+      canCancel: true,
       refundPercent: 50,
       policy: "Hủy từ 3 đến dưới 7 ngày trước ngày nhận phòng: hoàn 50%.",
+      daysBefore,
     };
   return {
+    canCancel: true,
     refundPercent: 0,
     policy:
-      "Hủy dưới 3 ngày trước ngày nhận phòng hoặc không đến: không hoàn tiền.",
+      "Hủy dưới 3 ngày trước ngày nhận phòng: không hoàn tiền (hoàn 0%).",
+    daysBefore,
   };
+}
+
+export function calculateEarlyCheckInSurcharge(
+  nightlyPrice: number,
+  arrivalTime: string,
+): number {
+  if (!arrivalTime) return 0;
+  const [hour] = arrivalTime.split(":").map(Number);
+  if (isNaN(hour)) return 0;
+  if (hour < 6) return nightlyPrice;
+  if (hour < 9) return Math.round(nightlyPrice * 0.5);
+  if (hour < 14) return Math.round(nightlyPrice * 0.3);
+  return 0;
+}
+
+export function calculateLateCheckOutSurcharge(
+  nightlyPrice: number,
+  departureTime: string,
+): number {
+  if (!departureTime) return 0;
+  const [hour] = departureTime.split(":").map(Number);
+  if (isNaN(hour)) return 0;
+  if (hour >= 18) return nightlyPrice;
+  if (hour >= 15) return Math.round(nightlyPrice * 0.5);
+  if (hour > 12) return Math.round(nightlyPrice * 0.3);
+  return 0;
 }
