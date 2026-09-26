@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useLanguage } from "@/lib/i18n";
+import { SUPPORTED_LANGUAGES, useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import { getBookings } from "@/lib/bookings";
 
 export default function Header() {
   const { t, language, setLanguage } = useLanguage();
+  const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[0];
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
@@ -68,16 +69,46 @@ export default function Header() {
 
         <div className="flex items-center gap-2">
           {user && <Button variant="ghost" size="icon" asChild className="relative" aria-label="Notifications"><Link to="/bookings"><Bell className="h-5 w-5" />{notificationCount > 0 && <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground">{notificationCount}</span>}</Link></Button>}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden sm:inline-flex text-xs font-semibold"
-            onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
-          >
-            {language === "vi" ? "VI" : "EN"}
-            <span className="mx-1 text-muted-foreground">/</span>
-            <span className="text-muted-foreground">{language === "vi" ? "EN" : "VI"}</span>
-          </Button>
+          {/* Multilingual Selector Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 px-2.5 text-xs font-semibold rounded-full hover:bg-secondary hidden sm:inline-flex"
+                aria-label="Choose language"
+              >
+                <span className="text-base leading-none">{currentLang.flag}</span>
+                <span className="uppercase tracking-wide">{currentLang.code}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
+              <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                {t("common.language")}
+              </div>
+              <DropdownMenuSeparator />
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <DropdownMenuItem
+                  key={lang.code}
+                  onClick={() => setLanguage(lang.code)}
+                  className={cn(
+                    "flex items-center justify-between rounded-lg px-2.5 py-2 text-sm cursor-pointer transition-colors",
+                    language === lang.code
+                      ? "bg-secondary font-semibold text-primary"
+                      : "hover:bg-secondary/60 text-foreground",
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-base">{lang.flag}</span>
+                    <span>{lang.nativeName}</span>
+                  </span>
+                  {language === lang.code && (
+                    <span className="text-xs font-bold text-gold">✓</span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             variant="ghost"
@@ -202,12 +233,32 @@ export default function Header() {
                     </Link>
                   </>
                 )}
-                <button
-                  onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
-                  className="mt-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground"
-                >
-                  {t("common.language")}: {language === "vi" ? "Tiếng Việt" : "English"}
-                </button>
+                {/* Mobile Language list */}
+                <div className="mt-2 space-y-1">
+                  <div className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("common.language")}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 pt-1">
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          setLanguage(lang.code);
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition",
+                          language === lang.code
+                            ? "border-primary bg-secondary text-primary font-semibold"
+                            : "border-border text-muted-foreground hover:bg-secondary/40",
+                        )}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.nativeName}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <button
                   onClick={toggleTheme}
                   className="mt-1 flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground"
