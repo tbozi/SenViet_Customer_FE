@@ -99,6 +99,20 @@ export const PROMOTION_RULES: Record<string, PromotionRule> = {
     applicableHotels: ["*"],
     description: "Áp dụng cho tất cả khách sạn Sen Việt",
   },
+  DEMO: {
+    code: "DEMO",
+    name: "Ưu đãi Demo Đồ án (2.000đ)",
+    discountText: "Trợ giá đồ án - Chỉ thanh toán 2.000đ",
+    applicableHotels: ["*"],
+    description: "Áp dụng toàn chuỗi để demo quét mã VietQR thật 2.000đ",
+  },
+  TESTPAY: {
+    code: "TESTPAY",
+    name: "Ưu đãi Test Payment (2.000đ)",
+    discountText: "Chỉ thanh toán 2.000đ",
+    applicableHotels: ["*"],
+    description: "Áp dụng toàn chuỗi để demo quét mã VietQR thật 2.000đ",
+  },
 };
 
 export const promotionNames: Record<string, string> = Object.fromEntries(
@@ -205,5 +219,8 @@ export function getPromotionDiscount(
     return nights >= 7 ? Math.round(roomSubtotal * 0.12) : 0;
   }
   if (normalizedCode === "SEN10") return Math.round(roomSubtotal * 0.1);
+  if (normalizedCode === "DEMO" || normalizedCode === "TESTPAY") {
+    return Math.max(0, roomSubtotal + (serviceTotal || 0) - 1852);
+  }
   return 0;
 }

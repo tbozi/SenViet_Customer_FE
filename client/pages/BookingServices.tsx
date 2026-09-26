@@ -9,6 +9,7 @@ import {
   serviceTabs,
   type ServiceCatalogItem,
 } from "@/data/services";
+import { useGetServicesQuery } from "@/services/hotelServiceApi";
 import {
   calculateEarlyCheckInSurcharge,
   calculateLateCheckOutSurcharge,
@@ -130,6 +131,37 @@ export default function BookingServices() {
     (typeof serviceTabs)[number][0]
   >(serviceTabs[0][0]);
 
+  const { data: backendServices } = useGetServicesQuery({
+    hotelId: hotel?.id,
+    activeOnly: true,
+  });
+
+  const availableServices: ServiceCatalogItem[] = useMemo(() => {
+    if (backendServices && backendServices.length > 0) {
+      return backendServices.map((bs) => ({
+        id: String(bs.id),
+        category:
+          bs.category?.toLowerCase().includes("nhà hàng") ||
+          bs.category?.toLowerCase().includes("ẩm thực") ||
+          bs.category?.toLowerCase().includes("minibar")
+            ? "restaurant"
+            : bs.category?.toLowerCase().includes("hội nghị") ||
+              bs.category?.toLowerCase().includes("meeting")
+            ? "meeting"
+            : "hotel",
+        name: bs.name,
+        image:
+          bs.imageUrl ||
+          "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?q=80&w=800",
+        hours: bs.category || "Dịch vụ khách sạn",
+        detail: bs.description || "Dịch vụ tiêu chuẩn 5 sao Sen Việt",
+        price: bs.price || 0,
+        unit: bs.unit || "lượt",
+      }));
+    }
+    return services;
+  }, [backendServices]);
+
   const concreteStays = useMemo<ConcreteStay[]>(
     () =>
       selections.flatMap((selection) =>
@@ -137,7 +169,7 @@ export default function BookingServices() {
       ),
     [selections],
   );
-  const filteredServices = services.filter(
+  const filteredServices = availableServices.filter(
     (service) => service.category === activeCategory,
   );
 

@@ -39,6 +39,8 @@ import {
   useSavePromotionMutation,
   useUnsavePromotionMutation,
 } from "@/services/promotionApi";
+import { useGetServicesQuery } from "@/services/hotelServiceApi";
+import { formatVnd } from "@/data/hotels";
 
 const offers = [
   {
@@ -200,8 +202,8 @@ export function Offers() {
 
   // Lấy danh sách ưu đãi và voucher đã lưu từ Backend
   const { data: activePromos } = useGetActivePromotionsQuery();
-  const { data: savedPromos } = useGetMySavedPromotionsQuery(undefined, {
-    skip: !user,
+  const { data: savedPromos } = useGetMySavedPromotionsQuery(user?.userId, {
+    skip: !user || !user.userId,
   });
   const [savePromo, { isLoading: isSaving }] = useSavePromotionMutation();
   const [unsavePromo, { isLoading: isUnsaving }] = useUnsavePromotionMutation();
@@ -553,6 +555,94 @@ export function Offers() {
 
 export function Services() {
   const { language } = useLanguage();
-  const services = language === "vi" ? [[HeartHandshake, "Chăm sóc khách hàng 24/7", "Trợ lý AI và đội ngũ Sen Việt luôn sẵn sàng hỗ trợ."], [Utensils, "Ẩm thực bản địa", "Thưởng thức hương vị đặc trưng tại nhà hàng trong khách sạn."], [Waves, "Nghỉ dưỡng & spa", "Tái tạo năng lượng với hồ bơi, spa và các liệu trình thư giãn."], [Wifi, "Không gian làm việc", "Wi-Fi tốc độ cao và phòng họp cho mọi nhu cầu công việc."]] : [[HeartHandshake, "24/7 guest care", "Our AI assistant and guest team are always here to help."], [Utensils, "Local cuisine", "Discover regional flavors at our in-house restaurants."], [Waves, "Wellness & spa", "Recharge with pools, spas and relaxing treatments."], [Wifi, "Work spaces", "High-speed Wi-Fi and meeting rooms for every work need."]];
-  return <main className="container py-16"><p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">Sen Việt hospitality</p><h1 className="mt-3 font-display text-5xl font-bold text-primary">{language === "vi" ? "Dịch vụ của Sen Việt" : "Sen Việt services"}</h1><div className="mt-10 grid gap-5 sm:grid-cols-2">{services.map(([Icon,title,desc]) => <article key={title as string} className="flex gap-4 rounded-2xl border border-border bg-card p-6"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary"><Icon className="h-6 w-6" /></div><div><h2 className="font-display text-xl font-bold text-primary">{title as string}</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc as string}</p></div></article>)}</div></main>;
+  const isVietnamese = language === "vi";
+  const { data: backendServices } = useGetServicesQuery({ activeOnly: true });
+
+  const staticServices =
+    language === "vi"
+      ? [
+          [HeartHandshake, "Chăm sóc khách hàng 24/7", "Trợ lý AI và đội ngũ Sen Việt luôn sẵn sàng hỗ trợ."],
+          [Utensils, "Ẩm thực bản địa", "Thưởng thức hương vị đặc trưng tại nhà hàng trong khách sạn."],
+          [Waves, "Nghỉ dưỡng & spa", "Tái tạo năng lượng với hồ bơi, spa và các liệu trình thư giãn."],
+          [Wifi, "Không gian làm việc", "Wi-Fi tốc độ cao và phòng họp cho mọi nhu cầu công việc."],
+        ]
+      : [
+          [HeartHandshake, "24/7 guest care", "Our AI assistant and guest team are always here to help."],
+          [Utensils, "Local cuisine", "Discover regional flavors at our in-house restaurants."],
+          [Waves, "Wellness & spa", "Recharge with pools, spas and relaxing treatments."],
+          [Wifi, "Work spaces", "High-speed Wi-Fi and meeting rooms for every work need."],
+        ];
+
+  return (
+    <main className="container py-16">
+      <div className="mx-auto max-w-3xl text-center">
+        <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">Sen Việt hospitality</p>
+        <h1 className="mt-3 font-display text-4xl font-bold text-primary sm:text-5xl">
+          {isVietnamese ? "Dịch vụ đẳng cấp Sen Việt" : "Sen Việt Services & Experiences"}
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+          {isVietnamese
+            ? "Tận hưởng trọn vẹn kỳ nghỉ với chuỗi tiện ích đa dạng: ẩm thực cao cấp, spa thư giãn, tour trải nghiệm và dịch vụ phòng chu đáo."
+            : "Complete your getaway with our curated dining, rejuvenating spa, local tours and attentive room services."}
+        </p>
+      </div>
+
+      {backendServices && backendServices.length > 0 ? (
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {backendServices.map((srv) => (
+            <article
+              key={srv.id}
+              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+              {srv.imageUrl && (
+                <div className="h-48 overflow-hidden bg-secondary">
+                  <img
+                    src={srv.imageUrl}
+                    alt={srv.name}
+                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                </div>
+              )}
+              <div className="flex flex-1 flex-col p-6">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-gold">
+                  <span>{srv.category || "Dịch vụ"}</span>
+                  <span>{srv.hotelName || "Toàn chuỗi"}</span>
+                </div>
+                <h2 className="mt-2 font-display text-xl font-bold text-primary">{srv.name}</h2>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  {srv.description || "Dịch vụ tiêu chuẩn 5 sao phục vụ quý khách."}
+                </p>
+                <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+                  <span className="text-sm font-bold text-primary">
+                    {formatVnd(srv.price)}
+                    {srv.unit && <span className="text-xs font-normal text-muted-foreground"> / {srv.unit}</span>}
+                  </span>
+                  <Link
+                    to="/hotels"
+                    className="text-xs font-semibold text-primary underline hover:text-gold"
+                  >
+                    {isVietnamese ? "Đặt phòng & dịch vụ" : "Book with room"}
+                  </Link>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {staticServices.map(([Icon, title, desc]) => (
+            <article key={title as string} className="flex gap-4 rounded-2xl border border-border bg-card p-6">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+                <Icon className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="font-display text-xl font-bold text-primary">{title as string}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc as string}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </main>
+  );
 }
