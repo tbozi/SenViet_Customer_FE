@@ -40,14 +40,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
-  // Khôi phục session khi reload trang
+  // Khôi phục session khi reload trang & tự động đồng bộ profile mới nhất
   useEffect(() => {
     try {
       const storedToken = localStorage.getItem(TOKEN_KEY);
       const storedUser = localStorage.getItem(SESSION_KEY);
       if (storedToken && storedUser) {
+        const parsed = JSON.parse(storedUser);
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(parsed);
+
+        // Đồng bộ dữ liệu profile mới nhất từ server
+        axiosInstance
+          .get("/customer/me/profile")
+          .catch(() => axiosInstance.get("/users/me/profile"))
+          .then((res) => {
+            const profile = res?.data?.result;
+            if (profile) {
+              const updatedUser: AuthUser = {
+                ...parsed,
+                userId: profile.id || profile.userId || parsed.userId,
+                name: profile.fullName || parsed.name,
+                email: profile.email || parsed.email,
+                phone: profile.phone || parsed.phone,
+                birthDate: profile.dateOfBirth || parsed.birthDate || "",
+                identityNumber: profile.cccd || parsed.identityNumber,
+                cccd: profile.cccd || parsed.cccd,
+              };
+              persistSession(updatedUser, storedToken);
+            }
+          })
+          .catch(() => {});
       }
     } catch {
       // bỏ qua nếu parse lỗi
@@ -89,7 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profileRes = await axiosInstance.get("/customer/me/profile").catch(() => axiosInstance.get("/users/me/profile"));
         const profile = profileRes.data.result;
         const fullUser: AuthUser = {
-          userId: profile.userId || profile.id || 0,
+          userId: profile.id || profile.userId || 0,
           accountId: profile.accountId,
           name: profile.fullName,
           email: profile.email,
@@ -105,11 +128,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return { ok: true };
     } catch (err: any) {
-      const message = err.response?.data?.message || "";
-      if (err.response?.status === 401 || message.toLowerCase().includes("mật khẩu")) {
+      const code = err.response?.data?.code;
+      const message = String(err.response?.data?.message || err.message || "");
+      const normalized = message.toLowerCase();
+
+      if (
+        err.response?.status === 401 ||
+        code === 3006 ||
+        normalized.includes("credentials") ||
+        normalized.includes("mật khẩu") ||
+        normalized.includes("tài khoản") ||
+        normalized.includes("password") ||
+        normalized.includes("invalid")
+      ) {
         return { ok: false, error: "invalid" };
       }
-      return { ok: false, error: message || "Không thể đăng nhập" };
+      return { ok: false, error: message || "invalid" };
     }
   };
 

@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
@@ -9,6 +9,7 @@ import axiosInstance from "@/lib/axiosInstance";
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
   const { t } = useLanguage();
+  const location = useLocation();
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [birthDate, setBirthDate] = useState(user?.birthDate || "");
@@ -24,7 +25,7 @@ export default function ProfilePage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordMsg, setPasswordMsg] = useState("");
+  const [passwordMsg, setPasswordMsg] = useState((location.state as any)?.successMessage || "");
   const [passwordError, setPasswordError] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
 
@@ -234,7 +235,11 @@ export default function ProfilePage() {
             <Button type="submit" variant="outline" className="rounded-xl" disabled={passwordLoading}>
               {passwordLoading ? "Đang xử lý..." : "Đổi mật khẩu"}
             </Button>
-            <Link to="/forgot-password" className="flex items-center text-sm font-medium text-primary underline">
+            <Link
+              to="/forgot-password"
+              state={{ from: "/profile", email: user?.email }}
+              className="flex items-center text-sm font-medium text-primary underline"
+            >
               Quên mật khẩu / OTP
             </Link>
           </div>

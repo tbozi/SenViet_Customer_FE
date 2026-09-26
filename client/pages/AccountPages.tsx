@@ -8,7 +8,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useCheckCustomerRegistrationMutation, useRegisterRequestMutation, useResendOtpMutation, useVerifyOtpMutation } from "@/services/authApi";
 
 const errorMessages: Record<string, string> = {
-  invalid: "Email hoặc mật khẩu chưa đúng.",
+  invalid: "Sai tài khoản hoặc mật khẩu. Vui lòng kiểm tra lại.",
   exists: "Email này đã được đăng ký.",
   phone_exists: "Số điện thoại này đã được đăng ký.",
   verification_pending: "Số điện thoại này đang chờ xác thực bởi một yêu cầu khác.",
@@ -203,7 +203,12 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
 
     const result = await login(email, password);
     if (!result.ok) {
-      setError(errorMessages[result.error || ""] || "Không thể đăng nhập.");
+      const errKey = result.error || "";
+      const errMsg =
+        errorMessages[errKey] ||
+        (errKey.toLowerCase().includes("credential") ? "Sai tài khoản hoặc mật khẩu. Vui lòng kiểm tra lại." : "") ||
+        "Sai tài khoản hoặc mật khẩu. Vui lòng kiểm tra lại.";
+      setError(errMsg);
       return;
     }
     navigate(from);
@@ -336,11 +341,38 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
           {mode === "login" && <label className="block text-sm font-medium text-primary">{t("auth.password")}
             <div className="relative mt-1"><input required type={showPassword ? "text" : "password"} minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} className="w-full rounded-xl border border-input p-3 pr-11" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
           </label>}
+          {mode === "login" && (
+            <div className="flex justify-end">
+              <Link
+                to="/forgot-password"
+                state={{ from, email: email.trim() }}
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
+          )}
           {false && <label className="block text-sm font-medium text-primary">{t("auth.confirmPassword")} <span className="text-red-500" aria-hidden="true">*</span>
             <div className="relative mt-1"><input required type={showConfirmPassword ? "text" : "password"} minLength={6} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="w-full rounded-xl border border-input p-3 pr-11" /><button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label={showConfirmPassword ? "Ẩn mật khẩu xác nhận" : "Hiện mật khẩu xác nhận"}>{showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div>
           </label>}
           {successInfo && <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">{successInfo}</p>}
-          {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {error && (
+            <div className="space-y-2">
+              <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
+              {mode === "login" && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                  Bạn không nhớ mật khẩu?{" "}
+                  <Link
+                    to="/forgot-password"
+                    state={{ from, email: email.trim() }}
+                    className="font-bold text-primary underline hover:text-gold"
+                  >
+                    Bấm vào đây để lấy lại mật khẩu qua mã OTP
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
           {mode === "register" && accountStep && <button type="button" onClick={() => { setAccountStep(false); setError(""); }} className="w-full text-center text-sm font-semibold text-primary underline">Quay lại thông tin khách hàng</button>}
           <Button type="submit" disabled={mode === "register" && (registerLocked.current || isRegistering || isCheckingCustomer)} className="w-full rounded-xl">{mode === "register" && isCheckingCustomer ? "Đang kiểm tra hồ sơ..." : mode === "register" && isRegistering ? "Đang tạo hồ sơ..." : mode === "login" ? t("auth.loginButton") : accountStep ? t("auth.continueButton") : "Tiếp tục"}</Button>
         </form>

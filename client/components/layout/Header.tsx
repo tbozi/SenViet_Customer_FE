@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { useState } from "react";
-import { Bell, Flower2, Menu, User } from "lucide-react";
+import { Bell, Flower2, Menu, Moon, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -16,11 +16,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { getBookings } from "@/lib/bookings";
 
 export default function Header() {
   const { t, language, setLanguage } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const notificationCount = user ? getBookings().filter((booking) => booking.userEmail === user.email && booking.status !== "cancelled").length : 0;
@@ -75,6 +77,21 @@ export default function Header() {
             {language === "vi" ? "VI" : "EN"}
             <span className="mx-1 text-muted-foreground">/</span>
             <span className="text-muted-foreground">{language === "vi" ? "EN" : "VI"}</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            onClick={toggleTheme}
+            aria-label="Chuyển chế độ sáng/tối"
+            title={theme === "dark" ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4 text-gold transition-all" />
+            ) : (
+              <Moon className="h-4 w-4 text-primary transition-all" />
+            )}
           </Button>
 
           {user ? (
@@ -190,6 +207,13 @@ export default function Header() {
                   className="mt-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground"
                 >
                   {t("common.language")}: {language === "vi" ? "Tiếng Việt" : "English"}
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="mt-1 flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground"
+                >
+                  {theme === "dark" ? <Sun className="h-4 w-4 text-gold" /> : <Moon className="h-4 w-4 text-primary" />}
+                  {theme === "dark" ? "Giao diện: Tối (Bấm để đổi Sáng)" : "Giao diện: Sáng (Bấm để đổi Tối)"}
                 </button>
               </div>
             </SheetContent>
