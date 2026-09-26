@@ -28,7 +28,9 @@ import LoyaltyPage from "@/pages/LoyaltyPage";
 import CustomerCRM from "@/pages/CustomerCRM";
 import { Offers, Services } from "@/pages/ExplorePages";
 import { AuthPage, Placeholder } from "@/pages/AccountPages";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import NotFound from "@/pages/NotFound";
+import { ThemeProvider } from "@/lib/theme";
 import { store } from "@/store";
 
 const queryClient = new QueryClient();
@@ -93,43 +95,45 @@ function App() {
           <Toaster />
           <Sonner />
           <LanguageProvider>
-            <AuthProvider>
-              <CustomerSocketLifecycle />
-              <BrowserRouter>
-                <SiteLayout>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/hotels" element={<Hotels />} />
-                    <Route path="/search" element={<SearchResults />} />
-                    <Route path="/hotels/:slug" element={<HotelRooms />} />
-                    <Route path="/hotels/:slug/details" element={<HotelDetails />} />
-                    <Route path="/hotels/:slug/services" element={<BookingServices />} />
-                    <Route path="/booking-services" element={<BookingServices />} />
-                    <Route path="/checkout" element={<Checkout />} />
-                    <Route path="/booking-success" element={<BookingSuccess />} />
-                    <Route path="/booking-success/:bookingId" element={<BookingSuccess />} />
-                    <Route path="/bookings" element={<BookingHistory />} />
-                    <Route path="/invoices" element={<InvoicePage />} />
-                    <Route path="/invoices/:id" element={<InvoicePage />} />
-                    <Route path="/offers" element={<Offers />} />
-                    <Route path="/services" element={<ServicesRoute />} />
-                    <Route path="/login" element={<AuthPage mode="login" />} />
-                    <Route path="/register" element={<AuthPage mode="register" />} />
-                    <Route path="/account" element={<CustomerAccount />} />
-                    <Route path="/loyalty" element={<LoyaltyPage />} />
-                    <Route path="/crm" element={<CustomerCRM />} />
-                    <Route path="/reviews/:bookingId" element={<ReviewPage />} />
-                    <Route path="/profile" element={<ProfilePage />} />
-                    <Route path="/forgot-password" element={<Placeholder title="Quên mật khẩu / OTP" />} />
-                    <Route path="/change-password" element={<Placeholder title="Đổi mật khẩu" />} />
-                    <Route path="/about" element={<Placeholder title="About Sen Việt" />} />
-                    <Route path="/contact" element={<Placeholder title="Contact Sen Việt" />} />
-                    <Route path="/admin" element={<Placeholder title="Chain management" />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </SiteLayout>
-              </BrowserRouter>
-            </AuthProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <CustomerSocketLifecycle />
+                <BrowserRouter>
+                  <SiteLayout>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/hotels" element={<Hotels />} />
+                      <Route path="/search" element={<SearchResults />} />
+                      <Route path="/hotels/:slug" element={<HotelRooms />} />
+                      <Route path="/hotels/:slug/details" element={<HotelDetails />} />
+                      <Route path="/hotels/:slug/services" element={<BookingServices />} />
+                      <Route path="/booking-services" element={<BookingServices />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/booking-success" element={<BookingSuccess />} />
+                      <Route path="/booking-success/:bookingId" element={<BookingSuccess />} />
+                      <Route path="/bookings" element={<BookingHistory />} />
+                      <Route path="/invoices" element={<InvoicePage />} />
+                      <Route path="/invoices/:id" element={<InvoicePage />} />
+                      <Route path="/offers" element={<Offers />} />
+                      <Route path="/services" element={<ServicesRoute />} />
+                      <Route path="/login" element={<AuthPage mode="login" />} />
+                      <Route path="/register" element={<AuthPage mode="register" />} />
+                      <Route path="/account" element={<CustomerAccount />} />
+                      <Route path="/loyalty" element={<LoyaltyPage />} />
+                      <Route path="/crm" element={<CustomerCRM />} />
+                      <Route path="/reviews/:bookingId" element={<ReviewPage />} />
+                      <Route path="/profile" element={<ProfilePage />} />
+                      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                      <Route path="/change-password" element={<Placeholder title="Đổi mật khẩu" />} />
+                      <Route path="/about" element={<Placeholder title="About Sen Việt" />} />
+                      <Route path="/contact" element={<Placeholder title="Contact Sen Việt" />} />
+                      <Route path="/admin" element={<Placeholder title="Chain management" />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </SiteLayout>
+                </BrowserRouter>
+              </AuthProvider>
+            </ThemeProvider>
           </LanguageProvider>
         </TooltipProvider>
       </QueryClientProvider>

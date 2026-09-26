@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { formatVnd, hotels } from "@/data/hotels";
 import { getBookings } from "@/lib/bookings";
 import { useAuth } from "@/lib/auth";
+import { useGetOrderByBookingIdQuery, useGetOrderByIdQuery } from "@/services/orderApi";
 
 interface RoomStayCard {
   roomCode: string;
@@ -35,6 +36,15 @@ export default function InvoicePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const rawId = id ? id.replace(/^SV-/, "") : "";
+  const { data: orderFromBooking } = useGetOrderByBookingIdQuery(rawId, {
+    skip: !rawId,
+  });
+  const { data: orderById } = useGetOrderByIdQuery(rawId, {
+    skip: !rawId || Boolean(orderFromBooking),
+  });
+  const order = orderFromBooking || orderById;
+
   // Tìm booking từ localStorage nếu có, hoặc tạo dữ liệu mẫu chuẩn theo đúng mockup
   const foundBooking = useMemo(() => {
     if (!id) return null;
@@ -50,13 +60,13 @@ export default function InvoicePage() {
 
   // Thông tin hiển thị hóa đơn
   const invoiceData = useMemo(() => {
-    const isMock = !foundBooking;
+    const isMock = !foundBooking && !order;
 
     // 1. Tên khách, SĐT, Email
     const customerName =
-      foundBooking?.guestName || user?.name || "Nguyễn Văn A";
+      order?.customerName || foundBooking?.guestName || user?.name || "Nguyễn Văn A";
     const customerPhone =
-      foundBooking?.phone || user?.phone || "0912 345 678";
+      order?.customerPhone || foundBooking?.phone || user?.phone || "0912 345 678";
     const customerEmail =
       foundBooking?.email || user?.email || "nguyen.vana@example.com";
 
@@ -299,23 +309,24 @@ export default function InvoicePage() {
       (sum, r) => sum + r.totalForRoom,
       0
     );
-    const subTotal = isMock ? 24950000 : computedSubTotal;
-    const discount = foundBooking ? foundBooking.discount || 0 : 0;
+    const subTotal = order ? (Number(order.roomTotalAmount || 0) + Number(order.serviceTotalAmount || 0)) : (isMock ? 24950000 : computedSubTotal);
+    const discount = order ? Number(order.discountAmountTotal || 0) : (foundBooking ? foundBooking.discount || 0 : 0);
     const promoCode =
-      foundBooking && discount > 0 ? "ƯU ĐÃI THÀNH VIÊN" : "";
+      (order && discount > 0) || (foundBooking && discount > 0) ? "ƯU ĐÃI THÀNH VIÊN" : "";
     const vat = isMock
       ? 1996000
       : foundBooking?.vat || Math.round((subTotal - discount) * 0.08);
-    const totalAmount = isMock
+    const totalAmount = order ? Number(order.totalAmount || 0) : (isMock
       ? 26946000
-      : foundBooking?.total || subTotal - discount + vat;
+      : foundBooking?.total || subTotal - discount + vat);
 
-    const isPaidInFull = foundBooking
-      ? foundBooking.status === "confirmed" ||
-        foundBooking.status === "completed"
-      : true;
-    const depositAmount = isPaidInFull ? totalAmount : 0;
-    const remainingAmount = Math.max(0, totalAmount - depositAmount);
+    const isPaidInFull = order
+      ? order.orderStatus === "CLOSED" || Number(order.remainingAmount || 0) <= 0
+      : (foundBooking
+        ? foundBooking.status === "confirmed" || foundBooking.status === "completed"
+        : true);
+    const depositAmount = order ? Number(order.paidAmount || 0) : (isPaidInFull ? totalAmount : 0);
+    const remainingAmount = order ? Number(order.remainingAmount || 0) : Math.max(0, totalAmount - depositAmount);
 
     const paymentMethodText =
       foundBooking?.paymentMethod === "qr"

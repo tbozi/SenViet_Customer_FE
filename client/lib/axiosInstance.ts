@@ -16,14 +16,20 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-// Bắt lỗi 401 → xóa token + redirect login
+// Bắt lỗi 401 hoặc 403 / 4003 (Token hết hạn / Access denied) → xóa token + redirect login
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const code = error.response?.data?.code;
+    const hasToken = !!localStorage.getItem("senviet_token");
+
+    if (hasToken && (status === 401 || status === 403 || code === 4003)) {
       localStorage.removeItem("senviet_token");
       localStorage.removeItem("senviet_session");
-      window.location.href = "/login";
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

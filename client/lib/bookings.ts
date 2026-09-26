@@ -10,7 +10,7 @@ export interface GuestForm {
 export interface RoomStay {
   roomCode: string;
   /** ID thực của phòng từ backend, tương ứng với roomCode được chọn */
-  roomId?: number;
+  roomId?: number | string;
   checkIn: string;
   checkOut: string;
   nights: number;

@@ -221,8 +221,8 @@ export default function Checkout() {
   const services = useMemo(() => parseServices(params), [params]);
   const [createCustomerBooking] = useCreateCustomerBookingMutation();
 
-  const { data: savedPromosBackend } = useGetMySavedPromotionsQuery(undefined, {
-    skip: !user,
+  const { data: savedPromosBackend } = useGetMySavedPromotionsQuery(user?.userId, {
+    skip: !user || !user.userId,
   });
 
   useEffect(() => {
@@ -319,20 +319,26 @@ export default function Checkout() {
       selectionStays(selection).map((stay) => stay.nights),
     ),
   );
-  const discount = getPromotionDiscount(promo, {
+  const isDemoPromo =
+    promo.trim().toUpperCase() === "DEMO" ||
+    promo.trim().toUpperCase() === "TESTPAY";
+  const standardDiscount = getPromotionDiscount(promo, {
     roomSubtotal,
     serviceTotal,
     nights: totalNights,
     roomCount,
     hotelSlugOrName: hotelTarget,
   });
+  const discount = isDemoPromo
+    ? Math.max(0, roomSubtotal + extraGuestCharge + serviceTotal - 1852)
+    : standardDiscount;
   const taxableSubtotal = Math.max(
     0,
     roomSubtotal + extraGuestCharge + serviceTotal - discount,
   );
   const vat = Math.round(taxableSubtotal * 0.08);
   const serviceFee = 0;
-  const total = taxableSubtotal + vat;
+  const total = isDemoPromo ? 2000 : taxableSubtotal + vat;
   const firstCheckIn =
     selections
       .flatMap((selection) =>
@@ -459,19 +465,14 @@ export default function Checkout() {
     const bookingDetailsPayload = selections.flatMap((selection) => {
       const stays = selectionStays(selection);
       return stays.map((stay) => {
-        // Ưu tiên stay.roomId (id phòng thực khách đã chọn trong dropdown)
-        // fallback về selection.roomId (id đại diện loại phòng)
-        const resolvedRoomId = stay.roomId ?? Number(selection.roomId);
-        const roomTypeMap: Record<string, number> = {
-          standard: 1,
-          superior: 2,
-          deluxe: 3,
-          suite: 4,
+        const rawRoomId = stay.roomId || selection.roomId;
+        const roomTypeMap: Record<string, string> = {
+          standard: "101",
+          superior: "102",
+          deluxe: "103",
+          suite: "104",
         };
-        const roomId =
-          resolvedRoomId > 0
-            ? resolvedRoomId
-            : roomTypeMap[selection.roomId] || 1;
+        const roomId = String(rawRoomId && rawRoomId !== "undefined" ? rawRoomId : (roomTypeMap[String(selection.roomId).toLowerCase()] || "101"));
         const checkInTime = `${stay.checkIn || firstCheckIn}T${arrivalTime}:00`;
         const checkOutTime = `${stay.checkOut || lastCheckOut}T${departureTime}:00`;
         const numAdults = stay.guest?.adults ?? 1;
@@ -757,9 +758,30 @@ export default function Checkout() {
                 )}
                 {promo && discount > 0 && (
                   <p className="rounded-lg bg-emerald-50 p-2 text-xs font-semibold text-emerald-700">
-                    ✓ Áp dụng thành công: giảm {formatVnd(discount)}
+                    ✓ Áp dụng thành công: giảm {formatVnd(discount)} {isDemoPromo ? "(Chế độ Demo: Tổng tiền 2.000đ)" : ""}
                   </p>
                 )}
+
+                {/* Nút bấm nhanh chế độ Demo Đồ án 2.000đ */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setPromo("DEMO")}
+                    className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs transition ${
+                      promo === "DEMO"
+                        ? "border-emerald-500 bg-emerald-100/80 text-emerald-900 font-bold"
+                        : "border-dashed border-emerald-400 bg-emerald-50/70 text-emerald-800 hover:bg-emerald-100"
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white font-bold">⚡</span>
+                      <span>Chế độ Demo (Thanh toán 2.000đ)</span>
+                    </span>
+                    <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                      {promo === "DEMO" ? "Đang áp dụng" : "Bật mã DEMO"}
+                    </span>
+                  </button>
+                </div>
               </div>
             }
             savedPromotions={savedPromotionItems}

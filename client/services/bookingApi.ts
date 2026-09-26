@@ -8,7 +8,7 @@ export interface BookingServiceRequestDto {
 }
 
 export interface BookingDetailRequestDto {
-  roomId: number;
+  roomId: number | string;
   checkInTime: string;
   checkOutTime: string;
   numAdults: number;
@@ -24,18 +24,19 @@ export interface BookingDetailRequestDto {
 }
 
 export interface BookingCreateRequestDto {
-  customerId: number;
+  customerId: number | string;
   hotelId?: number;
-  employeeId?: number;
+  employeeId?: number | string;
   bookingChannel: "ONLINE" | "WALK_IN";
-  customerPromotionId?: number | null;
-  promotionId?: number | null;
+  customerPromotionId?: number | string | null;
+  promotionId?: number | string | null;
   bookingDetails: BookingDetailRequestDto[];
 }
 
 export interface BookingResponseDto {
-  bookingId: number;
-  customerId: number;
+  bookingId: number | string;
+  orderId?: string;
+  customerId: number | string;
   customerName: string;
   bookingStatus: string;
   bookingChannel: string;
