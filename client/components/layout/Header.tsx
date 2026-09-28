@@ -1,6 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 import { useState } from "react";
-import { Bell, Flower2, Menu, Moon, Sun, User } from "lucide-react";
+import { Bell, Flower2, Globe, Menu, Moon, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -20,6 +20,64 @@ import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { getBookings } from "@/lib/bookings";
 
+function FlagIcon({ code, className = "h-4 w-4" }: { code: string; className?: string }) {
+  switch (code) {
+    case "vi":
+      return (
+        <svg viewBox="0 0 24 24" className={`rounded-full shrink-0 ${className}`}>
+          <rect width="24" height="24" fill="#DA251D" />
+          <polygon
+            points="12,4 14.47,11.6 22.46,11.6 15.99,16.3 18.46,23.9 12,19.2 5.54,23.9 8.01,16.3 1.54,11.6 9.53,11.6"
+            fill="#FFFF00"
+          />
+        </svg>
+      );
+    case "en":
+      return (
+        <svg viewBox="0 0 24 24" className={`rounded-full shrink-0 ${className}`}>
+          <clipPath id="uk-flag-clip">
+            <circle cx="12" cy="12" r="12" />
+          </clipPath>
+          <g clipPath="url(#uk-flag-clip)">
+            <rect width="24" height="24" fill="#012169" />
+            <path d="M0,0 L24,24 M24,0 L0,24" stroke="#FFF" strokeWidth="4" />
+            <path d="M0,0 L24,24 M24,0 L0,24" stroke="#C8102E" strokeWidth="2.5" />
+            <path d="M12,0 V24 M0,12 H24" stroke="#FFF" strokeWidth="6" />
+            <path d="M12,0 V24 M0,12 H24" stroke="#C8102E" strokeWidth="3.5" />
+          </g>
+        </svg>
+      );
+    case "zh":
+      return (
+        <svg viewBox="0 0 24 24" className={`rounded-full shrink-0 ${className}`}>
+          <rect width="24" height="24" fill="#DE2910" />
+          <polygon points="6,4 7,7 10,7 7.5,9 8.5,12 6,10 3.5,12 4.5,9 2,7 5,7" fill="#FFDE00" />
+          <circle cx="12" cy="5" r="1" fill="#FFDE00" />
+          <circle cx="14" cy="7" r="1" fill="#FFDE00" />
+          <circle cx="14" cy="10" r="1" fill="#FFDE00" />
+          <circle cx="12" cy="12" r="1" fill="#FFDE00" />
+        </svg>
+      );
+    case "ko":
+      return (
+        <svg viewBox="0 0 24 24" className={`rounded-full shrink-0 border border-gray-200/60 ${className}`}>
+          <rect width="24" height="24" fill="#FFFFFF" />
+          <circle cx="12" cy="12" r="6" fill="#CD2E3A" />
+          <path d="M6,12 A6,6 0 0,0 18,12 A3,3 0 0,0 12,12 A3,3 0 0,1 6,12" fill="#0047A0" />
+        </svg>
+      );
+    case "ja":
+      return (
+        <svg viewBox="0 0 24 24" className={`rounded-full shrink-0 border border-gray-200/60 ${className}`}>
+          <rect width="24" height="24" fill="#FFFFFF" />
+          <circle cx="12" cy="12" r="6" fill="#BC002D" />
+        </svg>
+      );
+    default:
+      return <Globe className={className} />;
+  }
+}
+
 export default function Header() {
   const { t, language, setLanguage } = useLanguage();
   const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[0];
@@ -27,6 +85,7 @@ export default function Header() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const notificationCount = user ? getBookings().filter((booking) => booking.userEmail === user.email && booking.status !== "cancelled").length : 0;
+  const userShortName = user?.name ? user.name.trim().split(/\s+/).pop() || user.name : "";
 
   const links = [
     { to: "/", label: t("nav.home") },
@@ -39,7 +98,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className="container flex h-16 items-center justify-between">
+      <div className="container flex h-16 items-center justify-between gap-2">
         <Link to="/" className="flex items-center gap-2 shrink-0">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Flower2 className="h-5 w-5" />
@@ -49,7 +108,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
           {links.map((link) => (
             <NavLink
               key={link.to}
@@ -57,8 +116,8 @@ export default function Header() {
               end={link.to === "/"}
               className={({ isActive }) =>
                 cn(
-                  "rounded-full px-4 py-2 text-sm font-medium transition-colors hover:text-primary",
-                  isActive ? "text-primary" : "text-muted-foreground",
+                  "rounded-full px-3 xl:px-4 py-2 text-sm font-medium transition-colors hover:text-primary whitespace-nowrap shrink-0",
+                  isActive ? "text-primary font-semibold" : "text-muted-foreground",
                 )
               }
             >
@@ -67,53 +126,39 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
-          {user && <Button variant="ghost" size="icon" asChild className="relative" aria-label="Notifications"><Link to="/bookings"><Bell className="h-5 w-5" />{notificationCount > 0 && <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground">{notificationCount}</span>}</Link></Button>}
-          {/* Multilingual Selector Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 px-2.5 text-xs font-semibold rounded-full hover:bg-secondary hidden sm:inline-flex"
-                aria-label="Choose language"
-              >
-                <span className="text-base leading-none">{currentLang.flag}</span>
-                <span className="uppercase tracking-wide">{currentLang.code}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl p-1.5">
-              <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                {t("common.language")}
-              </div>
-              <DropdownMenuSeparator />
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <DropdownMenuItem
-                  key={lang.code}
-                  onClick={() => setLanguage(lang.code)}
-                  className={cn(
-                    "flex items-center justify-between rounded-lg px-2.5 py-2 text-sm cursor-pointer transition-colors",
-                    language === lang.code
-                      ? "bg-secondary font-semibold text-primary"
-                      : "hover:bg-secondary/60 text-foreground",
-                  )}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-base">{lang.flag}</span>
-                    <span>{lang.nativeName}</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {user && (
+            <Button variant="ghost" size="icon" asChild className="relative" aria-label="Notifications">
+              <Link to="/bookings">
+                <Bell className="h-5 w-5" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground ring-2 ring-background">
+                    {notificationCount}
                   </span>
-                  {language === lang.code && (
-                    <span className="text-xs font-bold text-gold">✓</span>
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                )}
+              </Link>
+            </Button>
+          )}
+
+          {/* Toggle VI / EN trực tiếp khi bấm */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
+            className="gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full hover:bg-secondary inline-flex items-center shrink-0 border border-border/40 transition-colors"
+            aria-label="Chuyển đổi ngôn ngữ Tiếng Việt / English"
+            title={language === "vi" ? "Bấm để đổi sang English" : "Click to switch to Tiếng Việt"}
+          >
+            <FlagIcon code={currentLang.code} className="h-4 w-4 shrink-0 shadow-sm" />
+            <span className="uppercase tracking-wider font-bold text-primary">
+              {currentLang.code}
+            </span>
+          </Button>
 
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full"
+            className="h-9 w-9 rounded-full shrink-0"
             onClick={toggleTheme}
             aria-label="Chuyển chế độ sáng/tối"
             title={theme === "dark" ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
@@ -128,9 +173,9 @@ export default function Header() {
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 rounded-full">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">{user.name}</span>
+                <Button variant="outline" size="sm" className="gap-1.5 rounded-full px-3 py-1.5 shrink-0 border-border/60">
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-xs max-w-[85px] sm:max-w-[110px] truncate">{userShortName}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
@@ -157,7 +202,7 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2 shrink-0">
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/login">{t("nav.login")}</Link>
               </Button>
@@ -173,7 +218,7 @@ export default function Header() {
 
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button variant="ghost" size="icon" className="lg:hidden shrink-0">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -247,13 +292,13 @@ export default function Header() {
                           setOpen(false);
                         }}
                         className={cn(
-                          "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition",
+                          "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition",
                           language === lang.code
                             ? "border-primary bg-secondary text-primary font-semibold"
                             : "border-border text-muted-foreground hover:bg-secondary/40",
                         )}
                       >
-                        <span>{lang.flag}</span>
+                        <FlagIcon code={lang.code} className="h-4 w-4 shadow-sm" />
                         <span>{lang.nativeName}</span>
                       </button>
                     ))}

@@ -1,4 +1,5 @@
 import { rooms as fallbackRooms, sharedAmenities, type RoomOffer, type RoomType } from "@/data/rooms";
+import { baseApi, type ApiResponse } from "./baseApi";
 
 export interface BackendBed {
   bedTypeName: string;
@@ -40,10 +41,11 @@ const API_BASE_URL = "http://localhost:8081";
 export const hotelSlugToIdMap: Record<string, number> = {
   "sen-viet-sai-gon": 1,
   "sen-viet-ha-noi": 2,
-  "sen-viet-go-cong": 1,
-  "sen-viet-an-nhon": 1,
-  "sen-viet-da-nang": 2,
-  "sen-viet-nha-trang": 1,
+  "sen-viet-da-nang": 3,
+  "sen-viet-nha-trang": 4,
+  "sen-viet-da-lat": 5,
+  "sen-viet-go-cong": 6,
+  "sen-viet-an-nhon": 7,
 };
 
 function createOffers(price: number): RoomOffer[] {
@@ -84,6 +86,16 @@ function createOffers(price: number): RoomOffer[] {
       cancellationPolicyVi: "Không hoàn tiền khi hủy hoặc không đến.",
     },
   ];
+}
+
+export function formatRoomDisplayCode(room: { roomNumber?: string | number | null; floorNumber?: number; id?: string | number }): string {
+  if (room.roomNumber && String(room.roomNumber).trim()) {
+    const raw = String(room.roomNumber).trim();
+    return raw.startsWith("Phòng") ? raw : `Phòng ${raw}`;
+  }
+  const floor = room.floorNumber || 1;
+  const num = `${floor}${String(room.id || 1).padStart(2, "0")}`;
+  return `Phòng ${num}`;
 }
 
 export function mapBackendRoomToUiRoom(room: BackendRoomResponse): RoomType {
@@ -128,19 +140,21 @@ export function mapBackendRoomToUiRoom(room: BackendRoomResponse): RoomType {
     image: defaultImg,
     building: (room.nameBuilding?.includes("B") ? "B" : "A") as "A" | "B" | "C",
     floor: (room.floorNumber || 1) as 1 | 2 | 3,
-    roomCodes: [
-      room.roomNumber ? `Phòng ${room.roomNumber}` : `${room.floorNumber || 1}-${room.nameBuilding?.includes("B") ? "B" : "A"}-${room.id}`,
-    ],
+    roomCodes: [formatRoomDisplayCode(room)],
     capacity: {
       adults: room.standardCapacity || 2,
       children: Math.max(0, (room.maxExtraGuests || 2) - 1),
       infants: 1,
     },
     targetGuests: "Phù hợp cho khách lẻ, cặp đôi hoặc gia đình",
-    description: `Phòng ${info.vi} thuộc ${room.nameBuilding || "Tòa chính"}, tầng ${room.floorNumber || 1}. Tiện nghi đầy đủ và không gian nghỉ dưỡng sang trọng.`,
+    description: `${info.vi.trim().startsWith("Phòng") ? info.vi.trim() : `Phòng ${info.vi.trim()}`} thuộc ${room.nameBuilding || "Tòa chính"}, tầng ${room.floorNumber || 1}. Tiện nghi đầy đủ và không gian nghỉ dưỡng sang trọng.`,
     amenities: amenitiesList,
     inventory: 5,
     roomId: room.id,
+    extraAdultFee: room.extraAdultFee ?? 200000,
+    extraChildFee: room.extraChildFee ?? 100000,
+    standardCapacity: room.standardCapacity || 2,
+    maxExtraGuests: room.maxExtraGuests ?? 2,
   };
 }
 
@@ -165,9 +179,8 @@ export async function fetchRoomsByHotel(hotelIdOrSlug: number | string): Promise
       : hotelSlugToIdMap[hotelIdOrSlug] || 1;
 
   const buildGroupedRooms = (rawRooms: BackendRoomResponse[]): RoomType[] => {
-    // Tạo mã phòng từ dữ liệu backend
-    const codeOf = (r: BackendRoomResponse) =>
-      r.roomNumber ? `Phòng ${r.roomNumber}` : `${r.floorNumber || 1}-${r.nameBuilding?.includes("B") ? "B" : "A"}-${r.id}`;
+    // Tạo mã phòng chuẩn hóa từ dữ liệu backend
+    const codeOf = (r: BackendRoomResponse) => formatRoomDisplayCode(r);
 
     // Group theo loại phòng
     const grouped = groupByRoomType(rawRooms);
@@ -209,4 +222,34 @@ export async function fetchRoomsByHotel(hotelIdOrSlug: number | string): Promise
   }
 
   return fallbackRooms;
+}
+
+export type RoomDailyPricesResponse = Record<string, Record<string, number>>;
+
+export const branchRoomPricesApi = baseApi.injectEndpoints({
+  endpoints: (builder) => ({
+    getBranchRoomDailyPrices: builder.query<RoomDailyPricesResponse, { hotelId: number; startDate: string; endDate: string }>({
+      query: ({ hotelId, startDate, endDate }) => ({
+        url: "/management-rooms/branch-prices",
+        method: "GET",
+        params: { hotelId, startDate, endDate },
+      }),
+      transformResponse: (response: any) => (response?.result !== undefined ? response.result : response) ?? {},
+    }),
+  }),
+});
+
+export const { useGetBranchRoomDailyPricesQuery } = branchRoomPricesApi;
+
+export async function fetchBranchRoomDailyPrices(hotelId: number, startDate: string, endDate: string): Promise<RoomDailyPricesResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/management-rooms/branch-prices?hotelId=${hotelId}&startDate=${startDate}&endDate=${endDate}`);
+    if (res.ok) {
+      const json = await res.json();
+      return (json?.result !== undefined ? json.result : json) || {};
+    }
+  } catch (e) {
+    console.warn("fetchBranchRoomDailyPrices error:", e);
+  }
+  return {};
 }

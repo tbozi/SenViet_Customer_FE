@@ -1,8 +1,6 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowDown,
-  ArrowLeft,
   Printer,
   QrCode,
 } from "lucide-react";
@@ -374,10 +372,6 @@ export default function InvoicePage() {
   }, [foundBooking, id, user]);
 
   const handlePrint = () => {
-    window.print();
-  };
-
-  const handleDownloadPdf = () => {
     const prevTitle = document.title;
     document.title = `${invoiceData.invoiceNo}_SenViet`;
     window.print();
@@ -390,42 +384,23 @@ export default function InvoicePage() {
     <div className="min-h-screen bg-slate-100/70 py-6 sm:py-10 text-slate-800 print:bg-white print:p-0">
       {/* Top Action Bar */}
       <div className="mx-auto mb-5 max-w-2xl px-4 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center justify-end">
+          {/* Nút thao tác duy nhất: In hóa đơn / Lưu PDF */}
           <Button
-            variant="ghost"
-            onClick={() => navigate("/bookings")}
-            className="text-xs text-slate-600 hover:bg-white hover:text-primary gap-1.5 px-3 py-1.5 h-auto rounded-lg font-medium shadow-xs"
+            onClick={handlePrint}
+            className="h-auto px-4 py-2 text-xs font-semibold rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition gap-2 shadow-xs"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Lịch sử đặt phòng
+            <Printer className="h-4 w-4" />
+            In hóa đơn / Lưu PDF
           </Button>
-
-          {/* 2 nút riêng biệt: In hóa đơn & Tải PDF */}
-          <div className="flex items-center gap-2.5">
-            {/* Nút 1: In hóa đơn */}
-            <Button
-              onClick={handlePrint}
-              variant="outline"
-              className="h-auto px-4 py-2 text-xs font-semibold rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 transition gap-2 shadow-xs"
-            >
-              <Printer className="h-3.5 w-3.5 text-slate-600" />
-              In hóa đơn
-            </Button>
-
-            {/* Nút 2: Tải PDF */}
-            <Button
-              onClick={handleDownloadPdf}
-              className="h-auto px-4 py-2 text-xs font-semibold rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition gap-1.5 shadow-xs"
-            >
-              <ArrowDown className="h-3.5 w-3.5" />
-              Tải PDF
-            </Button>
-          </div>
         </div>
       </div>
 
       {/* Main Invoice Card (Nền trắng đồng bộ với giao diện web Sen Việt) */}
-      <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm print:max-w-none print:border-none print:p-0 print:shadow-none">
+      <div
+        id="printable-invoice"
+        className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm print:max-w-none print:border-none print:p-0 print:shadow-none"
+      >
         
         {/* ================= KHỐI HEADER ================= */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
@@ -535,52 +510,47 @@ export default function InvoicePage() {
                 </div>
 
                 {/* Các khoản mục tính tiền trong phòng */}
-                <div className="border-t border-slate-200/80 pt-2.5 space-y-2 text-xs">
+                <div className="border-t border-slate-200/80 pt-2.5 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 text-xs items-center">
                   {/* Tiền phòng cơ sở */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-700 font-medium">
-                      Tiền phòng
-                    </span>
-                    <span className="text-slate-500">
-                      {room.nights} đêm × {formatVnd(room.roomRate).replace(" đ", "").replace(" ₫", "")}
-                    </span>
-                    <span className="font-semibold text-slate-900">
-                      {formatVnd(room.roomTotal).replace(" đ", "").replace(" ₫", "")}
-                    </span>
-                  </div>
+                  <span className="text-slate-700 font-medium truncate">
+                    Tiền phòng
+                  </span>
+                  <span className="text-right text-slate-500 font-mono whitespace-nowrap">
+                    {room.nights} đêm × {formatVnd(room.roomRate).replace(" đ", "").replace(" ₫", "")}
+                  </span>
+                  <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                    {formatVnd(room.roomTotal)}
+                  </span>
 
                   {/* Phụ thu nếu có */}
                   {room.extraGuestCharge > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-amber-800 font-medium">
+                    <Fragment key="extra-guest">
+                      <span className="text-amber-800 font-medium truncate">
                         Phụ thu thêm người
                       </span>
-                      <span className="text-slate-500">—</span>
-                      <span className="font-semibold text-amber-800">
-                        {formatVnd(room.extraGuestCharge).replace(" đ", "").replace(" ₫", "")}
+                      <span className="text-right text-slate-500 font-mono whitespace-nowrap">—</span>
+                      <span className="text-right font-semibold text-amber-800 whitespace-nowrap">
+                        +{formatVnd(room.extraGuestCharge)}
                       </span>
-                    </div>
+                    </Fragment>
                   )}
 
                   {/* Các dịch vụ đã dùng */}
                   {room.services.map((srv, sIdx) => (
-                    <div
-                      key={sIdx}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-1.5 text-slate-700">
-                        <span className="rounded bg-slate-200 px-1 py-0.5 text-[10px] font-mono text-slate-700 font-semibold">
+                    <Fragment key={sIdx}>
+                      <div className="flex items-center gap-1.5 text-slate-700 min-w-0 truncate">
+                        <span className="shrink-0 rounded bg-slate-200 px-1 py-0.5 text-[10px] font-mono text-slate-700 font-semibold">
                           DV
                         </span>
-                        <span>{srv.name}</span>
+                        <span className="truncate">{srv.name}</span>
                       </div>
-                      <span className="text-slate-500">
+                      <span className="text-right text-slate-500 font-mono whitespace-nowrap">
                         {srv.quantity} × {formatVnd(srv.unitPrice).replace(" đ", "").replace(" ₫", "")}
                       </span>
-                      <span className="font-semibold text-slate-900">
-                        {formatVnd(srv.total).replace(" đ", "").replace(" ₫", "")}
+                      <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                        {formatVnd(srv.total)}
                       </span>
-                    </div>
+                    </Fragment>
                   ))}
                 </div>
               </div>
@@ -617,7 +587,7 @@ export default function InvoicePage() {
 
           <div className="border-t border-slate-200 pt-2.5 flex justify-between text-sm font-bold text-slate-900">
             <span>Tổng thanh toán</span>
-            <span className="text-lg text-primary font-display font-bold">
+            <span className="text-lg text-primary font-bold">
               {formatVnd(invoiceData.totalAmount)}
             </span>
           </div>

@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, useState, ReactNode } from "react";
 
-export type Language = "vi" | "en" | "zh" | "ko" | "ja";
+export type Language = "vi" | "en";
 
 export interface LanguageMeta {
   code: Language;
@@ -12,9 +12,6 @@ export interface LanguageMeta {
 export const SUPPORTED_LANGUAGES: LanguageMeta[] = [
   { code: "vi", name: "Tiếng Việt", nativeName: "Tiếng Việt", flag: "🇻🇳" },
   { code: "en", name: "English", nativeName: "English", flag: "🇬🇧" },
-  { code: "zh", name: "Chinese", nativeName: "中文", flag: "🇨🇳" },
-  { code: "ko", name: "Korean", nativeName: "한국어", flag: "🇰🇷" },
-  { code: "ja", name: "Japanese", nativeName: "日本語", flag: "🇯🇵" },
 ];
 
 const dictionaries = {
@@ -39,7 +36,7 @@ const dictionaries = {
       badge: "Chuỗi khách sạn hàng đầu Việt Nam",
       title: "Sen Việt Hotels & Resorts",
       subtitle:
-        "6 khách sạn trải dài từ Bắc chí Nam, cùng trợ lý AI tư vấn đặt phòng và chăm sóc khách hàng 24/7.",
+        "7 khách sạn trải dài từ Bắc chí Nam, cùng trợ lý AI tư vấn đặt phòng và chăm sóc khách hàng 24/7.",
       ctaPrimary: "Khám phá khách sạn",
       ctaSecondary: "Đặt phòng ngay",
       statHotels: "khách sạn",
@@ -62,7 +59,7 @@ const dictionaries = {
       filterSouth: "Miền Nam",
       pageTitle: "Khách sạn của chúng tôi",
       pageSubtitle:
-        "6 điểm dừng chân sang trọng, rải khắp Việt Nam, sẵn sàng đón bạn.",
+        "7 điểm dừng chân sang trọng, rải khắp Việt Nam, sẵn sàng đón bạn.",
       regionsTitle: "Khám phá theo khu vực",
       searchLocation: "Địa điểm",
       searchCheckIn: "Ngày nhận",
@@ -172,7 +169,7 @@ const dictionaries = {
       badge: "Vietnam's leading luxury hotel chain",
       title: "Sen Việt Hotels & Resorts",
       subtitle:
-        "6 boutique hotels spanning the country, backed by an AI agent for booking advice and 24/7 customer care.",
+        "7 boutique hotels spanning the country, backed by an AI agent for booking advice and 24/7 customer care.",
       ctaPrimary: "Explore hotels",
       ctaSecondary: "Book now",
       statHotels: "hotels",
@@ -195,7 +192,7 @@ const dictionaries = {
       filterSouth: "Southern",
       pageTitle: "Our Hotels",
       pageSubtitle:
-        "6 luxury destinations across Vietnam, ready to welcome you.",
+        "7 luxury destinations across Vietnam, ready to welcome you.",
       regionsTitle: "Explore by region",
       searchLocation: "Destination",
       searchCheckIn: "Check-in",
@@ -702,7 +699,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
     if (typeof window === "undefined") return "vi";
     const saved = localStorage.getItem("senviet_lang") as Language;
-    if (saved && ["vi", "en", "zh", "ko", "ja"].includes(saved)) {
+    if (saved && (saved === "vi" || saved === "en")) {
       return saved;
     }
     return "vi";

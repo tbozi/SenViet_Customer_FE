@@ -28,7 +28,7 @@ export const hotels: Hotel[] = [
     id: 1,
     slug: "sen-viet-sai-gon",
     name: "Sen Việt Sài Gòn",
-    city: "Quận 1, TP. Hồ Chí Minh",
+    city: "Quận 1",
     province: "TP. Hồ Chí Minh",
     region: "south",
     description: "Tọa lạc kiêu hãnh giữa trái tim hoa lệ Quận 1, Sen Việt Sài Gòn là biểu tượng nghỉ dưỡng thượng lưu, giao thoa hoàn mỹ giữa nét duyên dáng Á Đông và kiến trúc đương đại đẳng cấp quốc tế. Sở hữu tầm nhìn panorama triệu đô ôm trọn sông Sài Gòn, hồ bơi vô cực dát vàng trên tầng thượng, spa thảo dược hoa sen độc bản và nhà hàng fine-dining chuẩn sao Michelin, khách sạn là chốn dừng chân hoàn hảo của các chính khách, doanh nhân tinh hoa và những thượng khách sành điệu nhất.",
@@ -42,7 +42,7 @@ export const hotels: Hotel[] = [
   {
     slug: "sen-viet-ha-noi",
     name: "Sen Việt Hà Nội",
-    city: "Hoàn Kiếm, Hà Nội",
+    city: "Hoàn Kiếm",
     province: "Hà Nội",
     region: "north",
     description: "Nằm kề bên Hồ Gươm huyền thoại và khu Phố Cổ ngàn năm văn hiến, Sen Việt Hà Nội là kiệt tác kiến trúc Đông Dương (Indochine) tráng lệ, tái hiện vẻ đẹp quý tộc hoàng gia Thăng Long xưa. Từng đường nét chạm khắc gỗ lim quý phái, ban công ngắm trọn tháp Rùa cổ kính, sảnh đón thơm ngát hương sen Tây Hồ và trà thất thượng hạng sẽ đưa quý khách vào một hành trình đắm chìm trong di sản, tôn quý và sự chăm chút tinh tế đến từng giác quan.",
@@ -56,7 +56,7 @@ export const hotels: Hotel[] = [
   {
     slug: "sen-viet-da-nang",
     name: "Sen Việt Đà Nẵng",
-    city: "Ngũ Hành Sơn, Đà Nẵng",
+    city: "Ngũ Hành Sơn",
     province: "Đà Nẵng",
     region: "central",
     description: "Tựa mình trên bờ biển Mỹ Khê huyền thoại – một trong những bãi biển quyến rũ nhất hành tinh, Sen Việt Đà Nẵng là thiên đường nghỉ dưỡng nhiệt đới 5 sao thượng hạng. Nổi bật với bãi cát trắng mịn riêng biệt, hồ bơi nước mặn tràn bờ uốn lượn bên rặng dừa xanh mướt, biệt thự hướng biển đón trọn bình minh bán đảo Sơn Trà và trung tâm chăm sóc sức khỏe đá muối Himalaya, resort mang đến kỳ nghỉ viên mãn, tái sinh nguồn năng lượng tươi mới.",
@@ -70,7 +70,7 @@ export const hotels: Hotel[] = [
   {
     slug: "sen-viet-nha-trang",
     name: "Sen Việt Nha Trang",
-    city: "Nha Trang, Khánh Hòa",
+    city: "TP. Nha Trang",
     province: "Khánh Hòa",
     region: "central",
     description: "Vươn mình kiêu hãnh trên cung đường biển vàng Trần Phú, Sen Việt Nha Trang là 'viên ngọc đại dương' lấp lánh giữa vịnh biển thơ mộng. 100% phòng nghỉ và suite đều sở hữu ban công kính tràn viền hướng ra làn nước xanh ngọc bích, bồn tắm ngâm thảo dược ngắm hoàng hôn vịnh biển, cùng Sky Bar cao nhất thành phố đón gió đại dương, mang đến trải nghiệm nghỉ dưỡng xa hoa đỉnh cao không thể nào quên.",
@@ -84,7 +84,7 @@ export const hotels: Hotel[] = [
   {
     slug: "sen-viet-da-lat",
     name: "Sen Việt Đà Lạt",
-    city: "Đà Lạt, Lâm Đồng",
+    city: "TP. Đà Lạt",
     province: "Lâm Đồng",
     region: "central",
     description: "Ẩn mình giữa ngàn thông reo và thung lũng sương mây bồng bềnh của thành phố ngàn hoa, Sen Việt Đà Lạt mang đến không gian cổ tích lãng mạn đậm chất quý tộc Pháp cổ điển. Với lò sưởi ấm cúng trong từng gian phòng, ban công ngập tràn hoa hồng môn nhìn xuống hồ sương mù, tiệc trà chiều hoàng gia bên lò nướng bánh gỗ và vườn dâu tây sinh thái riêng, resort là chốn an yên tuyệt đối để chữa lành tâm hồn và tận hưởng khí hậu cao nguyên thanh khiết.",
@@ -98,7 +98,7 @@ export const hotels: Hotel[] = [
   {
     slug: "sen-viet-go-cong",
     name: "Sen Việt Gò Công",
-    city: "Gò Công, Tiền Giang",
+    city: "TP. Gò Công",
     province: "Tiền Giang",
     region: "south",
     description: "Nép mình bên dòng sông Tiền êm đềm giữa những rặng dừa nước và miệt vườn Nam Bộ trù phú, Sen Việt Gò Công là bản hòa tấu thanh bình của thiên nhiên sông nước Cửu Long. Khách sạn kết hợp hài hòa nét mộc mạc dân dã của xứ lụa Tân Châu với dịch vụ nghỉ dưỡng cao cấp, mang đến cho du khách những buổi sớm ngắm bình minh trên sông nước, thưởng thức đờn ca tài tử và các món ngon đồng nội đậm đà tình quê.",
@@ -112,7 +112,7 @@ export const hotels: Hotel[] = [
   {
     slug: "sen-viet-an-nhon",
     name: "Sen Việt An Nhơn",
-    city: "An Nhơn, Bình Định",
+    city: "Thị xã An Nhơn",
     province: "Bình Định",
     region: "central",
     description: "Tọa lạc trên mảnh đất địa linh nhân kiệt Bình Định, Sen Việt An Nhơn là cầu nối văn hóa tôn vinh hào khí Tây Sơn và tinh hoa tháp Chăm ngàn năm rực rỡ. Với nội thất gốm nung và đá sa thạch tinh xảo, hồ sen thơm ngát giữa khuôn viên tĩnh lặng và các tour trải nghiệm võ cổ truyền Bình Định, nơi đây mở ra một không gian nghỉ dưỡng đậm đà bản sắc hào sảng miền Trung.",
@@ -125,7 +125,21 @@ export const hotels: Hotel[] = [
   },
 ];
 
+export function formatHotelLocation(hotel: { city?: string; province?: string }): string {
+  if (!hotel) return "";
+  const city = (hotel.city || "").trim();
+  const province = (hotel.province || "").trim();
+  if (!city && !province) return "";
+  if (!province) return city;
+  if (!city) return province;
+  if (city.toLowerCase().includes(province.toLowerCase())) {
+    return city;
+  }
+  return `${city}, ${province}`;
+}
+
 export function formatVnd(amount: number) {
   if (typeof amount !== "number" || isNaN(amount)) return "0₫";
   return amount.toLocaleString("vi-VN") + "₫";
 }
+

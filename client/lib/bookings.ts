@@ -17,6 +17,7 @@ export interface RoomStay {
   guest: GuestForm;
   extraGuestCharge: number;
   nightlyPrice?: number;
+  stayTotal?: number;
   offerId?: string;
   offerName?: string;
   offerCancellationPolicy?: string;

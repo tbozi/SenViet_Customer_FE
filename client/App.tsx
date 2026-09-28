@@ -29,6 +29,8 @@ import CustomerCRM from "@/pages/CustomerCRM";
 import { Offers, Services } from "@/pages/ExplorePages";
 import { AuthPage, Placeholder } from "@/pages/AccountPages";
 import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import AboutPage from "@/pages/AboutPage";
+import ContactPage from "@/pages/ContactPage";
 import NotFound from "@/pages/NotFound";
 import { ThemeProvider } from "@/lib/theme";
 import { store } from "@/store";
@@ -124,10 +126,10 @@ function App() {
                       <Route path="/reviews/:bookingId" element={<ReviewPage />} />
                       <Route path="/profile" element={<ProfilePage />} />
                       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                      <Route path="/change-password" element={<Placeholder title="Đổi mật khẩu" />} />
-                      <Route path="/about" element={<Placeholder title="About Sen Việt" />} />
-                      <Route path="/contact" element={<Placeholder title="Contact Sen Việt" />} />
-                      <Route path="/admin" element={<Placeholder title="Chain management" />} />
+                      <Route path="/change-password" element={<ProfilePage />} />
+                      <Route path="/about" element={<AboutPage />} />
+                      <Route path="/contact" element={<ContactPage />} />
+                      <Route path="/admin" element={<Placeholder title="Hệ thống Quản lý Chuỗi Sen Việt" />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </SiteLayout>

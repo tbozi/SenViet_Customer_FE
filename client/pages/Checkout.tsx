@@ -35,7 +35,7 @@ import {
   promotionNames,
 } from "@/lib/savedPromotions";
 import { useLanguage } from "@/lib/i18n";
-import { useGetMySavedPromotionsQuery } from "@/services/promotionApi";
+import { useGetActivePromotionsQuery, useGetMySavedPromotionsQuery } from "@/services/promotionApi";
 import { useCreateCustomerBookingMutation } from "@/services/bookingApi";
 
 const fallbackGuestForms = (params: URLSearchParams): GuestForm[] => {
@@ -220,6 +220,7 @@ export default function Checkout() {
 
   const services = useMemo(() => parseServices(params), [params]);
   const [createCustomerBooking] = useCreateCustomerBookingMutation();
+  const { data: activePromotions = [] } = useGetActivePromotionsQuery();
 
   const { data: savedPromosBackend } = useGetMySavedPromotionsQuery(user?.userId, {
     skip: !user || !user.userId,
@@ -279,8 +280,9 @@ export default function Checkout() {
       selectionStays(selection).reduce(
         (staySum, stay) =>
           staySum +
-          (stay.nightlyPrice || selection.nightlyPrice) *
-            Math.max(0, stay.nights),
+          (stay.stayTotal ??
+            (stay.nightlyPrice || selection.nightlyPrice) *
+              Math.max(0, stay.nights)),
         0,
       ),
     0,
@@ -319,6 +321,29 @@ export default function Checkout() {
       selectionStays(selection).map((stay) => stay.nights),
     ),
   );
+  const matchedActivePromo = useMemo(() => {
+    if (!promo.trim()) return null;
+    return activePromotions.find(
+      (p) => p.code.trim().toUpperCase() === promo.trim().toUpperCase(),
+    );
+  }, [promo, activePromotions]);
+
+  const promoMinBookingFailed = useMemo(() => {
+    if (!matchedActivePromo || !matchedActivePromo.minBookingValue) return false;
+    return roomSubtotal < matchedActivePromo.minBookingValue;
+  }, [matchedActivePromo, roomSubtotal]);
+
+  const backendDiscount = useMemo(() => {
+    if (!matchedActivePromo || promoMinBookingFailed) return 0;
+    if (String(matchedActivePromo.type).toUpperCase().includes("PERCENT")) {
+      const calculated = Math.round((roomSubtotal * matchedActivePromo.discountValue) / 100);
+      return matchedActivePromo.maxDiscountAmount
+        ? Math.min(calculated, matchedActivePromo.maxDiscountAmount)
+        : calculated;
+    }
+    return matchedActivePromo.discountValue || 0;
+  }, [matchedActivePromo, promoMinBookingFailed, roomSubtotal]);
+
   const isDemoPromo =
     promo.trim().toUpperCase() === "DEMO" ||
     promo.trim().toUpperCase() === "TESTPAY";
@@ -329,9 +354,10 @@ export default function Checkout() {
     roomCount,
     hotelSlugOrName: hotelTarget,
   });
+  const effectiveDiscount = matchedActivePromo ? backendDiscount : standardDiscount;
   const discount = isDemoPromo
     ? Math.max(0, roomSubtotal + extraGuestCharge + serviceTotal - 1852)
-    : standardDiscount;
+    : effectiveDiscount;
   const taxableSubtotal = Math.max(
     0,
     roomSubtotal + extraGuestCharge + serviceTotal - discount,
@@ -363,7 +389,7 @@ export default function Checkout() {
             {
               label: "Phụ thu vượt sức chứa",
               amount: extraGuestCharge,
-              detail: "500.000đ/người/đêm, không tính em bé",
+              detail: "Theo chính sách khách sạn (người lớn / trẻ em, miễn phí em bé)",
               scope: "room" as const,
               kind: "surcharge" as const,
             },
@@ -516,12 +542,13 @@ export default function Checkout() {
     try {
       const customerId = (user as any)?.customerId || (user as any)?.userId || 1;
       const hotelId = hotel.id || (hotel.slug ? hotelSlugToId[hotel.slug] : 1) || 1;
+      const promotionIdToSend = (matchedActivePromo && !promoMinBookingFailed) ? String(matchedActivePromo.id) : null;
       const res = await createCustomerBooking({
         customerId,
         hotelId,
         bookingChannel: "ONLINE",
         customerPromotionId: null,
-        promotionId: null,
+        promotionId: promotionIdToSend,
         bookingDetails: bookingDetailsPayload,
       }).unwrap();
 
@@ -751,7 +778,12 @@ export default function Checkout() {
                     ✕ {promoApplicability.reason || "Mã không áp dụng cho khách sạn này."}
                   </p>
                 )}
-                {promo && promoApplicability.applicable && discount === 0 && (
+                {promo && promoMinBookingFailed && (
+                  <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
+                    ⚠ Mã {matchedActivePromo?.code} yêu cầu giá trị tiền phòng tối thiểu {matchedActivePromo?.minBookingValue?.toLocaleString("vi-VN")}đ (hiện tại: {roomSubtotal.toLocaleString("vi-VN")}đ).
+                  </p>
+                )}
+                {promo && promoApplicability.applicable && !promoMinBookingFailed && discount === 0 && (
                   <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
                     ⚠ Mã chưa đủ điều kiện cho đơn này (ví dụ: số đêm tối thiểu).
                   </p>

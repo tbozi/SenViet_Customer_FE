@@ -39,6 +39,10 @@ export interface RoomType {
   amenities: string[];
   inventory: number;
   roomId?: number | string;
+  extraAdultFee?: number;
+  extraChildFee?: number;
+  standardCapacity?: number;
+  maxExtraGuests?: number;
   /** Danh sách phòng TRỐNG thực tế từ backend, dùng cho dropdown chọn mã phòng */
   availableRooms?: { id: number | string; code: string }[];
 }
@@ -64,33 +68,33 @@ export const sharedAmenities = [
 
 const roomCodes = {
   standard: [
-    "1-A-01",
-    "1-A-02",
-    "1-A-04",
-    "1-A-07",
-    "1-A-08",
-    "1-A-11",
+    "Phòng 101",
+    "Phòng 102",
+    "Phòng 104",
+    "Phòng 107",
+    "Phòng 108",
+    "Phòng 111",
   ],
   superior: [
-    "2-A-01",
-    "2-A-03",
-    "2-A-05",
-    "2-A-09",
-    "2-A-12",
-    "2-A-14",
+    "Phòng 201",
+    "Phòng 203",
+    "Phòng 205",
+    "Phòng 209",
+    "Phòng 212",
+    "Phòng 214",
   ],
   deluxe: [
-    "3-A-02",
-    "3-A-04",
-    "3-A-06",
-    "3-A-10",
-    "3-A-18",
+    "Phòng 302",
+    "Phòng 304",
+    "Phòng 306",
+    "Phòng 310",
+    "Phòng 318",
   ],
   suite: [
-    "3-B-01",
-    "3-B-03",
-    "3-B-05",
-    "3-B-12",
+    "Phòng 401",
+    "Phòng 403",
+    "Phòng 405",
+    "Phòng 412",
   ],
 } as const;
 
@@ -155,7 +159,11 @@ export const rooms: RoomType[] = [
     building: "A",
     floor: 1,
     roomCodes: [...roomCodes.standard],
-    capacity: { adults: 1, children: 1, infants: 1 },
+    capacity: { adults: 2, children: 1, infants: 1 },
+    standardCapacity: 2,
+    maxExtraGuests: 2,
+    extraAdultFee: 200_000,
+    extraChildFee: 100_000,
     targetGuests: "Cặp đôi hoặc khách công tác đi một mình",
     description: "Không gian nghỉ ngơi gọn gàng, tiện dụng ở tầng thấp, phù hợp cho kỳ lưu trú ngắn ngày.",
     amenities: sharedAmenities,
@@ -175,6 +183,10 @@ export const rooms: RoomType[] = [
     floor: 2,
     roomCodes: [...roomCodes.superior],
     capacity: { adults: 2, children: 2, infants: 1 },
+    standardCapacity: 2,
+    maxExtraGuests: 2,
+    extraAdultFee: 250_000,
+    extraChildFee: 120_000,
     targetGuests: "Gia đình nhỏ hoặc hai người lớn cần hai giường riêng",
     description: "Phòng hai giường đơn thoải mái hơn, dành cho gia đình nhỏ và nhóm bạn.",
     amenities: sharedAmenities,
@@ -194,6 +206,10 @@ export const rooms: RoomType[] = [
     floor: 3,
     roomCodes: [...roomCodes.deluxe],
     capacity: { adults: 2, children: 1, infants: 1 },
+    standardCapacity: 2,
+    maxExtraGuests: 2,
+    extraAdultFee: 300_000,
+    extraChildFee: 150_000,
     targetGuests: "Cặp đôi hoặc gia đình cần không gian rộng rãi",
     description: "Phòng king rộng rãi ở tầng cao, mang lại trải nghiệm lưu trú thư thái và riêng tư.",
     amenities: sharedAmenities,
@@ -213,6 +229,10 @@ export const rooms: RoomType[] = [
     floor: 3,
     roomCodes: [...roomCodes.suite],
     capacity: { adults: 3, children: 1, infants: 1 },
+    standardCapacity: 3,
+    maxExtraGuests: 2,
+    extraAdultFee: 400_000,
+    extraChildFee: 200_000,
     targetGuests: "Gia đình hoặc nhóm bạn cần phòng suite nhiều giường",
     description: "Suite rộng từ 60 m² với hai loại giường, phù hợp cho nhóm khách muốn ở cùng một không gian.",
     amenities: sharedAmenities,

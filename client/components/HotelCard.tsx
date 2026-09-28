@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowUpRight, MapPin, Star } from "lucide-react";
-import { Hotel, formatVnd } from "@/data/hotels";
+import { Hotel, formatHotelLocation, formatVnd } from "@/data/hotels";
 import { useLanguage } from "@/lib/i18n";
 
 export default function HotelCard({ hotel }: { hotel: Hotel }) {
@@ -14,7 +14,7 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
       </div>
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
-          <div><h3 className="font-display text-xl font-bold text-primary">{hotel.name}</h3><p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 text-gold" />{hotel.city}, {hotel.province}</p></div>
+          <div><h3 className="font-display text-xl font-bold text-primary">{hotel.name}</h3><p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="h-3.5 w-3.5 text-gold" />{formatHotelLocation(hotel)}</p></div>
           <ArrowUpRight className="h-5 w-5 text-muted-foreground transition group-hover:text-gold" />
         </div>
         <p className="mt-4 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{language === "vi" ? hotel.description : hotel.descriptionEn}</p>

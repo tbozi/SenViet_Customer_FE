@@ -28,8 +28,8 @@ import QuickSearch from "@/components/QuickSearch";
 import RoomAvailabilityCalendar from "@/components/RoomAvailabilityCalendar";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 import { rooms as defaultRooms, type RoomType } from "@/data/rooms";
-import { fetchRoomsByHotel } from "@/services/roomApi";
-import { formatVnd, hotels } from "@/data/hotels";
+import { fetchRoomsByHotel, useGetBranchRoomDailyPricesQuery } from "@/services/roomApi";
+import { formatHotelLocation, formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
 import {
   calculateEarlyCheckInSurcharge,
   calculateLateCheckOutSurcharge,
@@ -44,14 +44,33 @@ import {
 import { useLanguage } from "@/lib/i18n";
 const today = new Date();
 const dateValue = (date: Date) => date.toISOString().slice(0, 10);
-const defaultGuest = (searchParams: URLSearchParams): GuestForm => ({
-  adults: Number(searchParams.get("adults") || 1),
-  children: Number(searchParams.get("children") || 0),
-  infants: 0,
-});
+const defaultGuest = (searchParams: URLSearchParams, maxCapacity = 4): GuestForm => {
+  const rawAdults = Number(searchParams.get("adults") || 2);
+  const adults = Math.min(maxCapacity, Math.max(1, rawAdults > maxCapacity ? 2 : rawAdults));
+  const rawChildren = Number(searchParams.get("children") || 0);
+  const children = Math.min(Math.max(0, maxCapacity - adults), Math.max(0, rawChildren));
+  return {
+    adults,
+    children,
+    infants: 0,
+  };
+};
 
 type StayDates = { checkIn: string; checkOut: string };
 type CalendarTarget = { roomId: string; stayIndex: number };
+
+function normalizeRoomDisplayName(code: string): string {
+  if (!code) return "";
+  const trimmed = code.trim();
+  if (trimmed.startsWith("Phòng")) return trimmed;
+  const match = trimmed.match(/^(\d+)-[A-Za-z]-(\d+)$/);
+  if (match) {
+    const floor = match[1];
+    const num = match[2].padStart(2, "0");
+    return `Phòng ${floor}${num}`;
+  }
+  return `Phòng ${trimmed}`;
+}
 
 function nextDate(date: string) {
   const next = new Date(`${date}T12:00:00`);
@@ -60,14 +79,70 @@ function nextDate(date: string) {
 }
 
 function extraGuests(room: RoomType, guest: GuestForm) {
-  const extraAdults = Math.max(0, guest.adults - room.capacity.adults);
-  const extraChildren = Math.max(0, guest.children - room.capacity.children);
+  const standardCapacity = room.standardCapacity || room.capacity?.adults || 2;
+  const actualAdults = guest.adults || 0;
+  const actualChildren = guest.children || 0;
+  const totalActualGuests = actualAdults + actualChildren;
+
+  // Nếu tổng khách (người lớn + trẻ em) <= sức chứa tiêu chuẩn -> Miễn phí hoàn toàn
+  if (totalActualGuests <= standardCapacity) {
+    return {
+      extraAdults: 0,
+      extraChildren: 0,
+      extraGuestCount: 0,
+      extraGuestCharge: 0,
+    };
+  }
+
+  // Ưu tiên lấp đầy suất tiêu chuẩn cho Người lớn trước, phần còn dư suất tiêu chuẩn cho Trẻ em hưởng
+  const actualAdultsCoveredByStandard = Math.min(actualAdults, standardCapacity);
+  const remainingStandardSlots = standardCapacity - actualAdultsCoveredByStandard;
+
+  const extraAdults = Math.max(0, actualAdults - actualAdultsCoveredByStandard);
+  const extraChildren = Math.max(0, actualChildren - remainingStandardSlots);
+
+  const adultFee = room.extraAdultFee ?? 200000;
+  const childFee = room.extraChildFee ?? 100000;
+  const extraGuestCharge = extraAdults * adultFee + extraChildren * childFee;
+
   return {
     extraAdults,
     extraChildren,
     extraGuestCount: extraAdults + extraChildren,
-    extraGuestCharge: (extraAdults + extraChildren) * 500000,
+    extraGuestCharge,
   };
+}
+
+function getStayPrice(
+  roomId: string | number,
+  checkIn: string,
+  checkOut: string,
+  fallbackNightlyPrice: number,
+  dailyPrices?: Record<string, Record<string, number>>,
+) {
+  if (!checkIn || !checkOut) return { total: fallbackNightlyPrice, avgNightly: fallbackNightlyPrice };
+  const start = new Date(`${checkIn}T00:00:00`);
+  const end = new Date(`${checkOut}T00:00:00`);
+  const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 3600 * 24)));
+
+  const roomRates = dailyPrices ? (dailyPrices[String(roomId)] || dailyPrices[Number(roomId)]) : null;
+  if (!roomRates) {
+    return { total: fallbackNightlyPrice * nights, avgNightly: fallbackNightlyPrice };
+  }
+
+  let total = 0;
+  for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+    if (roomRates[dateStr] !== undefined && roomRates[dateStr] > 0) {
+      total += roomRates[dateStr];
+    } else {
+      total += fallbackNightlyPrice;
+    }
+  }
+  return { total, avgNightly: Math.round(total / nights) };
 }
 
 function RoomDetailsModal({
@@ -225,10 +300,8 @@ function RoomDetailsModal({
                   <Users className="h-4 w-4 text-gold" /> Sức chứa
                 </span>
                 <p className="mt-1 text-xs font-bold text-slate-800">
-                  Tối đa {room.capacity.adults} người lớn
-                  {room.capacity.children > 0
-                    ? `, ${room.capacity.children} trẻ`
-                    : ""}
+                  Chuẩn {room.standardCapacity || room.capacity.adults} người
+                  {room.maxExtraGuests ? ` (thêm tối đa ${room.maxExtraGuests})` : ""}
                 </p>
               </div>
 
@@ -335,7 +408,7 @@ function RoomDetailsModal({
                     </p>
                   </div>
                   <span className="shrink-0 font-bold text-primary">
-                    500.000₫ / người / đêm
+                    {(room.extraAdultFee ?? 200000).toLocaleString("vi-VN")}₫ / người / đêm
                   </span>
                 </div>
 
@@ -349,7 +422,7 @@ function RoomDetailsModal({
                     </p>
                   </div>
                   <span className="shrink-0 font-bold text-primary">
-                    250.000₫ / trẻ / đêm
+                    {(room.extraChildFee ?? 100000).toLocaleString("vi-VN")}₫ / trẻ / đêm
                   </span>
                 </div>
 
@@ -483,10 +556,9 @@ export default function HotelRooms() {
       4,
       Math.max(0, Number(searchParams.get("rooms") || 0)),
     );
-    initial[defaultRooms[legacyIndex].id] = defaultRooms[legacyIndex].roomCodes.slice(
-      0,
-      quantity,
-    );
+    initial[defaultRooms[legacyIndex].id] = defaultRooms[legacyIndex].roomCodes
+      .slice(0, quantity)
+      .map(normalizeRoomDisplayName);
     return initial;
   });
   const [selectedRoom, setSelectedRoom] = useState(
@@ -497,6 +569,16 @@ export default function HotelRooms() {
   );
   const [detailRoom, setDetailRoom] = useState<number | null>(null);
   const [error, setError] = useState("");
+
+  const hotelId = hotel.id || (slug ? hotelSlugToId[slug] : 1) || 1;
+  const { data: dailyPrices } = useGetBranchRoomDailyPricesQuery(
+    {
+      hotelId,
+      startDate: defaultDates.checkIn,
+      endDate: defaultDates.checkOut,
+    },
+    { skip: !hotelId || !defaultDates.checkIn || !defaultDates.checkOut },
+  );
 
   const getDates = (roomId: string, index: number) =>
     roomStays[roomId]?.[index] || defaultDates;
@@ -540,17 +622,17 @@ export default function HotelRooms() {
     setSelectedRoomCodes((current) => {
       const existing = current[roomId] || [];
       const roomDef = rooms.find((r) => r.id === roomId);
-      const allCodes = roomDef?.roomCodes || [];
+      const allCodes = (roomDef?.roomCodes || []).map(normalizeRoomDisplayName);
       const updated: string[] = [];
       for (let i = 0; i < quantity; i++) {
-        if (existing[i] && !updated.includes(existing[i])) {
-          updated.push(existing[i]);
+        if (existing[i] && !updated.includes(normalizeRoomDisplayName(existing[i]))) {
+          updated.push(normalizeRoomDisplayName(existing[i]));
         } else {
           const availableCode =
             allCodes.find((c) => !updated.includes(c)) ||
             allCodes[0] ||
             `Phòng ${i + 1}`;
-          updated.push(availableCode);
+          updated.push(normalizeRoomDisplayName(availableCode));
         }
       }
       return { ...current, [roomId]: updated };
@@ -586,7 +668,7 @@ export default function HotelRooms() {
   ) => {
     setSelectedRoomCodes((current) => {
       const list = [...(current[roomId] || [])];
-      list[stayIndex] = newRoomCode;
+      list[stayIndex] = normalizeRoomDisplayName(newRoomCode);
       return { ...current, [roomId]: list };
     });
   };
@@ -596,13 +678,30 @@ export default function HotelRooms() {
     index: number,
     field: keyof GuestForm,
     value: number,
-  ) =>
+  ) => {
+    const room = rooms.find((r) => r.id === roomId);
+    const standardGuests = room?.standardCapacity || room?.capacity?.adults || 2;
+    const maxExtra = room?.maxExtraGuests ?? 2;
+    const maxTotalCapacity = standardGuests + maxExtra;
+
     setGuestForms((current) => ({
       ...current,
-      [roomId]: (current[roomId] || []).map((guest, guestIndex) =>
-        guestIndex === index ? { ...guest, [field]: value } : guest,
-      ),
+      [roomId]: (current[roomId] || []).map((guest, guestIndex) => {
+        if (guestIndex !== index) return guest;
+        const next = { ...guest, [field]: value };
+        if (field === "adults") {
+          if (next.adults + next.children > maxTotalCapacity) {
+            next.children = Math.max(0, maxTotalCapacity - next.adults);
+          }
+        } else if (field === "children") {
+          if (next.adults + next.children > maxTotalCapacity) {
+            next.adults = Math.max(1, maxTotalCapacity - next.children);
+          }
+        }
+        return next;
+      }),
     }));
+  };
 
   const updateStay = (
     roomId: string,
@@ -656,17 +755,31 @@ export default function HotelRooms() {
             const stayDates = dates[index] || defaultDates;
             const guest = forms[index] || defaultGuest(searchParams);
             const extra = extraGuests(room, guest);
-            const roomCode =
+            const rawRoomCode =
               codes[index] || room.roomCodes[index] || `Phòng ${index + 1}`;
+            const roomCode = normalizeRoomDisplayName(rawRoomCode);
             // Lookup roomId thực từ availableRooms dựa trên code được chọn
-            const matchedRoom = room.availableRooms?.find((r) => r.code === roomCode);
+            const matchedRoom = room.availableRooms?.find(
+              (r) =>
+                normalizeRoomDisplayName(r.code) === roomCode ||
+                r.code === rawRoomCode,
+            );
             const stayRoomId = matchedRoom?.id ?? room.roomId;
+            const priceCalc = getStayPrice(
+              stayRoomId || room.id,
+              stayDates.checkIn,
+              stayDates.checkOut,
+              room.price,
+              dailyPrices,
+            );
             return {
               roomCode,
               roomId: stayRoomId,
               checkIn: stayDates.checkIn,
               checkOut: stayDates.checkOut,
               nights: calculateNights(stayDates.checkIn, stayDates.checkOut),
+              nightlyPrice: priceCalc.avgNightly,
+              stayTotal: priceCalc.total,
               guest,
               extraGuestCharge: extra.extraGuestCharge,
             };
@@ -696,7 +809,7 @@ export default function HotelRooms() {
             roomName: room.name,
             roomNameVi: room.nameVi,
             quantity,
-            nightlyPrice: room.price,
+            nightlyPrice: firstStay?.nightlyPrice ?? room.price,
             guestForms: forms,
             includedCapacity: room.capacity,
             checkIn: firstStay.checkIn,
@@ -715,6 +828,7 @@ export default function HotelRooms() {
       roomStays,
       searchParams,
       selectedRoomCodes,
+      dailyPrices,
     ],
   );
 
@@ -723,7 +837,7 @@ export default function HotelRooms() {
       sum +
       (selection.stays || []).reduce(
         (staySum, stay) =>
-          staySum + selection.nightlyPrice * Math.max(0, stay.nights),
+          staySum + (stay.stayTotal ?? (stay.nightlyPrice || selection.nightlyPrice) * Math.max(0, stay.nights)),
         0,
       ),
     0,
@@ -838,7 +952,7 @@ export default function HotelRooms() {
             </h1>
             <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" />
-              {hotel.city}, {hotel.province}
+              {formatHotelLocation(hotel)}
             </p>
             <p className="mt-5 leading-relaxed text-muted-foreground">
               {language === "vi" ? hotel.description : hotel.descriptionEn}
@@ -958,6 +1072,21 @@ export default function HotelRooms() {
                 dates.checkOut,
               );
               const maxQuantity = maxAvailable(index, dates);
+              const stayRoomId = item.roomId || item.id;
+              const priceCalc = getStayPrice(
+                stayRoomId,
+                dates.checkIn,
+                dates.checkOut,
+                item.price,
+                dailyPrices,
+              );
+              const hasDynamicPricing = Boolean(
+                dailyPrices &&
+                (dailyPrices[String(stayRoomId)] || dailyPrices[Number(stayRoomId)])
+              );
+              const displayNightlyPrice = priceCalc.avgNightly;
+              const standardGuests = item.standardCapacity || item.capacity.adults || 2;
+              const maxTotalGuests = standardGuests + (item.maxExtraGuests || 0);
               return (
                 <article
                   key={item.id}
@@ -1009,7 +1138,7 @@ export default function HotelRooms() {
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Users className="h-4 w-4 text-gold" />
-                          Tối đa {item.capacity.adults} người lớn
+                          Chuẩn {standardGuests} người lớn{maxTotalGuests > standardGuests ? ` (tối đa ${maxTotalGuests} khách)` : ""}
                         </span>
                       </div>
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -1024,7 +1153,7 @@ export default function HotelRooms() {
                             : "Hết phòng"}
                         </span>
                         <span className="text-muted-foreground">
-                          Tòa {item.building} · Tầng {item.floor} · Giá cố định
+                          Tòa {item.building} · Tầng {item.floor} · {hasDynamicPricing ? "Giá theo ngày" : "Giá tiêu chuẩn"}
                         </span>
                       </div>
                       {(() => {
@@ -1058,14 +1187,19 @@ export default function HotelRooms() {
                       </div>
                     </div>
                     <div className="border-t border-border bg-secondary/30 p-5 md:border-l md:border-t-0">
-                      <p className="text-xs text-muted-foreground">Giá từ</p>
+                      <p className="text-xs text-muted-foreground">{hasDynamicPricing ? "Giá ngày đã chọn" : "Giá từ"}</p>
                       <p className="mt-1 text-2xl font-bold text-primary">
-                        {formatVnd(item.price)}
+                        {formatVnd(displayNightlyPrice)}
                         <span className="text-xs font-normal text-muted-foreground">
                           {" "}
                           / đêm
                         </span>
                       </p>
+                      {hasDynamicPricing && (
+                        <p className="mt-0.5 text-[11px] font-medium text-emerald-700">
+                          Đã cập nhật theo lịch
+                        </p>
+                      )}
                       <label className="mt-4 block text-xs font-semibold text-primary">
                         Số phòng
                         <select
@@ -1135,9 +1269,11 @@ export default function HotelRooms() {
                                   </span>
                                   <select
                                     value={
-                                      selectedRoomCodes[item.id]?.[stayIndex] ||
-                                      item.roomCodes[stayIndex] ||
-                                      ""
+                                      normalizeRoomDisplayName(
+                                        selectedRoomCodes[item.id]?.[stayIndex] ||
+                                        item.roomCodes[stayIndex] ||
+                                        "",
+                                      )
                                     }
                                     onChange={(event) =>
                                       updateStayRoomCode(
@@ -1152,12 +1288,14 @@ export default function HotelRooms() {
                                     {(item.availableRooms
                                       ? item.availableRooms.map((r) => r.code)
                                       : item.roomCodes
-                                    ).map((code) => {
+                                    ).map((rawCode) => {
+                                      const code = normalizeRoomDisplayName(rawCode);
                                       const isChosenByOther = (
                                         selectedRoomCodes[item.id] || []
                                       ).some(
                                         (c, idx) =>
-                                          idx !== stayIndex && c === code,
+                                          idx !== stayIndex &&
+                                          normalizeRoomDisplayName(c) === code,
                                       );
                                       return (
                                         <option
@@ -1245,87 +1383,103 @@ export default function HotelRooms() {
                                 </label>
                               </div>
                               <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                                <label className="text-xs text-muted-foreground">
-                                  Người lớn
-                                  <select
-                                    value={guest.adults}
-                                    onChange={(event) =>
-                                      updateGuest(
-                                        item.id,
-                                        stayIndex,
-                                        "adults",
-                                        Number(event.target.value),
-                                      )
-                                    }
-                                    className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm"
-                                  >
-                                    {Array.from(
-                                      { length: item.capacity.adults + 3 },
-                                      (_, optionIndex) => (
-                                        <option
-                                          key={optionIndex + 1}
-                                          value={optionIndex + 1}
+                                {(() => {
+                                  const standardGuests =
+                                    item.standardCapacity ||
+                                    item.capacity?.adults ||
+                                    2;
+                                  const maxExtra = item.maxExtraGuests ?? 2;
+                                  const maxTotalCapacity =
+                                    standardGuests + maxExtra;
+                                  const maxAdultsAllowed = Math.max(
+                                    1,
+                                    maxTotalCapacity - (guest.children || 0),
+                                  );
+                                  const maxChildrenAllowed = Math.max(
+                                    0,
+                                    maxTotalCapacity - (guest.adults || 1),
+                                  );
+
+                                  return (
+                                    <>
+                                      <label className="text-xs text-muted-foreground">
+                                        Người lớn (từ 12 tuổi)
+                                        <select
+                                          value={guest.adults}
+                                          onChange={(event) =>
+                                            updateGuest(
+                                              item.id,
+                                              stayIndex,
+                                              "adults",
+                                              Number(event.target.value),
+                                            )
+                                          }
+                                          className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm font-semibold text-primary"
                                         >
-                                          {optionIndex + 1}
-                                        </option>
-                                      ),
-                                    )}
-                                  </select>
-                                </label>
-                                <label className="text-xs text-muted-foreground">
-                                  Trẻ em (6-11 tuổi)
-                                  <select
-                                    value={guest.children}
-                                    onChange={(event) =>
-                                      updateGuest(
-                                        item.id,
-                                        stayIndex,
-                                        "children",
-                                        Number(event.target.value),
-                                      )
-                                    }
-                                    className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm"
-                                  >
-                                    {Array.from(
-                                      { length: item.capacity.children + 3 },
-                                      (_, optionIndex) => (
-                                        <option
-                                          key={optionIndex}
-                                          value={optionIndex}
+                                          {Array.from(
+                                            { length: maxAdultsAllowed },
+                                            (_, optionIndex) => (
+                                              <option
+                                                key={optionIndex + 1}
+                                                value={optionIndex + 1}
+                                              >
+                                                {optionIndex + 1} người lớn
+                                              </option>
+                                            ),
+                                          )}
+                                        </select>
+                                      </label>
+                                      <label className="text-xs text-muted-foreground">
+                                        Trẻ em (2–11 tuổi)
+                                        <select
+                                          value={guest.children}
+                                          onChange={(event) =>
+                                            updateGuest(
+                                              item.id,
+                                              stayIndex,
+                                              "children",
+                                              Number(event.target.value),
+                                            )
+                                          }
+                                          className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm font-semibold text-primary"
                                         >
-                                          {optionIndex}
-                                        </option>
-                                      ),
-                                    )}
-                                  </select>
-                                </label>
-                                <label className="text-xs text-muted-foreground">
-                                  Em bé (0-5 tuổi)
-                                  <select
-                                    value={guest.infants}
-                                    onChange={(event) =>
-                                      updateGuest(
-                                        item.id,
-                                        stayIndex,
-                                        "infants",
-                                        Number(event.target.value),
-                                      )
-                                    }
-                                    className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm"
-                                  >
-                                    {Array.from(
-                                      { length: item.capacity.infants + 2 },
-                                      (_, optionIndex) => (
-                                        <option
-                                          key={optionIndex}
-                                          value={optionIndex}
+                                          {Array.from(
+                                            { length: maxChildrenAllowed + 1 },
+                                            (_, optionIndex) => (
+                                              <option
+                                                key={optionIndex}
+                                                value={optionIndex}
+                                              >
+                                                {optionIndex} trẻ em
+                                              </option>
+                                            ),
+                                          )}
+                                        </select>
+                                      </label>
+                                      <label className="text-xs text-muted-foreground">
+                                        Em bé (&lt; 2 tuổi, miễn phí)
+                                        <select
+                                          value={guest.infants}
+                                          onChange={(event) =>
+                                            updateGuest(
+                                              item.id,
+                                              stayIndex,
+                                              "infants",
+                                              Number(event.target.value),
+                                            )
+                                          }
+                                          className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm font-semibold text-primary"
                                         >
-                                          {optionIndex}
-                                        </option>
-                                      ),
-                                    )}
-                                  </select>
-                                </label>
+                                          {[0, 1, 2].map((count) => (
+                                            <option key={count} value={count}>
+                                              {count} em bé
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </label>
+                                    </>
+                                  );
+                                })()}
                               </div>
                               {calendarOpen && (
                                 <RoomAvailabilityCalendar

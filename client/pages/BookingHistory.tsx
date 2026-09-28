@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BedDouble,
@@ -899,41 +899,39 @@ export default function BookingHistory() {
                             </div>
 
                             {/* Line items */}
-                            <div className="border-t border-slate-200 pt-2 space-y-1.5 text-xs">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-slate-800">Tiền phòng</span>
-                                <span className="text-muted-foreground">
-                                  {stay.nights} đêm × {formatVnd(nightly).replace(" đ", "").replace(" ₫", "")}
-                                </span>
-                                <span className="font-semibold text-slate-900">
-                                  {formatVnd(roomPrice)}
-                                </span>
-                              </div>
+                            <div className="border-t border-slate-200 pt-2.5 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 text-xs items-center">
+                              <span className="font-medium text-slate-800 truncate">Tiền phòng</span>
+                              <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
+                                {stay.nights} đêm × {formatVnd(nightly).replace(" đ", "").replace(" ₫", "")}
+                              </span>
+                              <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                                {formatVnd(roomPrice)}
+                              </span>
 
                               {extraGuestCharge > 0 && (
-                                <div className="flex items-center justify-between text-amber-800">
-                                  <span>Phụ thu thêm người</span>
-                                  <span className="text-muted-foreground">—</span>
-                                  <span className="font-semibold">+{formatVnd(extraGuestCharge)}</span>
-                                </div>
+                                <Fragment key="extra-guest">
+                                  <span className="font-medium text-amber-800 truncate">Phụ thu thêm người</span>
+                                  <span className="text-right text-muted-foreground font-mono whitespace-nowrap">—</span>
+                                  <span className="text-right font-semibold text-amber-800 whitespace-nowrap">+{formatVnd(extraGuestCharge)}</span>
+                                </Fragment>
                               )}
 
                               {stay.services && stay.services.length > 0 && (
                                 stay.services.map((srv) => (
-                                  <div key={srv.id} className="flex items-center justify-between">
-                                    <span className="flex items-center gap-1.5 text-slate-700">
-                                      <span className="rounded bg-slate-200 px-1 py-0.2 text-[10px] font-mono text-slate-600">
+                                  <Fragment key={srv.id}>
+                                    <span className="flex items-center gap-1.5 text-slate-700 min-w-0 truncate">
+                                      <span className="shrink-0 rounded bg-slate-200 px-1 py-0.2 text-[10px] font-mono text-slate-600 font-semibold">
                                         DV
                                       </span>
-                                      {srv.name}
+                                      <span className="truncate">{srv.name}</span>
                                     </span>
-                                    <span className="text-muted-foreground">
+                                    <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
                                       {srv.quantity} × {formatVnd(srv.unitPrice || srv.total / (srv.quantity || 1)).replace(" đ", "").replace(" ₫", "")}
                                     </span>
-                                    <span className="font-semibold text-slate-900">
+                                    <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
                                       {formatVnd(srv.total)}
                                     </span>
-                                  </div>
+                                  </Fragment>
                                 ))
                               )}
                             </div>
@@ -963,12 +961,15 @@ export default function BookingHistory() {
                     <p className="font-bold text-xs uppercase tracking-wider text-primary mb-2">
                       Dịch vụ chung đặt kèm
                     </p>
-                    <div className="space-y-1.5 text-xs">
+                    <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 text-xs items-center">
                       {booking.services.map((srv) => (
-                        <div key={srv.id} className="flex justify-between items-center text-slate-700">
-                          <span>{srv.name} (SL: {srv.quantity})</span>
-                          <strong className="text-slate-900">{formatVnd(srv.total)}</strong>
-                        </div>
+                        <Fragment key={srv.id}>
+                          <span className="text-slate-700 font-medium truncate">{srv.name}</span>
+                          <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
+                            {srv.quantity} × {formatVnd(srv.unitPrice || srv.total / (srv.quantity || 1)).replace(" đ", "").replace(" ₫", "")}
+                          </span>
+                          <strong className="text-right text-slate-900 whitespace-nowrap">{formatVnd(srv.total)}</strong>
+                        </Fragment>
                       ))}
                     </div>
                   </div>
@@ -1023,7 +1024,7 @@ export default function BookingHistory() {
                     </div>
                   )}
 
-                  {booking.extraGuestCharge && booking.extraGuestCharge > 0 && (
+                  {Number(booking.extraGuestCharge || 0) > 0 && (
                     <div className="flex justify-between text-slate-600">
                       <span>Tổng phụ thu khách thêm:</span>
                       <strong className="text-slate-900">{formatVnd(booking.extraGuestCharge)}</strong>
@@ -1051,7 +1052,7 @@ export default function BookingHistory() {
 
                   <div className="flex justify-between items-center border-t-2 border-primary/30 pt-3 text-base font-extrabold text-primary">
                     <span>TỔNG CỘNG THANH TOÁN:</span>
-                    <span className="text-xl text-primary font-display font-bold">
+                    <span className="text-xl text-primary font-bold">
                       {formatVnd(booking.total)}
                     </span>
                   </div>

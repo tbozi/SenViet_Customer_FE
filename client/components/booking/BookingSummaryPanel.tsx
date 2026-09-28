@@ -106,7 +106,10 @@ export default function BookingSummaryPanel({
   const roomBreakdowns = selections.flatMap((selection, selectionIndex) =>
     selectionStays(selection).map((stay, stayIndex) => {
       const nightlyPrice = stay.nightlyPrice || selection.nightlyPrice;
-      const roomPrice = nightlyPrice * Math.max(0, stay.nights);
+      const roomPrice =
+        stay.stayTotal !== undefined
+          ? stay.stayTotal
+          : nightlyPrice * Math.max(0, stay.nights);
       const extraGuestSurcharge =
         Number(stay.extraGuestCharge || 0) * Math.max(0, stay.nights);
       const concreteStayIndex =
@@ -260,13 +263,20 @@ export default function BookingSummaryPanel({
 
                 <div className="mt-3 space-y-2 border-t border-primary/10 pt-3 text-xs">
                   <div className="flex justify-between gap-3">
-                    <span>Tiền phòng</span>
-                    <span>{formatVnd(breakdown.roomPrice)}</span>
+                    <span>Tiền phòng ({stay.nights} đêm)</span>
+                    <span className="font-semibold text-slate-800">{formatVnd(breakdown.roomPrice)}</span>
                   </div>
-                  <div className="flex justify-between gap-3">
-                    <span>Phụ thu khách thêm</span>
-                    <span>{formatVnd(breakdown.extraGuestSurcharge)}</span>
-                  </div>
+                  {breakdown.extraGuestSurcharge > 0 ? (
+                    <div className="flex justify-between gap-3 font-medium text-amber-700">
+                      <span>Phụ thu vượt sức chứa</span>
+                      <span>+{formatVnd(breakdown.extraGuestSurcharge)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between gap-3 text-emerald-700">
+                      <span>Phụ thu khách thêm</span>
+                      <span>Miễn phí (trong chuẩn)</span>
+                    </div>
+                  )}
                   <div className="border-t border-primary/10 pt-2">
                     <p className="mb-1 font-semibold text-primary">Dịch vụ</p>
                     {breakdown.services.length ? (
