@@ -266,15 +266,10 @@ export default function BookingSummaryPanel({
                     <span>Tiền phòng ({stay.nights} đêm)</span>
                     <span className="font-semibold text-slate-800">{formatVnd(breakdown.roomPrice)}</span>
                   </div>
-                  {breakdown.extraGuestSurcharge > 0 ? (
+                  {breakdown.extraGuestSurcharge > 0 && (
                     <div className="flex justify-between gap-3 font-medium text-amber-700">
                       <span>Phụ thu vượt sức chứa</span>
                       <span>+{formatVnd(breakdown.extraGuestSurcharge)}</span>
-                    </div>
-                  ) : (
-                    <div className="flex justify-between gap-3 text-emerald-700">
-                      <span>Phụ thu khách thêm</span>
-                      <span>Miễn phí (trong chuẩn)</span>
                     </div>
                   )}
                   <div className="border-t border-primary/10 pt-2">

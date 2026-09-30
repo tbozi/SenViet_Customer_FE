@@ -19,7 +19,7 @@ import {
   Wifi,
 } from "lucide-react";
 import HotelCard from "@/components/HotelCard";
-import { formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
+import { formatHotelLocation, formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
 import { rooms as fallbackRooms, type RoomType } from "@/data/rooms";
 import { fetchRoomsByHotel } from "@/services/roomApi";
 import { fetchHotelReviews, type HotelReviewSummary } from "@/services/reviewApi";
