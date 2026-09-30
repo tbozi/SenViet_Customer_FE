@@ -335,14 +335,27 @@ export default function Checkout() {
 
   const backendDiscount = useMemo(() => {
     if (!matchedActivePromo || promoMinBookingFailed) return 0;
-    if (String(matchedActivePromo.type).toUpperCase().includes("PERCENT")) {
-      const calculated = Math.round((roomSubtotal * matchedActivePromo.discountValue) / 100);
+    const isPercentage =
+      matchedActivePromo.discountType === "PERCENTAGE" ||
+      String(matchedActivePromo.type).toUpperCase().includes("PERCENT") ||
+      matchedActivePromo.discountValue <= 100;
+
+    const scope = String(matchedActivePromo.type).toUpperCase();
+    const applicableAmount =
+      scope === "SERVICE"
+        ? serviceTotal
+        : scope === "TOTAL"
+        ? roomSubtotal + serviceTotal
+        : roomSubtotal;
+
+    if (isPercentage) {
+      const calculated = Math.round((applicableAmount * matchedActivePromo.discountValue) / 100);
       return matchedActivePromo.maxDiscountAmount
         ? Math.min(calculated, matchedActivePromo.maxDiscountAmount)
         : calculated;
     }
     return matchedActivePromo.discountValue || 0;
-  }, [matchedActivePromo, promoMinBookingFailed, roomSubtotal]);
+  }, [matchedActivePromo, promoMinBookingFailed, roomSubtotal, serviceTotal]);
 
   const isDemoPromo =
     promo.trim().toUpperCase() === "DEMO" ||

@@ -1,11 +1,12 @@
 import { baseApi, type ApiResponse } from "./baseApi";
 
 export interface PromotionItem {
-  id: number;
+  id: number | string;
   code: string;
   name: string;
   description?: string;
   type: string;
+  discountType?: string;
   discountValue: number;
   maxDiscountAmount?: number;
   minBookingValue?: number;
@@ -16,12 +17,13 @@ export interface PromotionItem {
 }
 
 export interface SavedPromotionItem {
-  savedId: number;
-  promotionId: number;
+  savedId: number | string;
+  promotionId: number | string;
   code: string;
   name: string;
   description?: string;
   type: string;
+  discountType?: string;
   discountValue: number;
   maxDiscountAmount?: number;
   minBookingValue?: number;
@@ -39,7 +41,7 @@ export const promotionApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<PromotionItem[]>) => response.result || [],
       providesTags: ["Promotion"],
     }),
-    getMySavedPromotions: builder.query<SavedPromotionItem[], number | void>({
+    getMySavedPromotions: builder.query<SavedPromotionItem[], number | string | void>({
       query: (customerId) => ({
         url: customerId ? `/customer-promotions/customer/${customerId}` : "/customer-promotions/customer/0",
         method: "GET",
@@ -53,6 +55,7 @@ export const promotionApi = baseApi.injectEndpoints({
           name: item.name || item.code,
           description: item.description,
           type: item.type,
+          discountType: item.discountType,
           discountValue: item.discountValue,
           maxDiscountAmount: item.maxDiscountAmount,
           minBookingValue: item.minBookingValue,
@@ -65,11 +68,11 @@ export const promotionApi = baseApi.injectEndpoints({
       },
       providesTags: ["Promotion"],
     }),
-    savePromotion: builder.mutation<any, number>({
+    savePromotion: builder.mutation<any, number | string>({
       query: (promotionId) => ({
         url: "/customer-promotions/claim",
         method: "POST",
-        data: { promotionId },
+        data: { promotionId: String(promotionId) },
       }),
       invalidatesTags: ["Promotion"],
     }),
