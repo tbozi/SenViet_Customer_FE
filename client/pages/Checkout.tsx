@@ -82,7 +82,7 @@ function parseSelections(params: URLSearchParams): RoomSelection[] {
       includedCapacity: { adults: 1, children: 1, infants: 1 },
       checkIn,
       checkOut,
-      nights: Number(params.get("nights") || 0),
+      nights: Number(params.get("nights") || 1),
       extraAdults: 0,
       extraChildren: 0,
       extraGuestCount: 0,
@@ -151,9 +151,15 @@ export default function Checkout() {
   const [params] = useSearchParams();
   const hotel =
     hotels.find((item) => item.slug === params.get("hotel")) || hotels[0];
-  const [name, setName] = useState(user?.name || "");
-  const [phone, setPhone] = useState(user?.phone || "");
-  const [email, setEmail] = useState(user?.email || "");
+  const [name, setName] = useState(
+    user?.name || params.get("fullName") || params.get("name") || "",
+  );
+  const [phone, setPhone] = useState(
+    user?.phone || params.get("phone") || "",
+  );
+  const [email, setEmail] = useState(
+    user?.email || params.get("email") || "",
+  );
   const [cccd, setCccd] = useState(user?.cccd || user?.identityNumber || "");
   const [request, setRequest] = useState("");
 

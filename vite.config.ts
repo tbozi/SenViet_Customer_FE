@@ -22,32 +22,42 @@ export default defineConfig(({ mode }) => ({
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
       },
-      "/services": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-      },
       "/bookings": {
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
+      },
+      "/services": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
       },
       "/rooms": {
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
       },
       "/orders": {
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
       },
       "/customer": {
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
       },
       "/reviews": {
         target: "http://127.0.0.1:8081",
         changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
+      },
+      "/payment": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
       },
       "/ai": {
-        target: "http://127.0.0.1:8081",
+        target: "http://127.0.0.1:8000",
         changeOrigin: true,
       },
     },

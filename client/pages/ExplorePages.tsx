@@ -197,7 +197,7 @@ export function Offers() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [copiedCode, setCopiedCode] = useState("");
-  const [selectedOffer, setSelectedOffer] = useState<(typeof offers)[number] | null>(null);
+  const [selectedOffer, setSelectedOffer] = useState<any | null>(null);
   const isVietnamese = language === "vi";
 
   // Lấy danh sách ưu đãi và voucher đã lưu từ Backend
@@ -207,6 +207,50 @@ export function Offers() {
   });
   const [savePromo, { isLoading: isSaving }] = useSavePromotionMutation();
   const [unsavePromo, { isLoading: isUnsaving }] = useUnsavePromotionMutation();
+
+  const displayOffers = (activePromos && activePromos.length > 0)
+    ? activePromos.map((p, idx) => {
+        const isPercent = p.discountType === "PERCENTAGE" || (p as any).promotionDiscountType === "PERCENTAGE" || p.discountValue <= 100;
+        const discountText = isPercent ? `Giảm ${p.discountValue}%` : `Giảm ${formatVnd(p.discountValue)}`;
+        const accents = [
+          "from-amber-50 to-white",
+          "from-blue-50 to-white",
+          "from-emerald-50 to-white",
+          "from-rose-50 to-white",
+          "from-violet-50 to-white",
+          "from-orange-50 to-white",
+        ];
+        return {
+          id: p.id,
+          tag: p.type === "ROOM" ? "PHÒNG" : p.type === "SERVICE" ? "DỊCH VỤ" : "TOÀN BỘ",
+          icon: isPercent ? Percent : Gift,
+          title: p.name,
+          titleEn: p.name,
+          description: p.description || `${discountText} cho đơn đặt phòng tại Sen Việt Luxury.`,
+          descriptionEn: p.description || `${discountText} for booking at Sen Việt Luxury.`,
+          code: p.code,
+          image: (p as any).imageUrl || "https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1000",
+          detail: p.minBookingValue ? `Đơn tối thiểu ${formatVnd(p.minBookingValue)}` : "Áp dụng toàn bộ hệ thống Sen Việt",
+          detailEn: p.minBookingValue ? `Min order ${formatVnd(p.minBookingValue)}` : "All Sen Việt branches",
+          usage: `Nhập mã ${p.code} tại ô Mã khuyến mãi khi đặt phòng hoặc thanh toán.`,
+          usageEn: `Enter ${p.code} at promo code during booking.`,
+          conditions: [
+            p.minBookingValue ? `Áp dụng cho đơn từ ${formatVnd(p.minBookingValue)}` : "Áp dụng cho đặt phòng",
+            p.maxDiscountAmount ? `Giảm tối đa ${formatVnd(p.maxDiscountAmount)}` : "Không giới hạn mức giảm tối đa",
+            "Mỗi khách hàng áp dụng 1 lần / đơn",
+          ],
+          conditionsEn: [
+            p.minBookingValue ? `Valid for orders from ${formatVnd(p.minBookingValue)}` : "Valid for bookings",
+            "Non-transferable",
+          ],
+          hotels: ["Tất cả khách sạn Sen Việt"],
+          hotelsEn: ["All Sen Việt hotels"],
+          valid: p.endDate ? new Date(p.endDate).toLocaleDateString("vi-VN") : "31/12/2026",
+          validEn: p.endDate ? new Date(p.endDate).toLocaleDateString("vi-VN") : "31/12/2026",
+          accent: accents[idx % accents.length],
+        };
+      })
+    : offers;
 
   const [savedCodes, setSavedCodes] = useState<string[]>(() =>
     getSavedPromotionCodes(user?.email),
@@ -307,7 +351,7 @@ export function Offers() {
           </div>
 
           <div className="mx-auto mt-10 grid max-w-6xl gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {offers.map((offer) => {
+            {displayOffers.map((offer) => {
               const Icon = offer.icon;
               const copied = copiedCode === offer.code;
               const isSaved = isSavedCode(offer.code);

@@ -21,17 +21,20 @@ import {
   Minimize2,
   Clock,
   CalendarCheck,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n";
 import { useSendChatMessageMutation } from "@/services/chatApi";
 import type { ChatMessage as ChatMessageType } from "@/services/chatApi";
 import { formatVnd } from "@/data/hotels";
+import { saveBooking, getBookings, updateBooking } from "@/lib/bookings";
 
 interface Message {
   id: number;
   from: "bot" | "user";
   text: string;
+  state?: any;
 }
 
 export interface RoomOptionItem {
@@ -51,6 +54,8 @@ export interface BookingCardData {
   children?: number;
   rooms?: number;
   pricePerNight?: number;
+  customerName?: string;
+  customerPhone?: string;
   roomOptions?: RoomOptionItem[];
 }
 
@@ -204,6 +209,8 @@ function parseBotMessage(rawText: string): {
         children: parsed.children || 0,
         rooms: typeof parsed.rooms === "number" ? parsed.rooms : 1,
         pricePerNight: primaryPrice,
+        customerName: parsed.customerName || parsed.name || parsed.fullName || "",
+        customerPhone: parsed.customerPhone || parsed.phone || "",
         roomOptions,
       };
 
@@ -275,6 +282,44 @@ export default function ChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
   const sessionIdRef = useRef<string>(crypto.randomUUID());
   const historyRef = useRef<ChatMessageType[]>([]);
+  const [activePaymentOrderId, setActivePaymentOrderId] = useState<string | null>(null);
+  const currentBookingIdRef = useRef<string | null>(null);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.lang = "vi-VN";
+      
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput((prev) => (prev ? prev + " " + transcript : transcript));
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+      };
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
 
   const [sendChatMessage] = useSendChatMessageMutation();
 
@@ -313,7 +358,7 @@ export default function ChatWidget() {
       // Add to history for context
       historyRef.current = [
         ...historyRef.current,
-        { role: "user", content: text },
+        { role: "user" as const, content: text },
       ].slice(-10); // Keep last 10 messages
 
       try {
@@ -324,12 +369,56 @@ export default function ChatWidget() {
         }).unwrap();
 
         const reply = result.result?.reply || t("ai.genericReply");
+        const state = result.result?.state;
 
         // Add bot reply to UI
         setMessages((prev) => [
           ...prev,
-          { id: Date.now() + 1, from: "bot", text: reply },
+          { id: Date.now() + 1, from: "bot", text: reply, state: state },
         ]);
+
+        // Synchronize booking to client localStorage for history & success pages
+        if (state?.bookingId) {
+          currentBookingIdRef.current = state.bookingId;
+          const existing = getBookings().find((b) => b.id === state.bookingId);
+          if (!existing) {
+            const checkIn = state.checkIn || new Date().toISOString().split("T")[0];
+            const checkOut = state.checkOut || new Date(Date.now() + 86400000).toISOString().split("T")[0];
+            const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
+            const payAmount = Number(state.amountToPay || 2000);
+            saveBooking({
+              id: state.bookingId,
+              userEmail: state.guestInfo?.email || "guest@senviet.vn",
+              hotelSlug: getSlugFromHotelName(state.branch?.name),
+              hotelName: state.branch?.name || "Chi nhánh Sen Việt Luxury",
+              roomName: "Phòng " + (state.roomType?.id || "STANDARD"),
+              checkIn,
+              checkOut,
+              nights,
+              rooms: state.roomQty || 1,
+              roomPrice: payAmount,
+              roomTotal: payAmount,
+              vat: 0,
+              serviceFee: 0,
+              discount: 0,
+              total: payAmount,
+              paymentMethod: "qr",
+              status: state.status === "CONFIRMED" ? "confirmed" : "pending_payment",
+              createdAt: new Date().toISOString(),
+              guestName: state.guestInfo?.name || "Khách hàng",
+              phone: state.guestInfo?.phone || "",
+              email: state.guestInfo?.email || "",
+              specialRequest: "",
+              cancellationDeadline: "",
+              holdUntil: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+            });
+          }
+        }
+
+        // Track order ID for payment polling
+        if (state?.orderId) {
+          setActivePaymentOrderId(String(state.orderId));
+        }
 
         // Update session ID from server
         if (result.result?.sessionId) {
@@ -339,7 +428,7 @@ export default function ChatWidget() {
         // Add bot reply to history
         historyRef.current = [
           ...historyRef.current,
-          { role: "model", content: reply },
+          { role: "model" as const, content: reply },
         ].slice(-10);
       } catch {
         setMessages((prev) => [
@@ -357,12 +446,51 @@ export default function ChatWidget() {
     [isTyping, sendChatMessage, t],
   );
 
-  const quickReplies = [
-    t("ai.quickBook"),
-    t("ai.quickOffer"),
-    t("ai.quickLocation"),
-    t("ai.quickSupport"),
-  ];
+  // Real-time payment check polling via PayOS backend
+  useEffect(() => {
+    if (!activePaymentOrderId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/payment/check-order-status/${activePaymentOrderId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.isPaid || data.status === "PAID" || data.status === "CLOSED") {
+          clearInterval(interval);
+          setActivePaymentOrderId(null);
+          const bId = currentBookingIdRef.current;
+          if (bId) {
+            updateBooking(bId, { status: "confirmed" });
+          }
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: Date.now() + 2,
+              from: "bot",
+              text: `🎉 **Chúc mừng quý khách!** Hệ thống đã ghi nhận thanh toán thành công qua PayOS cho đơn đặt phòng #${bId || activePaymentOrderId}.\n\nPhòng của quý khách đã được chính thức xác nhận giữ chỗ thành công. Quý khách có thể xem lại chi tiết trong mục **Lịch sử booking** bất cứ lúc nào!`,
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error("[ChatWidget] Payment status check error:", err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [activePaymentOrderId]);
+
+  const lastBotMsg = messages.filter((m) => m.from === "bot").slice(-1)[0]?.text?.toLowerCase() || "";
+  const isAwaitingConfirmation =
+    (lastBotMsg.includes("xác nhận") || lastBotMsg.includes("thanh toán")) &&
+    !lastBotMsg.includes("payos_payment");
+
+  const quickReplies = isAwaitingConfirmation
+    ? ["✅ Xác nhận đặt phòng", "Chỉnh sửa thông tin", "Dịch vụ đưa đón sân bay"]
+    : [
+        t("ai.quickBook"),
+        t("ai.quickOffer"),
+        t("ai.quickLocation"),
+        t("ai.quickSupport"),
+      ];
 
   return (
     <>
@@ -442,7 +570,48 @@ export default function ChatWidget() {
               }
 
               // Bot message: parse text & optional booking card / payos payment / hotel reservation
-              const { cleanText, bookingCard, payosPayment, hotelReservation } = parseBotMessage(m.text);
+              let { cleanText, bookingCard, payosPayment, hotelReservation } = parseBotMessage(m.text);
+
+              // 1. Ánh xạ thẻ thanh toán PayOS khi AI sinh mã QR thanh toán
+              if (m.state?.qrUrl || m.state?.currentStep === "PAYMENT_PROCESSING") {
+                payosPayment = {
+                  bookingId: m.state.bookingId || "BKG_SENVIET",
+                  orderId: m.state.orderCode || m.state.bookingId || "N/A",
+                  hotelName: m.state.branch?.name || "Chi nhánh Sen Việt Luxury",
+                  roomName: "Phòng " + (m.state.roomType?.id || m.state.roomType || "STANDARD"),
+                  checkIn: m.state.checkIn || "",
+                  checkOut: m.state.checkOut || "",
+                  customerName: m.state.guestInfo?.name || "Quý khách",
+                  customerPhone: m.state.guestInfo?.phone || "",
+                  services: m.state.services?.map((s: any) => s.name || s.id).join(", ") || "",
+                  promotion: m.state.promoCode || "",
+                  totalAmount: m.state.amountToPay || 350000,
+                  qrCodeUrl: m.state.qrUrl || "",
+                  checkoutUrl: m.state.checkoutUrl || ""
+                };
+              }
+
+              // 2. Ánh xạ thẻ xác nhận đặt phòng khi chưa thanh toán
+              if (m.state?.branch && m.state?.currentStep !== "PAYMENT_PROCESSING") {
+                bookingCard = {
+                  hotelName: m.state.branch?.name || "Chi nhánh Sen Việt",
+                  hotelSlug: "sen-viet",
+                  checkInDate: m.state.checkIn,
+                  checkOutDate: m.state.checkOut,
+                  adults: m.state.guests?.adults,
+                  children: m.state.guests?.children,
+                  roomType: m.state.roomType?.id || m.state.roomType || "",
+                  roomTypeName: "Phòng " + (m.state.roomType?.id || m.state.roomType || ""),
+                  pricePerNight: m.state.availableRooms?.find((r: any) => r.roomType === (m.state.roomType?.id || m.state.roomType))?.pricePerNight || m.state.amountToPay || 0,
+                  customerName: m.state.guestInfo?.name,
+                  customerPhone: m.state.guestInfo?.phone,
+                  roomOptions: (m.state.currentStep === "SELECT_ROOM" && m.state.availableRooms) ? m.state.availableRooms.map((r: any) => ({
+                    type: r.roomType || "",
+                    typeName: r.roomTypeName || r.roomType,
+                    price: r.pricePerNight || 0
+                  })) : []
+                };
+              }
 
               return (
                 <div
@@ -517,7 +686,7 @@ export default function ChatWidget() {
                     <div className="mt-3 overflow-hidden rounded-xl border border-emerald-500/50 bg-card p-4 shadow-lg">
                       <div className="flex items-center justify-between border-b border-border/60 pb-2">
                         <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                          <Clock className="h-4 w-4" /> Đơn giữ chỗ tạm thời (15 phút)
+                          <Clock className="h-4 w-4" /> Đơn giữ chỗ tạm thời (5 phút)
                         </span>
                         <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                           Mã #{payosPayment.orderId || payosPayment.bookingId}
@@ -708,10 +877,10 @@ export default function ChatWidget() {
                               className="w-full rounded-xl bg-gold font-semibold text-gold-foreground shadow-sm hover:bg-gold/90"
                             >
                               <Link
-                                to={`/hotels/${bookingCard.hotelSlug || "sen-viet-an-nhon"}?checkIn=${bookingCard.checkInDate || ""}&checkOut=${bookingCard.checkOutDate || ""}&adults=${bookingCard.adults || 2}&children=${bookingCard.children || 0}&rooms=${bookingCard.rooms || 1}`}
+                                to={`/checkout?hotel=${bookingCard.hotelSlug || "sen-viet-an-nhon"}&checkIn=${bookingCard.checkInDate || ""}&checkOut=${bookingCard.checkOutDate || ""}&room=${encodeURIComponent(bookingCard.roomTypeName || "Phòng Deluxe")}&roomType=${bookingCard.roomType || "DELUXE"}&roomPrice=${bookingCard.pricePerNight || 1200000}&adults=${bookingCard.adults || 2}&children=${bookingCard.children || 0}&rooms=${bookingCard.rooms || 1}&fullName=${encodeURIComponent(bookingCard.customerName || "")}&phone=${encodeURIComponent(bookingCard.customerPhone || "")}`}
                                 onClick={() => setOpen(false)}
                               >
-                                Tiến hành đặt phòng ngay <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                                Xác nhận & Thanh toán ngay <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
                               </Link>
                             </Button>
                           </div>
@@ -762,6 +931,16 @@ export default function ChatWidget() {
               disabled={isTyping}
               className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-sm outline-none transition focus:border-gold focus:ring-1 focus:ring-gold disabled:opacity-50"
             />
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              onClick={toggleListening}
+              className={`h-9 w-9 shrink-0 rounded-full transition-colors ${isListening ? 'bg-red-100 text-red-500 border-red-500 animate-pulse' : 'text-muted-foreground hover:text-gold'}`}
+              title="Nhập bằng giọng nói"
+            >
+              <Mic className="h-4 w-4" />
+            </Button>
             <Button type="submit" size="icon" className="h-9 w-9 shrink-0 rounded-full" disabled={isTyping || !input.trim()}>
               <Send className="h-4 w-4" />
             </Button>

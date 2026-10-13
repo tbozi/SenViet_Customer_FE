@@ -3,6 +3,7 @@ import { baseApi, ApiResponse } from "./baseApi";
 interface ChatMessage {
   role: "user" | "model";
   content: string;
+  state?: any;
 }
 
 interface ChatRequest {
@@ -14,6 +15,7 @@ interface ChatRequest {
 interface ChatResponse {
   reply: string;
   sessionId: string;
+  state?: any;
 }
 
 export const chatApi = baseApi.injectEndpoints({
