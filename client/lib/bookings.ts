@@ -70,6 +70,12 @@ export interface CancellationInfo {
   refundPercent: number;
   refundAmount: number;
   cancelledAt?: string;
+  reason?: string;
+  bankName?: string;
+  bankCode?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  refundEmail?: string;
 }
 
 export interface Booking {
@@ -126,6 +132,10 @@ export function getBookings() {
 
 export function saveBooking(booking: Booking) {
   localStorage.setItem(KEY, JSON.stringify([booking, ...getBookings()]));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("senviet_booking_updated", { detail: { booking } }));
+    window.dispatchEvent(new Event("storage"));
+  }
 }
 
 export function updateBooking(id: string, patch: Partial<Booking>) {
@@ -137,6 +147,10 @@ export function updateBooking(id: string, patch: Partial<Booking>) {
       ),
     ),
   );
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("senviet_booking_updated", { detail: { id, patch } }));
+    window.dispatchEvent(new Event("storage"));
+  }
 }
 
 export function calculateNights(checkIn: string, checkOut: string) {

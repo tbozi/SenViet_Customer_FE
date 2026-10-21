@@ -45,150 +45,129 @@ import { formatVnd } from "@/data/hotels";
 const offers = [
   {
     tag: "HOT",
-    icon: Gift,
-    title: "Ở 3 đêm, tặng 1 đêm",
-    titleEn: "Stay 3 nights, get 1 free",
-    description: "Tận hưởng kỳ nghỉ dài ngày với một đêm miễn phí tại các điểm đến ven biển.",
-    descriptionEn: "Extend your getaway with one complimentary night at our coastal destinations.",
-    code: "STAY3FREE",
+    icon: Percent,
+    title: "Ưu đãi Sen Việt",
+    titleEn: "Sen Việt Special Offer",
+    description: "Giảm 10% tổng giá trị tiền phòng (tối đa 500.000₫) cho tất cả khách hàng.",
+    descriptionEn: "Enjoy 10% off room charges (up to 500,000 VND) across all hotels.",
+    code: "SEN10",
     image: "https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1000",
-    detail: "Áp dụng tại Sen Việt Đà Nẵng và Nha Trang",
-    detailEn: "Available at Sen Việt Da Nang and Nha Trang",
-    usage: "Nhập mã STAY3FREE tại ô Mã khuyến mãi trong bước tìm kiếm hoặc thanh toán.",
-    usageEn: "Enter STAY3FREE in the promo code field during search or checkout.",
-    conditions: ["Đặt tối thiểu 3 đêm liên tiếp", "Áp dụng cho phòng tiêu chuẩn trở lên", "Không áp dụng đồng thời với mã khác"],
-    conditionsEn: ["Book at least 3 consecutive nights", "Valid for standard rooms and above", "Cannot be combined with another code"],
-    hotels: ["Sen Việt Đà Nẵng", "Sen Việt Nha Trang"],
-    hotelsEn: ["Sen Việt Da Nang", "Sen Việt Nha Trang"],
-    valid: "01/09/2026 – 31/12/2026",
-    validEn: "01/09/2026 – 31/12/2026",
+    detail: "Áp dụng toàn bộ hệ thống khách sạn Sen Việt",
+    detailEn: "Available at all Sen Việt hotels and resorts",
+    usage: "Nhập mã SEN10 tại ô Mã ưu đãi ở bước thanh toán.",
+    usageEn: "Enter SEN10 in the promo code field during checkout.",
+    conditions: ["Áp dụng cho mọi hạng phòng", "Giảm tối đa 500.000₫", "Không giới hạn số đêm"],
+    conditionsEn: ["Valid for all room types", "Max discount 500,000 VND", "No minimum night requirement"],
+    hotels: ["Tất cả khách sạn Sen Việt"],
+    hotelsEn: ["All Sen Việt hotels"],
+    valid: "01/01/2026 – 31/12/2030",
+    validEn: "01/01/2026 – 31/12/2030",
     accent: "from-blue-50 to-white",
   },
   {
-    tag: "MEMBER",
-    icon: Percent,
-    title: "Ưu đãi thành viên Sen Việt",
-    titleEn: "Sen Việt member offer",
-    description: "Giảm 15% giá phòng và nhận phòng sớm dành riêng cho thành viên.",
-    descriptionEn: "Enjoy 15% off rooms and early check-in, exclusively for members.",
-    code: "SENMEMBER",
+    tag: "VIP",
+    icon: Sparkles,
+    title: "Ưu đãi VIP 20%",
+    titleEn: "VIP 20% Discount",
+    description: "Giảm ngay 20% cho các đơn đặt phòng từ 2.000.000₫ (tối đa 1.000.000₫).",
+    descriptionEn: "Save 20% on bookings from 2,000,000 VND (up to 1,000,000 VND).",
+    code: "VIP20",
     image: "https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?q=80&w=1000",
-    detail: "Đăng nhập tài khoản để nhận ưu đãi",
-    detailEn: "Sign in to unlock this member benefit",
-    usage: "Đăng nhập tài khoản Sen Việt trước khi chọn phòng và nhập mã khi thanh toán.",
-    usageEn: "Sign in to your Sen Việt account before selecting a room and apply the code at checkout.",
-    conditions: ["Dành cho tài khoản đã đăng ký", "Giảm tối đa 15% tiền phòng", "Có thể áp dụng cho tối đa 3 phòng mỗi đặt phòng"],
-    conditionsEn: ["For registered accounts", "Up to 15% off room charges", "Valid for up to 3 rooms per booking"],
+    detail: "Đơn đặt phòng tối thiểu từ 2.000.000₫",
+    detailEn: "Minimum booking value of 2,000,000 VND",
+    usage: "Nhập mã VIP20 khi đặt phòng với tổng tiền phòng từ 2 triệu đồng.",
+    usageEn: "Apply code VIP20 at checkout for bookings over 2,000,000 VND.",
+    conditions: ["Giá trị đặt phòng từ 2.000.000₫", "Mức giảm tối đa 1.000.000₫", "Áp dụng toàn chuỗi"],
+    conditionsEn: ["Minimum order 2,000,000 VND", "Max discount 1,000,000 VND", "Valid chainwide"],
     hotels: ["Tất cả khách sạn Sen Việt"],
     hotelsEn: ["All Sen Việt hotels"],
-    valid: "01/09/2026 – 31/12/2026",
-    validEn: "01/09/2026 – 31/12/2026",
+    valid: "01/01/2026 – 31/12/2030",
+    validEn: "01/01/2026 – 31/12/2030",
     accent: "from-amber-50 to-white",
   },
   {
-    tag: "NEW",
-    icon: Sparkles,
-    title: "Trọn gói cuối tuần",
-    titleEn: "Weekend escape",
-    description: "Phòng nghỉ, bữa sáng buffet và trải nghiệm địa phương trong một gói hoàn chỉnh.",
-    descriptionEn: "A complete package with a room, breakfast and a local experience.",
-    code: "WEEKEND",
+    tag: "SUMMER",
+    icon: Waves,
+    title: "Khuyến mãi Mùa Hè 2026",
+    titleEn: "Summer Promotion 2026",
+    description: "Chào đón mùa hè rực rỡ với ưu đãi giảm 10% giá phòng (tối đa 500.000₫).",
+    descriptionEn: "Celebrate summer with 10% off room rates across our destinations.",
+    code: "SUMMER2026",
     image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1000",
-    detail: "Lưu trú từ thứ Sáu đến Chủ nhật",
-    detailEn: "Valid for stays from Friday to Sunday",
-    usage: "Chọn ngày nhận phòng vào thứ Sáu hoặc thứ Bảy, sau đó nhập mã WEEKEND.",
-    usageEn: "Choose a Friday or Saturday check-in, then enter the WEEKEND code.",
-    conditions: ["Áp dụng cho kỳ nghỉ cuối tuần", "Bao gồm bữa sáng cho 2 khách", "Cần đặt trước ít nhất 2 ngày"],
-    conditionsEn: ["Valid for weekend stays", "Includes breakfast for 2 guests", "Must be booked at least 2 days in advance"],
-    hotels: ["Sen Việt Gò Công", "Sen Việt An Nhơn", "Sen Việt Hà Nội"],
-    hotelsEn: ["Sen Việt Go Cong", "Sen Việt An Nhon", "Sen Việt Ha Noi"],
-    valid: "01/09/2026 – 31/12/2026",
-    validEn: "01/09/2026 – 31/12/2026",
+    detail: "Áp dụng cho mùa du lịch hè 2026",
+    detailEn: "Valid for summer travel season 2026",
+    usage: "Nhập mã SUMMER2026 khi đặt phòng trực tuyến.",
+    usageEn: "Enter SUMMER2026 when booking online.",
+    conditions: ["Áp dụng cho mọi khách hàng", "Mức giảm tối đa 500.000₫", "Có thể đặt trước"],
+    conditionsEn: ["Open to all guests", "Max discount 500,000 VND", "Advance booking available"],
+    hotels: ["Tất cả khách sạn Sen Việt"],
+    hotelsEn: ["All Sen Việt hotels"],
+    valid: "01/01/2026 – 01/01/2027",
+    validEn: "01/01/2026 – 01/01/2027",
     accent: "from-emerald-50 to-white",
   },
   {
-    tag: "DINING",
-    icon: UtensilsCrossed,
-    title: "Bữa sáng trọn vị",
-    titleEn: "Breakfast delight",
-    description: "Tặng bữa sáng buffet cho hai khách trong mỗi đêm lưu trú.",
-    descriptionEn: "Enjoy complimentary buffet breakfast for two guests every night.",
-    code: "BREAKFAST",
-    image: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?q=80&w=1000",
-    detail: "Áp dụng tại khách sạn có nhà hàng buffet",
-    detailEn: "Available at hotels with buffet restaurants",
-    usage: "Nhập mã BREAKFAST khi đặt phòng và chọn số lượng khách chính xác.",
-    usageEn: "Enter BREAKFAST while booking and provide the correct guest count.",
-    conditions: ["Áp dụng cho đặt phòng từ 2 đêm", "Tối đa 2 suất sáng mỗi phòng mỗi ngày", "Không quy đổi thành tiền mặt"],
-    conditionsEn: ["Valid for stays of 2 nights or more", "Up to 2 breakfasts per room per day", "Cannot be exchanged for cash"],
-    hotels: ["Sen Việt Đà Nẵng", "Sen Việt Nha Trang", "Sen Việt Sài Gòn"],
-    hotelsEn: ["Sen Việt Da Nang", "Sen Việt Nha Trang", "Sen Việt Saigon"],
-    valid: "01/09/2026 – 31/12/2026",
-    validEn: "01/09/2026 – 31/12/2026",
+    tag: "SPECIAL",
+    icon: Gift,
+    title: "Đặc quyền VIP 500K",
+    titleEn: "VIP Privilege 500K",
+    description: "Giảm trực tiếp 500.000₫ cho đơn đặt phòng nghỉ dưỡng từ 5.000.000₫.",
+    descriptionEn: "Direct 500,000 VND discount for premium stays from 5,000,000 VND.",
+    code: "VIP500",
+    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=1000",
+    detail: "Đơn đặt phòng tối thiểu 5.000.000₫",
+    detailEn: "Minimum booking value of 5,000,000 VND",
+    usage: "Nhập mã VIP500 khi đặt các phòng cao cấp hoặc kỳ nghỉ dài ngày.",
+    usageEn: "Enter VIP500 at checkout for qualifying luxury bookings.",
+    conditions: ["Đơn hàng từ 5.000.000₫", "Giảm thẳng 500.000₫ vào hóa đơn", "Áp dụng toàn chuỗi"],
+    conditionsEn: ["Minimum order 5,000,000 VND", "Flat 500,000 VND off", "Valid chainwide"],
+    hotels: ["Tất cả khách sạn Sen Việt"],
+    hotelsEn: ["All Sen Việt hotels"],
+    valid: "01/01/2026 – 01/01/2027",
+    validEn: "01/01/2026 – 01/01/2027",
     accent: "from-orange-50 to-white",
   },
   {
-    tag: "WELLNESS",
-    icon: Waves,
-    title: "Thư giãn cùng Spa",
-    titleEn: "Wellness escape",
-    description: "Giảm 20% liệu trình spa khi đặt phòng nghỉ dưỡng tại Sen Việt.",
-    descriptionEn: "Save 20% on spa treatments when booking a Sen Việt stay.",
-    code: "SPA20",
-    image: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1000",
-    detail: "Ưu đãi cho dịch vụ spa và massage",
-    detailEn: "Offer for spa and massage services",
-    usage: "Nhập mã SPA20 khi đặt phòng, sau đó chọn dịch vụ Spa ở bước bổ sung.",
-    usageEn: "Enter SPA20 when booking, then select spa services in the add-ons step.",
-    conditions: ["Giảm 20% giá dịch vụ spa", "Cần đặt lịch trước với lễ tân", "Tùy thuộc khung giờ còn trống"],
-    conditionsEn: ["20% off spa services", "Advance reservation with reception required", "Subject to available time slots"],
-    hotels: ["Sen Việt Đà Nẵng", "Sen Việt Nha Trang"],
-    hotelsEn: ["Sen Việt Da Nang", "Sen Việt Nha Trang"],
-    valid: "01/09/2026 – 31/12/2026",
-    validEn: "01/09/2026 – 31/12/2026",
+    tag: "SALE",
+    icon: Ticket,
+    title: "Siêu ưu đãi 50%",
+    titleEn: "Super Deal 50%",
+    description: "Giảm 50% tiền phòng, mức giảm tối đa 300.000₫ cho mỗi đơn đặt.",
+    descriptionEn: "Save 50% on your stay up to a maximum of 300,000 VND.",
+    code: "MAX300K",
+    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=1000",
+    detail: "Ưu đãi giá sốc cho khách đặt phòng sớm",
+    detailEn: "Early-bird exclusive deal",
+    usage: "Nhập mã MAX300K tại bước thanh toán để nhận ngay mức giảm 50%.",
+    usageEn: "Enter MAX300K at checkout to claim your 50% discount.",
+    conditions: ["Giảm 50% tiền phòng", "Trần giảm giá tối đa 300.000₫", "Áp dụng toàn chuỗi"],
+    conditionsEn: ["50% discount", "Max discount 300,000 VND", "Valid chainwide"],
+    hotels: ["Tất cả khách sạn Sen Việt"],
+    hotelsEn: ["All Sen Việt hotels"],
+    valid: "01/01/2026 – 31/12/2030",
+    validEn: "01/01/2026 – 31/12/2030",
     accent: "from-violet-50 to-white",
   },
   {
-    tag: "FAMILY",
-    icon: Users,
-    title: "Kỳ nghỉ gia đình",
-    titleEn: "Family getaway",
-    description: "Ưu đãi dành cho gia đình với phòng rộng hơn và quà tặng cho trẻ em.",
-    descriptionEn: "A family-friendly stay with larger rooms and a welcome gift for children.",
-    code: "FAMILY10",
-    image: "https://images.unsplash.com/photo-1590490360182-c33d57733427?q=80&w=1000",
-    detail: "Dành cho đặt phòng có trẻ em",
-    detailEn: "For bookings that include children",
-    usage: "Khai báo số trẻ em trong tìm kiếm, chọn phòng phù hợp và nhập mã FAMILY10.",
-    usageEn: "Add children to your search, select a suitable room and enter FAMILY10.",
-    conditions: ["Có ít nhất 1 trẻ em trong đặt phòng", "Giảm 10% tiền phòng", "Tùy thuộc sức chứa từng loại phòng"],
-    conditionsEn: ["At least 1 child in the booking", "10% off room charges", "Subject to room capacity"],
-    hotels: ["Sen Việt Gò Công", "Sen Việt Đà Nẵng", "Sen Việt Nha Trang"],
-    hotelsEn: ["Sen Việt Go Cong", "Sen Việt Da Nang", "Sen Việt Nha Trang"],
-    valid: "01/09/2026 – 31/12/2026",
-    validEn: "01/09/2026 – 31/12/2026",
-    accent: "from-rose-50 to-white",
-  },
-  {
-    tag: "LONG STAY",
-    icon: Ticket,
-    title: "Ở lâu, tiết kiệm nhiều",
-    titleEn: "Long-stay savings",
-    description: "Giảm 12% cho những hành trình dài ngày từ 7 đêm trở lên.",
-    descriptionEn: "Save 12% on extended stays of 7 nights or more.",
-    code: "LONGSTAY12",
-    image: "https://images.unsplash.com/photo-1566665797739-1674de7a421a?q=80&w=1000",
-    detail: "Phù hợp cho nghỉ dưỡng dài ngày hoặc công tác",
-    detailEn: "Ideal for long holidays or business stays",
-    usage: "Chọn khoảng lưu trú từ 7 đêm, sau đó nhập mã LONGSTAY12 tại thanh toán.",
-    usageEn: "Choose a stay of 7 nights or more, then enter LONGSTAY12 at checkout.",
-    conditions: ["Tối thiểu 7 đêm liên tiếp", "Giảm 12% tiền phòng", "Có thể yêu cầu thanh toán trước"],
-    conditionsEn: ["Minimum 7 consecutive nights", "12% off room charges", "Prepayment may be required"],
+    tag: "DEMO",
+    icon: Sparkles,
+    title: "Trợ giá đồ án PayOS (2.000₫)",
+    titleEn: "PayOS Demo Voucher (2,000 VND)",
+    description: "Mã ưu đãi đặc biệt dùng để thử nghiệm quét mã VietQR PayOS thật chỉ với 2.000₫.",
+    descriptionEn: "Special trial voucher for real VietQR PayOS testing at 2,000 VND.",
+    code: "DEMO2K",
+    image: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?q=80&w=1000",
+    detail: "Dành riêng cho kiểm thử và demo đồ án",
+    detailEn: "Designed for thesis presentation and testing",
+    usage: "Nhập mã DEMO2K để hóa đơn tự động chuyển về 2.000₫ thanh toán QR ngân hàng.",
+    usageEn: "Apply code DEMO2K to reduce checkout total to 2,000 VND for QR testing.",
+    conditions: ["Áp dụng cho mọi phòng", "Tổng tiền thanh toán chỉ 2.000₫", "Hỗ trợ quét VietQR liên ngân hàng"],
+    conditionsEn: ["Valid for all rooms", "Fixed payment of 2,000 VND", "Supports real VietQR payment"],
     hotels: ["Tất cả khách sạn Sen Việt"],
     hotelsEn: ["All Sen Việt hotels"],
-    valid: "01/09/2026 – 31/12/2026",
-    validEn: "01/09/2026 – 31/12/2026",
-    accent: "from-cyan-50 to-white",
+    valid: "01/01/2026 – 31/12/2030",
+    validEn: "01/01/2026 – 31/12/2030",
+    accent: "from-rose-50 to-white",
   },
 ];
 
@@ -202,8 +181,8 @@ export function Offers() {
 
   // Lấy danh sách ưu đãi và voucher đã lưu từ Backend
   const { data: activePromos } = useGetActivePromotionsQuery();
-  const { data: savedPromos } = useGetMySavedPromotionsQuery(user?.userId, {
-    skip: !user || !user.userId,
+  const { data: savedPromos } = useGetMySavedPromotionsQuery(undefined, {
+    skip: !user,
   });
   const [savePromo, { isLoading: isSaving }] = useSavePromotionMutation();
   const [unsavePromo, { isLoading: isUnsaving }] = useUnsavePromotionMutation();
@@ -269,21 +248,79 @@ export function Offers() {
     };
   }, [user?.email]);
 
-  const isSavedCode = (code: string) => {
+  const matchSavedPromo = (code: string, offerId?: string | number) => {
     const upper = code.trim().toUpperCase();
-    return (
-      savedCodes.some((c) => c.toUpperCase() === upper) ||
-      Boolean(savedPromos?.some((sp) => sp.code.toUpperCase() === upper))
+    return savedPromos?.find(
+      (sp) =>
+        (offerId && String(sp.promotionId) === String(offerId)) ||
+        sp.code.toUpperCase() === upper ||
+        (sp.promotionCode && sp.promotionCode.toUpperCase() === upper) ||
+        sp.code.toUpperCase().startsWith(`${upper}-`),
     );
   };
 
-  const handleToggleSave = async (code: string) => {
+  const isSavedCode = (code: string, offerId?: string | number) => {
+    const upper = code.trim().toUpperCase();
+    if (user && savedPromos) {
+      return Boolean(matchSavedPromo(code, offerId)) || savedCodes.some((c) => c.toUpperCase() === upper);
+    }
+    return savedCodes.some((c) => c.toUpperCase() === upper);
+  };
+
+  const handleToggleSave = async (code: string, offerId?: string | number) => {
     const upperCode = code.trim().toUpperCase();
+    const currentlySaved = isSavedCode(upperCode, offerId);
+
+    // Đồng bộ localStorage
     const updated = toggleSavedPromotion(user?.email, upperCode);
     setSavedCodes(updated);
 
-    const isNowSaved = updated.some((c) => c.toUpperCase() === upperCode);
-    if (isNowSaved) {
+    // Đồng bộ sang Backend nếu đã đăng nhập
+    if (user) {
+      const saved = matchSavedPromo(upperCode, offerId);
+      if (currentlySaved && saved) {
+        try {
+          await unsavePromo(saved.promotionId || saved.savedId).unwrap();
+          toast.info(
+            isVietnamese
+              ? `Đã bỏ lưu mã khuyến mãi "${upperCode}" khỏi Ví voucher`
+              : `Removed voucher "${upperCode}" from wallet`,
+          );
+          return;
+        } catch (err: any) {
+          toast.error(err?.data?.message || "Không thể bỏ lưu mã khuyến mãi này");
+          return;
+        }
+      } else {
+        const matched = activePromos?.find(
+          (p) => (offerId && String(p.id) === String(offerId)) || p.code.toUpperCase() === upperCode,
+        );
+        if (matched) {
+          try {
+            await savePromo(matched.id).unwrap();
+            toast.success(
+              isVietnamese
+                ? `Đã lưu mã "${upperCode}" vào Ví voucher của bạn!`
+                : `Saved voucher "${upperCode}" to your wallet!`,
+            );
+            return;
+          } catch (err: any) {
+            // Nếu đã lưu trên DB trước đó và khách muốn bấm để bỏ lưu
+            if (currentlySaved) {
+              try {
+                await unsavePromo(matched.id).unwrap();
+                toast.info(isVietnamese ? `Đã bỏ lưu voucher "${upperCode}"` : `Removed voucher "${upperCode}"`);
+                return;
+              } catch {
+                // ignore
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (!currentlySaved) {
       toast.success(
         isVietnamese
           ? `Đã lưu voucher "${upperCode}" vào ví ưu đãi của bạn!`
@@ -295,31 +332,6 @@ export function Offers() {
           ? `Đã bỏ lưu voucher "${upperCode}"`
           : `Removed voucher "${upperCode}"`,
       );
-    }
-
-    // Đồng thời đồng bộ sang backend nếu đã login
-    if (user) {
-      const saved = savedPromos?.find(
-        (sp) => sp.code.toUpperCase() === upperCode,
-      );
-      if (saved) {
-        try {
-          await unsavePromo(saved.promotionId).unwrap();
-        } catch {
-          // bỏ qua lỗi
-        }
-      } else {
-        const matched = activePromos?.find(
-          (p) => p.code.toUpperCase() === upperCode,
-        );
-        if (matched) {
-          try {
-            await savePromo(matched.id).unwrap();
-          } catch {
-            // bỏ qua lỗi
-          }
-        }
-      }
     }
   };
 
@@ -354,7 +366,8 @@ export function Offers() {
             {displayOffers.map((offer) => {
               const Icon = offer.icon;
               const copied = copiedCode === offer.code;
-              const isSaved = isSavedCode(offer.code);
+              const offerId = (offer as any).id;
+              const isSaved = isSavedCode(offer.code, offerId);
 
               return (
                 <article
@@ -406,21 +419,21 @@ export function Offers() {
                     {isVietnamese ? offer.detail : offer.detailEn}
                   </p>
 
-                  {/* NÚT LƯU VOUCHER NẰM TRÊN NÚT XEM CHI TIẾT */}
+                  {/* NÚT LƯU / BỎ LƯU VOUCHER NẰM TRÊN NÚT XEM CHI TIẾT */}
                   <button
                     type="button"
-                    onClick={() => handleToggleSave(offer.code)}
+                    onClick={() => handleToggleSave(offer.code, offerId)}
                     disabled={isSaving || isUnsaving}
                     className={`mt-5 flex w-full items-center justify-center gap-2 rounded-full border py-2.5 text-sm font-semibold transition ${
                       isSaved
-                        ? "border-amber-400 bg-amber-100 text-amber-950 shadow-xs hover:bg-amber-200/80"
+                        ? "border-amber-400 bg-amber-100 text-amber-950 shadow-xs hover:bg-rose-100 hover:border-rose-300 hover:text-rose-900"
                         : "border-amber-300/80 bg-amber-50/80 text-amber-900 shadow-xs hover:border-amber-400 hover:bg-amber-100/90"
                     }`}
                   >
                     {isSaved ? (
                       <>
                         <BookmarkCheck className="h-4 w-4 text-amber-700" />
-                        <span>{isVietnamese ? "Đã lưu vào ví voucher" : "Saved to wallet"}</span>
+                        <span>{isVietnamese ? "Đã lưu · Bấm để bỏ lưu" : "Saved · Click to unsave"}</span>
                       </>
                     ) : (
                       <>

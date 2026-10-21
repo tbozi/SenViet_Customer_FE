@@ -49,11 +49,11 @@ function CustomerSocketLifecycle() {
   const { token, user } = useAuth();
 
   useEffect(() => {
-    if (token) initCustomerSocket(token, user?.userId);
+    if (token) initCustomerSocket(token, user?.userId, user?.accountId, user?.email);
     else disconnectCustomerSocket();
 
     return () => disconnectCustomerSocket();
-  }, [token, user?.userId]);
+  }, [token, user?.userId, user?.accountId, user?.email]);
 
   return null;
 }
@@ -114,6 +114,7 @@ function App() {
                       <Route path="/booking-success" element={<BookingSuccess />} />
                       <Route path="/booking-success/:bookingId" element={<BookingSuccess />} />
                       <Route path="/bookings" element={<BookingHistory />} />
+                      <Route path="/history" element={<BookingHistory />} />
                       <Route path="/invoices" element={<InvoicePage />} />
                       <Route path="/invoices/:id" element={<InvoicePage />} />
                       <Route path="/offers" element={<Offers />} />

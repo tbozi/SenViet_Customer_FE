@@ -19,6 +19,7 @@ export interface PromotionItem {
 export interface SavedPromotionItem {
   savedId: number | string;
   promotionId: number | string;
+  promotionCode?: string;
   code: string;
   name: string;
   description?: string;
@@ -31,6 +32,7 @@ export interface SavedPromotionItem {
   endDate?: string;
   status: string;
   available: boolean;
+  isUsed?: boolean;
   savedAt: string;
 }
 
@@ -43,26 +45,28 @@ export const promotionApi = baseApi.injectEndpoints({
     }),
     getMySavedPromotions: builder.query<SavedPromotionItem[], number | string | void>({
       query: (customerId) => ({
-        url: customerId ? `/customer-promotions/customer/${customerId}` : "/customer-promotions/customer/0",
+        url: customerId ? `/customer-promotions/customer/${customerId}` : "/customer-promotions/my",
         method: "GET",
       }),
       transformResponse: (response: ApiResponse<any[]>) => {
         const list = response.result || [];
         return list.map((item) => ({
           savedId: item.id,
-          promotionId: item.id,
+          promotionId: item.promotionId || item.id,
+          promotionCode: item.promotionCode || (item.code ? String(item.code).split("-")[0] : ""),
           code: item.code || item.voucherCode,
           name: item.name || item.code,
           description: item.description,
           type: item.type,
-          discountType: item.discountType,
+          discountType: item.discountType || item.type,
           discountValue: item.discountValue,
           maxDiscountAmount: item.maxDiscountAmount,
           minBookingValue: item.minBookingValue,
           startDate: item.startDate,
           endDate: item.endDate,
-          status: "ACTIVE",
-          available: true,
+          status: item.isUsed ? "USED" : "ACTIVE",
+          available: !item.isUsed,
+          isUsed: Boolean(item.isUsed),
           savedAt: item.savedAt || "",
         }));
       },
@@ -76,8 +80,11 @@ export const promotionApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Promotion"],
     }),
-    unsavePromotion: builder.mutation<void, number>({
-      queryFn: () => ({ data: undefined }),
+    unsavePromotion: builder.mutation<void, number | string>({
+      query: (id) => ({
+        url: `/customer-promotions/unsave/${id}`,
+        method: "DELETE",
+      }),
       invalidatesTags: ["Promotion"],
     }),
   }),

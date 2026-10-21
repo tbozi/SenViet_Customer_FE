@@ -1,6 +1,18 @@
-import { Link, NavLink } from "react-router-dom";
-import { useState } from "react";
-import { Bell, Flower2, Globe, Menu, Moon, Sun, User } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Bell,
+  Flower2,
+  Globe,
+  Menu,
+  Moon,
+  Sun,
+  User,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -14,6 +26,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { toast } from "sonner";
 import { SUPPORTED_LANGUAGES, useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
@@ -78,14 +96,226 @@ function FlagIcon({ code, className = "h-4 w-4" }: { code: string; className?: s
   }
 }
 
+interface HeaderNotification {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  read: boolean;
+  type?: "BOOKING" | "PAYMENT" | "CANCEL" | "PROMO" | "SYSTEM";
+  referenceId?: string;
+}
+
+function getNotificationIcon(n: HeaderNotification) {
+  if (
+    n.type === "PAYMENT" ||
+    n.title.toLowerCase().includes("thanh toán") ||
+    n.title.toLowerCase().includes("xác nhận") ||
+    n.description.toLowerCase().includes("thành công")
+  ) {
+    return (
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+        <CheckCircle2 className="h-4 w-4" />
+      </span>
+    );
+  }
+  if (
+    n.type === "CANCEL" ||
+    n.title.toLowerCase().includes("hủy") ||
+    n.title.toLowerCase().includes("hoàn tiền")
+  ) {
+    return (
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+        <AlertCircle className="h-4 w-4" />
+      </span>
+    );
+  }
+  return (
+    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+      <Bell className="h-4 w-4" />
+    </span>
+  );
+}
+
 export default function Header() {
+  const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
   const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[0];
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
-  const notificationCount = user ? getBookings().filter((booking) => booking.userEmail === user.email && booking.status !== "cancelled").length : 0;
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
   const userShortName = user?.name ? user.name.trim().split(/\s+/).pop() || user.name : "";
+
+  const notifStorageKey = user?.email
+    ? `senviet_user_notifications_${user.email.toLowerCase().replace(/[^a-z0-9_]/g, "_")}`
+    : "senviet_guest_notifications";
+
+  // Load notifications from local storage and sync with existing bookings
+  useEffect(() => {
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
+
+    let loaded: HeaderNotification[] = [];
+    try {
+      const raw = localStorage.getItem(notifStorageKey);
+      if (raw) loaded = JSON.parse(raw);
+    } catch {}
+
+    const userBookings = getBookings().filter((b) => b.userEmail === user.email);
+    const existingIds = new Set(loaded.map((n) => n.id));
+
+    // Prepopulate active booking alerts if not present
+    for (const b of userBookings) {
+      const notifId = `bkg_init_${b.id}`;
+      if (!existingIds.has(notifId)) {
+        const isPaid = b.status === "confirmed";
+        const isCancel = b.status === "cancelled";
+        loaded.push({
+          id: notifId,
+          title: isCancel
+            ? `Đơn #${b.id} đã yêu cầu hủy`
+            : isPaid
+            ? `Đơn #${b.id} đã xác nhận`
+            : `Đơn #${b.id} đang chờ thanh toán`,
+          description: `${b.hotelName} · ${b.roomName || "Phòng nghỉ"} · ${b.checkIn} đến ${b.checkOut}`,
+          time: new Date(b.createdAt || Date.now()).toLocaleTimeString("vi-VN", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          read: isPaid,
+          type: isCancel ? "CANCEL" : isPaid ? "PAYMENT" : "BOOKING",
+          referenceId: b.id,
+        });
+      }
+    }
+
+    setNotifications(loaded);
+  }, [user, notifStorageKey]);
+
+  // Persist notifications to local storage
+  useEffect(() => {
+    if (user && notifications.length > 0) {
+      try {
+        localStorage.setItem(notifStorageKey, JSON.stringify(notifications));
+      } catch {}
+    }
+  }, [notifications, user, notifStorageKey]);
+
+  // Real-time Socket Event Listeners
+  useEffect(() => {
+    if (!user) return;
+
+    const handleSocketNotif = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+      const newNotif: HeaderNotification = {
+        id: detail.id ? String(detail.id) : `notif_${Date.now()}`,
+        title: detail.title || "Thông báo từ Sen Việt",
+        description: detail.description || "",
+        time: nowTime,
+        read: false,
+        type: detail.type || "BOOKING",
+        referenceId: detail.referenceId,
+      };
+
+      setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)].slice(0, 30));
+      toast.info(newNotif.title, {
+        description: newNotif.description,
+        action: {
+          label: "Xem",
+          onClick: () => navigate("/bookings"),
+        },
+      });
+    };
+
+    const handleSocketBooking = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const bId = detail.id || detail.bookingId;
+      const bStatus = detail.bookingStatus || detail.status || "Đã cập nhật";
+      const statusText =
+        bStatus === "CONFIRMED" || bStatus === "confirmed"
+          ? "Đã xác nhận thanh toán thành công"
+          : bStatus === "CANCELLED" || bStatus === "cancelled"
+          ? "Đã hủy đơn"
+          : bStatus;
+      const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+
+      const newNotif: HeaderNotification = {
+        id: `booking_update_${bId}_${Date.now()}`,
+        title: `Cập nhật đơn #${bId}`,
+        description: `Trạng thái mới: ${statusText}. Quý khách có thể kiểm tra chi tiết trong Lịch sử booking.`,
+        time: nowTime,
+        read: false,
+        type: bStatus === "confirmed" || bStatus === "CONFIRMED" ? "PAYMENT" : "BOOKING",
+        referenceId: String(bId),
+      };
+
+      setNotifications((prev) => [newNotif, ...prev].slice(0, 30));
+      toast.success(newNotif.title, {
+        description: newNotif.description,
+        action: {
+          label: "Xem ngay",
+          onClick: () => navigate("/bookings"),
+        },
+      });
+    };
+
+    const handleBookingStorage = () => {
+      const userBookings = getBookings().filter((b) => b.userEmail === user.email);
+      setNotifications((prev) => {
+        const existingIds = new Set(prev.map((n) => n.referenceId));
+        const added: HeaderNotification[] = [];
+        for (const b of userBookings) {
+          if (!existingIds.has(b.id)) {
+            added.push({
+              id: `bkg_evt_${b.id}`,
+              title: `Đơn phòng mới #${b.id}`,
+              description: `${b.hotelName} · ${b.roomName} · Trạng thái: ${b.status}`,
+              time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+              read: false,
+              type: "BOOKING",
+              referenceId: b.id,
+            });
+          }
+        }
+        return added.length > 0 ? [...added, ...prev].slice(0, 30) : prev;
+      });
+    };
+
+    window.addEventListener("senviet_socket_notification", handleSocketNotif);
+    window.addEventListener("senviet_socket_booking_updated", handleSocketBooking);
+    window.addEventListener("senviet_socket_new_booking", handleSocketBooking);
+    window.addEventListener("senviet_booking_updated", handleBookingStorage);
+    window.addEventListener("storage", handleBookingStorage);
+
+    return () => {
+      window.removeEventListener("senviet_socket_notification", handleSocketNotif);
+      window.removeEventListener("senviet_socket_booking_updated", handleSocketBooking);
+      window.removeEventListener("senviet_socket_new_booking", handleSocketBooking);
+      window.removeEventListener("senviet_booking_updated", handleBookingStorage);
+      window.removeEventListener("storage", handleBookingStorage);
+    };
+  }, [user, navigate]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAllAsRead = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }, []);
+
+  const handleNotificationClick = (n: HeaderNotification) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)),
+    );
+    setNotifOpen(false);
+    navigate("/bookings");
+  };
 
   const links = [
     { to: "/", label: t("nav.home") },
@@ -128,16 +358,96 @@ export default function Header() {
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {user && (
-            <Button variant="ghost" size="icon" asChild className="relative" aria-label="Notifications">
-              <Link to="/bookings">
-                <Bell className="h-5 w-5" />
-                {notificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground ring-2 ring-background">
-                    {notificationCount}
-                  </span>
-                )}
-              </Link>
-            </Button>
+            <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative rounded-full transition hover:bg-secondary"
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground ring-2 ring-background">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-75" />
+                      <span className="relative">{unreadCount > 99 ? "99+" : unreadCount}</span>
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                className="w-80 sm:w-96 p-0 shadow-2xl rounded-2xl border-gold/40 overflow-hidden"
+              >
+                <div className="flex items-center justify-between border-b border-border/70 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-foreground">Thông báo</h3>
+                    {unreadCount > 0 && (
+                      <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-primary">
+                        {unreadCount} mới
+                      </span>
+                    )}
+                  </div>
+                  {notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllAsRead}
+                      className="text-[11px] font-semibold text-primary/80 hover:text-primary transition"
+                    >
+                      Đánh dấu đã đọc
+                    </button>
+                  )}
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-border/50">
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground space-y-2">
+                      <Bell className="h-8 w-8 mx-auto text-muted-foreground/40" />
+                      <p className="text-xs">Chưa có thông báo mới nào</p>
+                    </div>
+                  ) : (
+                    notifications.map((n) => (
+                      <div
+                        key={n.id}
+                        onClick={() => handleNotificationClick(n)}
+                        className={`flex items-start gap-3 p-3.5 transition cursor-pointer hover:bg-secondary/60 ${
+                          !n.read ? "bg-primary/5 font-medium" : ""
+                        }`}
+                      >
+                        <div className="shrink-0 mt-0.5">{getNotificationIcon(n)}</div>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <p className="text-xs font-semibold text-foreground truncate">{n.title}</p>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{n.time}</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+                            {n.description}
+                          </p>
+                        </div>
+                        {!n.read && (
+                          <span className="shrink-0 mt-1.5 h-2 w-2 rounded-full bg-gold" />
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="border-t border-border/70 p-2 text-center bg-secondary/30">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs font-semibold text-primary hover:text-primary/80 justify-center gap-1"
+                    onClick={() => {
+                      setNotifOpen(false);
+                      navigate("/bookings");
+                    }}
+                  >
+                    <span>Xem tất cả lịch sử đặt phòng</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           )}
 
           {/* Toggle VI / EN trực tiếp khi bấm */}

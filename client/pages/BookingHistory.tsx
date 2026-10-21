@@ -4,8 +4,11 @@ import {
   BedDouble,
   CheckCircle2,
   Clock3,
+  CreditCard,
   FileText,
   Hotel as HotelIcon,
+  Landmark,
+  Loader2,
   Printer,
   Receipt,
   Sparkles,
@@ -35,6 +38,32 @@ import {
 } from "@/lib/bookings";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
+import { useCancelCustomerBookingMutation } from "@/services/bookingApi";
+
+const VIETNAMESE_BANKS = [
+  { code: "VCB", name: "Vietcombank - Ngân hàng TMCP Ngoại thương Việt Nam" },
+  { code: "MB", name: "MB Bank - Ngân hàng TMCP Quân đội" },
+  { code: "TCB", name: "Techcombank - Ngân hàng TMCP Kỹ thương Việt Nam" },
+  { code: "BIDV", name: "BIDV - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam" },
+  { code: "CTG", name: "VietinBank - Ngân hàng TMCP Công thương Việt Nam" },
+  { code: "ACB", name: "ACB - Ngân hàng TMCP Á Châu" },
+  { code: "VPB", name: "VPBank - Ngân hàng TMCP Việt Nam Thịnh Vượng" },
+  { code: "TPB", name: "TPBank - Ngân hàng TMCP Tiên Phong" },
+  { code: "STB", name: "Sacombank - Ngân hàng TMCP Sài Gòn Thương Tín" },
+  { code: "VBA", name: "Agribank - Ngân hàng NN&PT Nông thôn Việt Nam" },
+  { code: "HDB", name: "HDBank - Ngân hàng TMCP Phát triển TP.HCM" },
+  { code: "VIB", name: "VIB - Ngân hàng TMCP Quốc tế Việt Nam" },
+  { code: "SHB", name: "SHB - Ngân hàng TMCP Sài Gòn - Hà Nội" },
+  { code: "MSB", name: "MSB - Ngân hàng TMCP Hàng Hải Việt Nam" },
+  { code: "OCB", name: "OCB - Ngân hàng TMCP Phương Đông" },
+];
+
+const QUICK_CANCEL_REASONS = [
+  "Thay đổi lịch trình công tác / du lịch",
+  "Đặt nhầm ngày nhận - trả phòng hoặc hạng phòng",
+  "Có việc cá nhân / gia đình đột xuất",
+  "Muốn đổi sang chi nhánh khác của Sen Việt",
+];
 
 const labels: Record<Booking["status"], string> = {
   pending_payment: "Chờ thanh toán",
@@ -84,6 +113,8 @@ export default function BookingHistory() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [success, setSuccess] = useState("");
+  const [cancelCustomerBooking, { isLoading: isCancelling }] =
+    useCancelCustomerBookingMutation();
 
   useEffect(() => {
     setBookings(getBookings().filter((item) => item.userEmail === user?.email));
@@ -129,12 +160,45 @@ export default function BookingHistory() {
   };
 
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelBankCode, setCancelBankCode] = useState("VCB");
+  const [cancelBankName, setCancelBankName] = useState(
+    VIETNAMESE_BANKS[0].name,
+  );
+  const [cancelAccountNumber, setCancelAccountNumber] = useState("");
+  const [cancelAccountName, setCancelAccountName] = useState("");
+  const [cancelRefundEmail, setCancelRefundEmail] = useState("");
+  const [cancelError, setCancelError] = useState("");
+
+  useEffect(() => {
+    if (cancelTarget) {
+      setCancelReason("");
+      setCancelBankCode("VCB");
+      setCancelBankName(VIETNAMESE_BANKS[0].name);
+      setCancelAccountNumber("");
+      setCancelAccountName(
+        (cancelTarget.guestName || user?.name || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/đ/g, "d")
+          .replace(/Đ/g, "D")
+          .toUpperCase(),
+      );
+      setCancelRefundEmail(cancelTarget.email || user?.email || "");
+      setCancelError("");
+    }
+  }, [cancelTarget, user]);
+
   const [cancelResult, setCancelResult] = useState<{
     bookingId: string;
     hotelName: string;
     refundAmount: number;
     refundPercent: number;
     policy: string;
+    reason?: string;
+    bankName?: string;
+    bankAccountNumber?: string;
+    bankAccountName?: string;
   } | null>(null);
   const [invoiceTarget, setInvoiceTarget] = useState<Booking | null>(null);
 
@@ -164,17 +228,82 @@ export default function BookingHistory() {
     { id: "cancelled", label: "Đã hủy", count: counts.cancelled },
   ];
 
-  const confirmCancel = () => {
+  const confirmCancel = async () => {
     if (!cancelTarget) return;
+    const trimmedReason = cancelReason.trim();
+    const trimmedBankName = cancelBankName.trim();
+    const trimmedAccountNumber = cancelAccountNumber.replace(/\s+/g, "").trim();
+    const trimmedAccountName = cancelAccountName.trim().toUpperCase();
+    const trimmedEmail = cancelRefundEmail.trim();
+
+    if (!trimmedReason) {
+      setCancelError("Vui lòng chọn hoặc nhập lý do hủy đặt phòng.");
+      return;
+    }
+    if (!trimmedBankName) {
+      setCancelError("Vui lòng chọn ngân hàng nhận tiền hoàn.");
+      return;
+    }
+    if (!/^[0-9]{6,50}$/.test(trimmedAccountNumber)) {
+      setCancelError("Số tài khoản ngân hàng không hợp lệ (cần từ 6 đến 50 chữ số).");
+      return;
+    }
+    if (!trimmedAccountName) {
+      setCancelError("Vui lòng nhập họ tên chủ tài khoản ngân hàng.");
+      return;
+    }
+
+    setCancelError("");
     const policy = getCancellationPolicy(cancelTarget.checkIn);
-    const refundAmount = Math.round(
+    let refundAmount = Math.round(
       (cancelTarget.roomTotal * policy.refundPercent) / 100,
     );
+    let refundPercent = policy.refundPercent;
+
+    // Gọi API Backend POST /bookings/{bookingId}/cancel để lưu thông tin ngân hàng + bắn Socket cho lễ tân
+    const numericBookingId = String(cancelTarget.id).replace(/^BK-/i, "");
+    try {
+      const apiRes = await cancelCustomerBooking({
+        bookingId: numericBookingId,
+        body: {
+          reason: trimmedReason,
+          bankName: trimmedBankName,
+          bankCode: cancelBankCode,
+          bankAccountName: trimmedAccountName,
+          bankAccountNumber: trimmedAccountNumber,
+          refundEmail: trimmedEmail || undefined,
+        },
+      }).unwrap();
+
+      const cancelData = (apiRes as any)?.result ?? apiRes;
+      if (cancelData && typeof cancelData.refundAmount === "number") {
+        refundAmount = cancelData.refundAmount;
+      }
+      if (cancelData && typeof cancelData.refundPercentage === "number") {
+        refundPercent = cancelData.refundPercentage;
+      }
+    } catch (err: any) {
+      console.warn("Gọi API hủy phòng Backend:", err);
+      // Nếu lỗi validation thực từ BE (ví dụ trạng thái không hợp lệ) nhưng đơn không phải đơn nháp local
+      const status = err?.status;
+      const beMessage = err?.data?.message || err?.data?.error;
+      if (status === 400 && beMessage && !String(beMessage).includes("not found")) {
+        setCancelError(beMessage);
+        return;
+      }
+    }
+
     const cancellation = {
       policy: policy.policy,
-      refundPercent: policy.refundPercent,
+      refundPercent,
       refundAmount,
       cancelledAt: new Date().toISOString(),
+      reason: trimmedReason,
+      bankName: trimmedBankName,
+      bankCode: cancelBankCode,
+      bankAccountName: trimmedAccountName,
+      bankAccountNumber: trimmedAccountNumber,
+      refundEmail: trimmedEmail,
     };
     updateBooking(cancelTarget.id, { status: "cancelled", cancellation });
     setBookings((current) =>
@@ -189,8 +318,12 @@ export default function BookingHistory() {
       bookingId: cancelTarget.id,
       hotelName: cancelTarget.hotelName,
       refundAmount,
-      refundPercent: policy.refundPercent,
+      refundPercent,
       policy: policy.policy,
+      reason: trimmedReason,
+      bankName: trimmedBankName,
+      bankAccountNumber: trimmedAccountNumber,
+      bankAccountName: trimmedAccountName,
     };
     setCancelTarget(null);
     setCancelResult(resultInfo);
@@ -492,6 +625,42 @@ export default function BookingHistory() {
                     </div>
                   </div>
                 </div>
+                {booking.status === "cancelled" && booking.cancellation && (
+                  <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50/70 p-4 text-xs text-rose-950">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-200/80 pb-2">
+                      <span className="font-bold text-sm text-rose-800 flex items-center gap-1.5">
+                        <XCircle className="h-4 w-4 text-rose-600" />
+                        Thông tin hủy đặt phòng & Hoàn tiền
+                      </span>
+                      <span className="rounded-full bg-rose-200/80 px-2.5 py-0.5 text-[11px] font-bold text-rose-900">
+                        Hoàn {booking.cancellation.refundPercent}% ({formatVnd(booking.cancellation.refundAmount)})
+                      </span>
+                    </div>
+                    <div className="mt-2.5 grid gap-1.5 sm:grid-cols-2">
+                      {booking.cancellation.reason && (
+                        <p className="sm:col-span-2">
+                          <span className="text-rose-700/80">Lý do hủy:</span>{" "}
+                          <strong className="text-slate-900">{booking.cancellation.reason}</strong>
+                        </p>
+                      )}
+                      {booking.cancellation.bankName && (
+                        <p>
+                          <span className="text-rose-700/80">Ngân hàng nhận hoàn:</span>{" "}
+                          <strong className="text-slate-900">{booking.cancellation.bankName}</strong>
+                        </p>
+                      )}
+                      {booking.cancellation.bankAccountNumber && (
+                        <p>
+                          <span className="text-rose-700/80">Số tài khoản:</span>{" "}
+                          <strong className="font-mono text-slate-900">{booking.cancellation.bankAccountNumber}</strong>
+                          {booking.cancellation.bankAccountName
+                            ? ` (${booking.cancellation.bankAccountName})`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                   <p className="text-lg font-bold text-primary">
                     Tổng: {formatVnd(booking.total)}
@@ -580,10 +749,10 @@ export default function BookingHistory() {
         </div>
       </div>
 
-      {/* MODAL 1: XÁC NHẬN HỦY ĐẶT PHÒNG */}
+      {/* MODAL 1: XÁC NHẬN HỦY ĐẶT PHÒNG KÈM LÝ DO & TÀI KHOẢN NGÂN HÀNG */}
       <Dialog
         open={Boolean(cancelTarget)}
-        onOpenChange={(open) => !open && setCancelTarget(null)}
+        onOpenChange={(open) => !open && !isCancelling && setCancelTarget(null)}
       >
         {cancelTarget && (() => {
           const policy = getCancellationPolicy(cancelTarget.checkIn);
@@ -592,30 +761,34 @@ export default function BookingHistory() {
           );
 
           return (
-            <DialogContent className="max-w-md rounded-2xl p-6 sm:p-7">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 sm:p-7">
               <DialogHeader>
-                <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-full ${
-                    policy.refundPercent === 0
-                      ? "bg-rose-100 text-rose-600"
-                      : policy.refundPercent === 50
-                        ? "bg-amber-100 text-amber-600"
-                        : "bg-blue-100 text-blue-600"
-                  }`}
-                >
-                  <AlertTriangle className="h-6 w-6" />
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                      policy.refundPercent === 0
+                        ? "bg-rose-100 text-rose-600"
+                        : policy.refundPercent === 50
+                          ? "bg-amber-100 text-amber-600"
+                          : "bg-blue-100 text-blue-600"
+                    }`}
+                  >
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-lg font-bold text-slate-900">
+                      Xác nhận hủy đặt phòng & Hoàn tiền
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                      Mã đơn: <strong className="font-mono text-primary">{cancelTarget.id}</strong> · {cancelTarget.hotelName}
+                    </DialogDescription>
+                  </div>
                 </div>
-                <DialogTitle className="mt-2 text-xl font-bold text-slate-900">
-                  Xác nhận hủy đặt phòng
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Mã đơn: <strong className="font-mono text-primary">{cancelTarget.id}</strong> · {cancelTarget.hotelName}
-                </DialogDescription>
               </DialogHeader>
 
-              <div className="my-2 space-y-3">
+              <div className="my-2 space-y-4">
                 <div
-                  className={`rounded-xl border p-4 text-xs ${
+                  className={`rounded-xl border p-3.5 text-xs ${
                     policy.refundPercent === 0
                       ? "border-rose-200 bg-rose-50/80 text-rose-950"
                       : policy.refundPercent === 50
@@ -644,14 +817,14 @@ export default function BookingHistory() {
                     </span>
                   </div>
 
-                  <div className="mt-3 flex justify-between border-t border-black/10 pt-2 text-muted-foreground">
+                  <div className="mt-2.5 flex justify-between border-t border-black/10 pt-2 text-muted-foreground">
                     <span>Tổng tiền phòng:</span>
                     <span className="font-semibold text-slate-900">
                       {formatVnd(cancelTarget.roomTotal)}
                     </span>
                   </div>
                   <div className="mt-1 flex justify-between text-sm font-bold">
-                    <span>Số tiền hoàn lại:</span>
+                    <span>Số tiền hoàn lại dự kiến:</span>
                     <span
                       className={
                         policy.refundPercent === 0
@@ -662,23 +835,127 @@ export default function BookingHistory() {
                       {formatVnd(refundAmt)}
                     </span>
                   </div>
-
-                  {policy.refundPercent === 0 ? (
-                    <p className="mt-2.5 rounded-lg bg-white/70 p-2.5 text-[11px] leading-relaxed text-rose-700">
-                      ⚠️ <strong>Lưu ý quan trọng:</strong> Theo chính sách của Sen Việt Hotels, hủy phòng dưới 3 ngày trước nhận phòng ({cancelTarget.checkIn}) sẽ <strong>không được hoàn tiền</strong>. Sau khi xác nhận, phòng sẽ được giải phóng trên hệ thống.
-                    </p>
-                  ) : (
-                    <p className="mt-2.5 text-[11px] leading-relaxed text-slate-600">
-                      Tiền hoàn dự kiến {formatVnd(refundAmt)} sẽ được chuyển về tài khoản thanh toán của bạn trong 3-5 ngày làm việc.
-                    </p>
-                  )}
                 </div>
+
+                {/* 1. LÝ DO HỦY PHÒNG */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    1. Lý do hủy đặt phòng <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {QUICK_CANCEL_REASONS.map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setCancelReason(r)}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+                          cancelReason === r
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-secondary/40 text-muted-foreground hover:border-primary/40 hover:text-primary"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  <textarea
+                    rows={2}
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="Nhập lý do hủy đặt phòng của bạn..."
+                    className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+
+                {/* 2. THÔNG TIN TÀI KHOẢN NGÂN HÀNG NHẬN HOÀN TIỀN */}
+                <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800">
+                    <Landmark className="h-4 w-4 text-primary" />
+                    <span>2. Thông tin tài khoản ngân hàng đối soát / hoàn tiền</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Tên ngân hàng <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={cancelBankCode}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        setCancelBankCode(code);
+                        const found = VIETNAMESE_BANKS.find((b) => b.code === code);
+                        if (found) setCancelBankName(found.name);
+                      }}
+                      className="w-full rounded-xl border border-border bg-white px-3 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                    >
+                      {VIETNAMESE_BANKS.map((bank) => (
+                        <option key={bank.code} value={bank.code}>
+                          {bank.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Số tài khoản <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <CreditCard className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={cancelAccountNumber}
+                          onChange={(e) =>
+                            setCancelAccountNumber(e.target.value.replace(/[^0-9]/g, ""))
+                          }
+                          placeholder="VD: 0123456789"
+                          className="w-full rounded-xl border border-border bg-white pl-8 pr-3 py-2 text-xs font-mono outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Tên chủ tài khoản <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={cancelAccountName}
+                        onChange={(e) => setCancelAccountName(e.target.value.toUpperCase())}
+                        placeholder="NGUYEN VAN A"
+                        className="w-full rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold uppercase outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Email nhận thông báo hoàn tiền
+                    </label>
+                    <input
+                      type="email"
+                      value={cancelRefundEmail}
+                      onChange={(e) => setCancelRefundEmail(e.target.value)}
+                      placeholder="email@example.com"
+                      className="w-full rounded-xl border border-border bg-white px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                {cancelError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-medium text-rose-700">
+                    ⚠️ {cancelError}
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={isCancelling}
                   onClick={() => setCancelTarget(null)}
                   className="rounded-full"
                 >
@@ -687,10 +964,18 @@ export default function BookingHistory() {
                 <Button
                   type="button"
                   variant="destructive"
+                  disabled={isCancelling}
                   onClick={confirmCancel}
                   className="rounded-full"
                 >
-                  Xác nhận hủy phòng
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      Đang gửi yêu cầu hủy...
+                    </>
+                  ) : (
+                    "Xác nhận hủy phòng"
+                  )}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -709,7 +994,7 @@ export default function BookingHistory() {
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <DialogTitle className="mt-4 text-center text-xl font-bold text-slate-900">
-              Đã hủy đặt phòng thành công!
+              Đã gửi yêu cầu hủy phòng thành công!
             </DialogTitle>
             <DialogDescription className="text-center text-xs text-muted-foreground">
               Mã booking: <strong className="font-mono text-primary">{cancelResult.bookingId}</strong> · {cancelResult.hotelName}
@@ -728,13 +1013,33 @@ export default function BookingHistory() {
                   {formatVnd(cancelResult.refundAmount)}
                 </strong>
               </div>
+              {cancelResult.reason && (
+                <div className="flex justify-between gap-2 border-t border-slate-200/80 pt-2">
+                  <span className="text-slate-500 shrink-0">Lý do hủy:</span>
+                  <span className="font-medium text-slate-800 text-right">{cancelResult.reason}</span>
+                </div>
+              )}
+              {cancelResult.bankName && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 shrink-0">Ngân hàng nhận:</span>
+                  <span className="font-medium text-slate-800 text-right">{cancelResult.bankName}</span>
+                </div>
+              )}
+              {cancelResult.bankAccountNumber && (
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500 shrink-0">Tài khoản:</span>
+                  <span className="font-mono font-semibold text-primary text-right">
+                    {cancelResult.bankAccountNumber} ({cancelResult.bankAccountName})
+                  </span>
+                </div>
+              )}
               {cancelResult.refundPercent === 0 ? (
-                <p className="text-[11px] leading-relaxed text-rose-700">
-                  Theo chính sách hủy sát ngày (dưới 3 ngày trước nhận phòng), số tiền hoàn lại là: <strong>0₫</strong>. Phòng đã được giải phóng trên hệ thống.
+                <p className="border-t border-slate-200 pt-2 text-[11px] leading-relaxed text-rose-700">
+                  Theo chính sách hủy sát ngày (dưới 3 ngày trước nhận phòng), số tiền hoàn lại là: <strong>0₫</strong>. Phòng đã được giải phóng và thông báo tới lễ tân.
                 </p>
               ) : (
-                <p className="text-[11px] leading-relaxed text-slate-600">
-                  Số tiền hoàn {formatVnd(cancelResult.refundAmount)} sẽ được hoàn về phương thức thanh toán của bạn trong <strong>3 - 5 ngày làm việc</strong>.
+                <p className="border-t border-slate-200 pt-2 text-[11px] leading-relaxed text-slate-600">
+                  Yêu cầu hoàn tiền {formatVnd(cancelResult.refundAmount)} đã được gửi trực tiếp đến bộ phận Lễ tân / Kế toán qua hệ thống thời gian thực và sẽ được chuyển khoản trong <strong>3 - 5 ngày làm việc</strong>.
                 </p>
               )}
             </div>
@@ -849,109 +1154,148 @@ export default function BookingHistory() {
                 </div>
 
                 <div className="space-y-3">
-                  {selections.flatMap((selection) =>
-                    selection.stays?.length ? (
-                      selection.stays.map((stay, idx) => {
-                        const nightly = stay.nightlyPrice || selection.nightlyPrice;
-                        const roomPrice = nightly * Math.max(1, stay.nights);
-                        const extraGuestCharge =
-                          Number(stay.extraGuestCharge || 0) * Math.max(1, stay.nights);
-                        const servicesTotal = (stay.services || []).reduce(
-                          (sum, s) => sum + (s.total || 0),
-                          0,
-                        );
-                        const staySubTotal = roomPrice + extraGuestCharge + servicesTotal;
+                  {selections.length > 0 ? (
+                    selections.flatMap((selection) =>
+                      selection.stays?.length ? (
+                        selection.stays.map((stay, idx) => {
+                          const nightly = stay.nightlyPrice || selection.nightlyPrice;
+                          const roomPrice = nightly * Math.max(1, stay.nights);
+                          const extraGuestCharge =
+                            Number(stay.extraGuestCharge || 0) * Math.max(1, stay.nights);
+                          const servicesTotal = (stay.services || []).reduce(
+                            (sum, s) => sum + (s.total || 0),
+                            0,
+                          );
+                          const staySubTotal = roomPrice + extraGuestCharge + servicesTotal;
 
-                        return (
-                          <div
-                            key={`${selection.roomId}-${stay.roomCode}-${idx}`}
-                            className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2.5 shadow-sm"
-                          >
-                            {/* Room Header */}
-                            <div className="flex items-start justify-between gap-2">
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="rounded bg-primary px-2 py-0.5 text-xs font-bold text-white font-mono">
-                                    {stay.roomCode}
-                                  </span>
-                                  <span className="text-sm font-bold text-slate-900">
-                                    {selection.roomNameVi}
-                                  </span>
-                                  {(stay.offerName || selection.offerName) && (
-                                    <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200">
-                                      <Sparkles className="h-2.5 w-2.5 text-gold" />
-                                      {stay.offerName || selection.offerName}
+                          return (
+                            <div
+                              key={`${selection.roomId}-${stay.roomCode}-${idx}`}
+                              className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2.5 shadow-sm"
+                            >
+                              {/* Room Header */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="rounded bg-primary px-2 py-0.5 text-xs font-bold text-white font-mono">
+                                      {stay.roomCode}
                                     </span>
-                                  )}
-                                </div>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  Nhận <strong className="text-slate-800">{dateTime(stay.checkIn, booking.arrivalTime || "14:00")}</strong> — Trả <strong className="text-slate-800">{dateTime(stay.checkOut, booking.departureTime || "12:00")}</strong> · {stay.nights} đêm · {stay.guest?.adults || 1} người lớn{(stay.guest?.children || 0) > 0 ? `, ${stay.guest.children} trẻ em` : ""}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                  Cộng phòng này
-                                </span>
-                                <span className="text-base font-bold text-primary">
-                                  {formatVnd(staySubTotal)}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Line items */}
-                            <div className="border-t border-slate-200 pt-2.5 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 text-xs items-center">
-                              <span className="font-medium text-slate-800 truncate">Tiền phòng</span>
-                              <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
-                                {stay.nights} đêm × {formatVnd(nightly).replace(" đ", "").replace(" ₫", "")}
-                              </span>
-                              <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
-                                {formatVnd(roomPrice)}
-                              </span>
-
-                              {extraGuestCharge > 0 && (
-                                <Fragment key="extra-guest">
-                                  <span className="font-medium text-amber-800 truncate">Phụ thu thêm người</span>
-                                  <span className="text-right text-muted-foreground font-mono whitespace-nowrap">—</span>
-                                  <span className="text-right font-semibold text-amber-800 whitespace-nowrap">+{formatVnd(extraGuestCharge)}</span>
-                                </Fragment>
-                              )}
-
-                              {stay.services && stay.services.length > 0 && (
-                                stay.services.map((srv) => (
-                                  <Fragment key={srv.id}>
-                                    <span className="flex items-center gap-1.5 text-slate-700 min-w-0 truncate">
-                                      <span className="shrink-0 rounded bg-slate-200 px-1 py-0.2 text-[10px] font-mono text-slate-600 font-semibold">
-                                        DV
+                                    <span className="text-sm font-bold text-slate-900">
+                                      {selection.roomNameVi}
+                                    </span>
+                                    {(stay.offerName || selection.offerName) && (
+                                      <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 border border-amber-200">
+                                        <Sparkles className="h-2.5 w-2.5 text-gold" />
+                                        {stay.offerName || selection.offerName}
                                       </span>
-                                      <span className="truncate">{srv.name}</span>
-                                    </span>
-                                    <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
-                                      {srv.quantity} × {formatVnd(srv.unitPrice || srv.total / (srv.quantity || 1)).replace(" đ", "").replace(" ₫", "")}
-                                    </span>
-                                    <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
-                                      {formatVnd(srv.total)}
-                                    </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    Nhận <strong className="text-slate-800">{dateTime(stay.checkIn, booking.arrivalTime || "14:00")}</strong> — Trả <strong className="text-slate-800">{dateTime(stay.checkOut, booking.departureTime || "12:00")}</strong> · {stay.nights} đêm · {stay.guest?.adults || 1} người lớn{(stay.guest?.children || 0) > 0 ? `, ${stay.guest.children} trẻ em` : ""}
+                                  </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Cộng phòng này
+                                  </span>
+                                  <span className="text-base font-bold text-primary">
+                                    {formatVnd(staySubTotal)}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Line items */}
+                              <div className="border-t border-slate-200 pt-2.5 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 text-xs items-center">
+                                <span className="font-medium text-slate-800 truncate">Tiền phòng</span>
+                                <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
+                                  {stay.nights} đêm × {formatVnd(nightly).replace(" đ", "").replace(" ₫", "")}
+                                </span>
+                                <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                                  {formatVnd(roomPrice)}
+                                </span>
+
+                                {extraGuestCharge > 0 && (
+                                  <Fragment key="extra-guest">
+                                    <span className="font-medium text-amber-800 truncate">Phụ thu thêm người</span>
+                                    <span className="text-right text-muted-foreground font-mono whitespace-nowrap">—</span>
+                                    <span className="text-right font-semibold text-amber-800 whitespace-nowrap">+{formatVnd(extraGuestCharge)}</span>
                                   </Fragment>
-                                ))
-                              )}
+                                )}
+
+                                {stay.services && stay.services.length > 0 && (
+                                  stay.services.map((srv) => (
+                                    <Fragment key={srv.id}>
+                                      <span className="flex items-center gap-1.5 text-slate-700 min-w-0 truncate">
+                                        <span className="shrink-0 rounded bg-slate-200 px-1 py-0.2 text-[10px] font-mono text-slate-600 font-semibold">
+                                          DV
+                                        </span>
+                                        <span className="truncate">{srv.name}</span>
+                                      </span>
+                                      <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
+                                        {srv.quantity} × {formatVnd(srv.unitPrice || srv.total / (srv.quantity || 1)).replace(" đ", "").replace(" ₫", "")}
+                                      </span>
+                                      <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                                        {formatVnd(srv.total)}
+                                      </span>
+                                    </Fragment>
+                                  ))
+                                )}
+                              </div>
                             </div>
+                          );
+                        })
+                      ) : (
+                        <div
+                          key={selection.roomId}
+                          className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2 text-xs"
+                        >
+                          <div className="flex justify-between items-start">
+                            <p className="font-bold text-sm text-slate-900">{selection.roomNameVi} ({selection.quantity} phòng)</p>
+                            <p className="font-bold text-base text-primary">{formatVnd(booking.roomTotal)}</p>
                           </div>
-                        );
-                      })
-                    ) : (
-                      <div
-                        key={selection.roomId}
-                        className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2 text-xs"
-                      >
-                        <div className="flex justify-between items-start">
-                          <p className="font-bold text-sm text-slate-900">{selection.roomNameVi} ({selection.quantity} phòng)</p>
-                          <p className="font-bold text-base text-primary">{formatVnd(booking.roomTotal)}</p>
+                          <p className="text-slate-500">
+                            {booking.checkIn} – {booking.checkOut} ({booking.nights} đêm)
+                          </p>
                         </div>
-                        <p className="text-slate-500">
-                          {booking.checkIn} – {booking.checkOut} ({booking.nights} đêm)
-                        </p>
+                      ),
+                    )
+                  ) : (
+                    /* Fallback nếu booking được tạo từ chatbot hoặc chưa có roomSelections mảng chi tiết */
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2.5 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="rounded bg-primary px-2 py-0.5 text-xs font-bold text-white font-mono">
+                              P.101
+                            </span>
+                            <span className="text-sm font-bold text-slate-900">
+                              {booking.roomName || "Phòng nghỉ Sen Việt"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Nhận <strong className="text-slate-800">{dateTime(booking.checkIn, booking.arrivalTime || "14:00")}</strong> — Trả <strong className="text-slate-800">{dateTime(booking.checkOut, booking.departureTime || "12:00")}</strong> · {booking.nights || 1} đêm · {booking.rooms || 1} phòng
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Tiền phòng
+                          </span>
+                          <span className="text-base font-bold text-primary">
+                            {formatVnd(booking.roomTotal || booking.total)}
+                          </span>
+                        </div>
                       </div>
-                    ),
+
+                      <div className="border-t border-slate-200 pt-2.5 grid grid-cols-[1fr_auto_auto] gap-x-4 gap-y-2 text-xs items-center">
+                        <span className="font-medium text-slate-800 truncate">Chi phí lưu trú</span>
+                        <span className="text-right text-muted-foreground font-mono whitespace-nowrap">
+                          {booking.nights || 1} đêm × {formatVnd((booking.roomTotal || booking.total) / Math.max(1, booking.nights || 1)).replace(" đ", "").replace(" ₫", "")}
+                        </span>
+                        <span className="text-right font-semibold text-slate-900 whitespace-nowrap">
+                          {formatVnd(booking.roomTotal || booking.total)}
+                        </span>
+                      </div>
+                    </div>
                   )}
                 </div>
 

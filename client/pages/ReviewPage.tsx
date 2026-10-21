@@ -51,9 +51,9 @@ export default function ReviewPage() {
 
     try {
       // 1. Gửi lên API Backend (chỉ gửi đánh giá sao, không bình luận)
-      const numericBookingId = Number(bookingId) || 505;
+      const validBookingId = !isNaN(Number(bookingId)) && Number(bookingId) > 0 ? Number(bookingId) : (bookingId || 505);
       await submitReview({
-        bookingId: numericBookingId,
+        bookingId: validBookingId,
         rating,
         cleanlinessRating: cleanliness,
         serviceRating: service,

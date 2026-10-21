@@ -1,7 +1,7 @@
 import { baseApi } from "./baseApi";
 
 export interface BookingServiceRequestDto {
-  serviceId: number;
+  serviceId: number | string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -25,6 +25,7 @@ export interface BookingDetailRequestDto {
 
 export interface BookingCreateRequestDto {
   customerId: number | string;
+  customerEmail?: string;
   hotelId?: number;
   employeeId?: number | string;
   bookingChannel: "ONLINE" | "WALK_IN";
@@ -48,6 +49,38 @@ export interface BookingResponseDto {
   bookingDetails: any[];
 }
 
+export interface BookingCancelRequestDto {
+  reason?: string;
+  bankName: string;
+  bankCode?: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  refundEmail?: string;
+}
+
+export interface BookingCancellationResponseDto {
+  id: number | string;
+  bookingId: number | string;
+  customerId?: number | string;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  refundEmail?: string;
+  reason?: string;
+  cancellationTime?: string;
+  checkInTime?: string;
+  daysBeforeCheckIn?: number;
+  paidAmount?: number;
+  refundPercentage?: number;
+  penaltyAmount?: number;
+  refundAmount?: number;
+  bankName?: string;
+  bankCode?: string;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  status?: string;
+}
+
 export const bookingApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     createCustomerBooking: builder.mutation<BookingResponseDto, BookingCreateRequestDto>({
@@ -58,7 +91,34 @@ export const bookingApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Booking"],
     }),
+    cancelCustomerBooking: builder.mutation<
+      BookingCancellationResponseDto,
+      { bookingId: string | number; body: BookingCancelRequestDto }
+    >({
+      query: ({ bookingId, body }) => ({
+        url: `/bookings/${bookingId}/cancel`,
+        method: "POST",
+        data: body,
+      }),
+      invalidatesTags: ["Booking"],
+    }),
+    updateCancellationBankDetails: builder.mutation<
+      BookingCancellationResponseDto,
+      { bookingId: string | number; body: BookingCancelRequestDto }
+    >({
+      query: ({ bookingId, body }) => ({
+        url: `/bookings/${bookingId}/cancel/bank-details`,
+        method: "PUT",
+        data: body,
+      }),
+      invalidatesTags: ["Booking"],
+    }),
   }),
 });
 
-export const { useCreateCustomerBookingMutation } = bookingApi;
+export const {
+  useCreateCustomerBookingMutation,
+  useCancelCustomerBookingMutation,
+  useUpdateCancellationBankDetailsMutation,
+} = bookingApi;
+

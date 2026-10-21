@@ -236,7 +236,9 @@ export default function Checkout() {
     const update = () => {
       const localCodes = getSavedPromotionCodes(user?.email);
       const backendCodes = savedPromosBackend
-        ? savedPromosBackend.map((sp) => sp.code)
+        ? savedPromosBackend
+            .filter((sp) => !sp.isUsed)
+            .map((sp) => sp.promotionCode || (sp.code ? sp.code.split("-")[0] : sp.code))
         : [];
       const allCodes = Array.from(new Set([...backendCodes, ...localCodes]));
       setSavedPromotionCodes(allCodes);
@@ -255,20 +257,43 @@ export default function Checkout() {
 
   const savedPromotionItems = useMemo(() => {
     return savedPromotionCodes.map((code) => {
-      const rule = PROMOTION_RULES[code.trim().toUpperCase()];
+      const cleanCode = code.trim().toUpperCase();
+      const rule = PROMOTION_RULES[cleanCode];
+      const backendMatch = savedPromosBackend?.find(
+        (sp) =>
+          (sp.promotionCode && sp.promotionCode.toUpperCase() === cleanCode) ||
+          (sp.code && sp.code.toUpperCase().startsWith(cleanCode)),
+      );
+      const activeMatch = activePromotions.find(
+        (ap) => ap.code.trim().toUpperCase() === cleanCode,
+      );
       const { applicable, reason } = isPromotionApplicableToHotel(
         code,
         hotelTarget,
       );
+      const backendDiscountText = backendMatch
+        ? backendMatch.discountType === "PERCENTAGE" || backendMatch.discountValue <= 100
+          ? `Giảm ${backendMatch.discountValue}%`
+          : `Giảm ${formatVnd(backendMatch.discountValue)}`
+        : activeMatch
+          ? activeMatch.discountType === "PERCENTAGE" || activeMatch.discountValue <= 100
+            ? `Giảm ${activeMatch.discountValue}%`
+            : `Giảm ${formatVnd(activeMatch.discountValue)}`
+          : undefined;
       return {
         code,
-        name: rule?.name || promotionNames[code] || "Ưu đãi Sen Việt",
-        discountText: rule?.discountText,
+        name:
+          rule?.name ||
+          backendMatch?.title ||
+          activeMatch?.name ||
+          promotionNames[code] ||
+          "Ưu đãi Sen Việt",
+        discountText: rule?.discountText || backendDiscountText,
         applicable,
         reason,
       };
     });
-  }, [savedPromotionCodes, hotelTarget]);
+  }, [savedPromotionCodes, hotelTarget, savedPromosBackend, activePromotions]);
 
   const promoApplicability = useMemo(() => {
     if (!promo) return { applicable: true };
@@ -512,13 +537,13 @@ export default function Checkout() {
       return stays.map((stay) => {
         const rawRoomId = String(stay.roomId || selection.roomId || "");
         let roomId = rawRoomId;
-        if (!roomId || roomId === "undefined" || roomId === "legacy" || isNaN(Number(roomId))) {
+        if (!roomId || roomId === "undefined" || roomId === "legacy" || isNaN(Number(roomId)) || roomId.length < 5) {
           const typeKey = (selection.roomNameVi || selection.roomName || String(selection.roomId) || "").toLowerCase();
-          if (typeKey.includes("tiêu chuẩn") || typeKey.includes("standard")) roomId = "101";
-          else if (typeKey.includes("cao cấp") || typeKey.includes("deluxe")) roomId = "103";
-          else if (typeKey.includes("suite")) roomId = "201";
-          else if (typeKey.includes("gia đình") || typeKey.includes("family")) roomId = "203";
-          else roomId = "101";
+          if (typeKey.includes("tiêu chuẩn") || typeKey.includes("standard") || roomId === "101" || roomId === "102") roomId = "ROOM20260922101";
+          else if (typeKey.includes("cao cấp") || typeKey.includes("deluxe") || roomId === "103" || roomId === "104") roomId = "ROOM20260922103";
+          else if (typeKey.includes("suite") || roomId === "201" || roomId === "202") roomId = "ROOM20260922201";
+          else if (typeKey.includes("gia đình") || typeKey.includes("family") || roomId === "203" || roomId === "204") roomId = "ROOM20260922203";
+          else roomId = "ROOM20260922101";
         }
         const checkInTime = `${stay.checkIn || firstCheckIn}T${arrivalTime}:00`;
         const checkOutTime = `${stay.checkOut || lastCheckOut}T${departureTime}:00`;
@@ -531,7 +556,7 @@ export default function Checkout() {
           nightly * Math.max(1, stay.nights) +
           (stay.extraGuestCharge || 0) * Math.max(1, stay.nights);
         const serviceRequests = (stay.services || []).map((srv) => ({
-          serviceId: Number(srv.id) || 1,
+          serviceId: String(srv.id || 1),
           quantity: srv.quantity || 1,
           unitPrice: srv.unitPrice || 0,
           totalPrice: srv.total || ((srv.unitPrice || 0) * (srv.quantity || 1)),
@@ -563,18 +588,33 @@ export default function Checkout() {
     try {
       const rawCustomerId = (user as any)?.customerId || (user as any)?.userId;
       let customerId = String(rawCustomerId || "");
-      if (!customerId || customerId === "0" || customerId === "undefined") {
-        if (user?.email === "huynhvanhieu416@gmail.com") customerId = "4";
-        else if (user?.email === "customer@senviet.vn") customerId = "201";
-        else customerId = "201";
+      if (!customerId || customerId === "0" || customerId === "undefined" || customerId === "4" || customerId === "201") {
+        if (user?.email === "huynhvanhieu416@gmail.com") customerId = "64375436-23e0-4ff9-b48e-53658df5cb45";
+        else if (user?.email === "customer@senviet.vn") customerId = "CUS_201";
+        else customerId = user?.email || "CUS_201";
       }
       const hotelId = hotel.id || (hotel.slug ? hotelSlugToId[hotel.slug] : 1) || 1;
-      const promotionIdToSend = (matchedActivePromo && !promoMinBookingFailed) ? String(matchedActivePromo.id) : null;
+      const cleanPromo = promo.trim().toUpperCase();
+      const matchedSavedPromo =
+        cleanPromo && !promoMinBookingFailed
+          ? savedPromosBackend?.find(
+              (sp) =>
+                !sp.isUsed &&
+                ((sp.promotionCode && sp.promotionCode.toUpperCase() === cleanPromo) ||
+                  (sp.code && sp.code.toUpperCase().startsWith(cleanPromo))),
+            )
+          : undefined;
+      const customerPromotionIdToSend = matchedSavedPromo ? String(matchedSavedPromo.id) : null;
+      const promotionIdToSend =
+        !customerPromotionIdToSend && matchedActivePromo && !promoMinBookingFailed
+          ? String(matchedActivePromo.id)
+          : null;
       const res = await createCustomerBooking({
         customerId,
+        customerEmail: user?.email,
         hotelId,
         bookingChannel: "ONLINE",
-        customerPromotionId: null,
+        customerPromotionId: customerPromotionIdToSend,
         promotionId: promotionIdToSend,
         bookingDetails: bookingDetailsPayload,
       }).unwrap();

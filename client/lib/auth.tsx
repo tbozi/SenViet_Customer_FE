@@ -5,8 +5,8 @@ import axiosInstance from "@/lib/axiosInstance";
 // Types
 // ============================================================
 export interface AuthUser {
-  userId: number;
-  accountId: number;
+  userId: string | number;
+  accountId: string | number;
   name: string;
   email: string;
   phone?: string;
@@ -99,8 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const jwtToken: string = data.token;
       const loggedUser: AuthUser = {
-        userId: 0, // sẽ load từ /users/me/profile sau
-        accountId: 0,
+        userId: data.id || 0,
+        accountId: data.accountId || 0,
         name: data.fullName,
         email: data.email,
         phone: data.phone,
@@ -112,11 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const profileRes = await axiosInstance.get("/customer/me/profile").catch(() => axiosInstance.get("/users/me/profile"));
         const profile = profileRes.data.result;
         const fullUser: AuthUser = {
-          userId: profile.id || profile.userId || 0,
-          accountId: profile.accountId,
-          name: profile.fullName,
-          email: profile.email,
-          phone: profile.phone,
+          userId: profile.id || profile.userId || data.id || 0,
+          accountId: profile.accountId || data.accountId || 0,
+          name: profile.fullName || data.fullName,
+          email: profile.email || data.email,
+          phone: profile.phone || data.phone,
           birthDate: profile.dateOfBirth || loggedUser.birthDate || "",
           identityNumber: profile.cccd,
           cccd: profile.cccd,
