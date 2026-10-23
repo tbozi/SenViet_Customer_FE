@@ -65,14 +65,26 @@ const QUICK_CANCEL_REASONS = [
   "Muốn đổi sang chi nhánh khác của Sen Việt",
 ];
 
-const labels: Record<Booking["status"], string> = {
+const labelsVi: Record<Booking["status"], string> = {
   pending_payment: "Chờ thanh toán",
   confirmed: "Đã xác nhận · Sắp đi",
   completed: "Đã hoàn thành",
   cancelled: "Đã hủy",
 };
-const paymentLabels: Record<Booking["paymentMethod"], string> = {
+const labelsEn: Record<Booking["status"], string> = {
+  pending_payment: "Pending payment",
+  confirmed: "Confirmed · Upcoming",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+const paymentLabelsVi: Record<Booking["paymentMethod"], string> = {
   cash: "Tiền mặt",
+  qr: "Bank QR",
+  momo: "MoMo",
+  vnpay: "VNPay",
+};
+const paymentLabelsEn: Record<Booking["paymentMethod"], string> = {
+  cash: "Cash",
   qr: "Bank QR",
   momo: "MoMo",
   vnpay: "VNPay",
@@ -109,6 +121,9 @@ function dateTime(date: string, time: string) {
 export default function BookingHistory() {
   const { user } = useAuth();
   const { language } = useLanguage();
+  const isVi = language === "vi";
+  const labels = isVi ? labelsVi : labelsEn;
+  const paymentLabels = isVi ? paymentLabelsVi : paymentLabelsEn;
   const [params] = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -221,12 +236,21 @@ export default function BookingHistory() {
   }, [bookings, statusFilter]);
 
   const filterTabs: Array<{ id: "all" | BookingStatus; label: string; count: number }> = [
-    { id: "all", label: "Tất cả", count: counts.all },
-    { id: "pending_payment", label: "Chờ thanh toán", count: counts.pending_payment },
-    { id: "confirmed", label: "Đã xác nhận", count: counts.confirmed },
-    { id: "completed", label: "Đã hoàn thành", count: counts.completed },
-    { id: "cancelled", label: "Đã hủy", count: counts.cancelled },
+    { id: "all", label: isVi ? "Tất cả" : "All", count: counts.all },
+    { id: "pending_payment", label: isVi ? "Chờ thanh toán" : "Pending payment", count: counts.pending_payment },
+    { id: "confirmed", label: isVi ? "Đã xác nhận" : "Confirmed", count: counts.confirmed },
+    { id: "completed", label: isVi ? "Đã hoàn thành" : "Completed", count: counts.completed },
+    { id: "cancelled", label: isVi ? "Đã hủy" : "Cancelled", count: counts.cancelled },
   ];
+
+  const isCancelFormValid = Boolean(
+    cancelReason.trim() &&
+    cancelBankName.trim() &&
+    cancelBankCode.trim() &&
+    cancelAccountName.trim() &&
+    cancelAccountNumber.trim() &&
+    /^[0-9]{6,50}$/.test(cancelAccountNumber.trim())
+  );
 
   const confirmCancel = async () => {
     if (!cancelTarget) return;
@@ -237,19 +261,19 @@ export default function BookingHistory() {
     const trimmedEmail = cancelRefundEmail.trim();
 
     if (!trimmedReason) {
-      setCancelError("Vui lòng chọn hoặc nhập lý do hủy đặt phòng.");
+      setCancelError(isVi ? "Vui lòng chọn hoặc nhập lý do hủy đặt phòng." : "Please select or enter the cancellation reason.");
       return;
     }
     if (!trimmedBankName) {
-      setCancelError("Vui lòng chọn ngân hàng nhận tiền hoàn.");
+      setCancelError(isVi ? "Vui lòng chọn ngân hàng nhận tiền hoàn." : "Please select the refund recipient bank.");
       return;
     }
     if (!/^[0-9]{6,50}$/.test(trimmedAccountNumber)) {
-      setCancelError("Số tài khoản ngân hàng không hợp lệ (cần từ 6 đến 50 chữ số).");
+      setCancelError(isVi ? "Số tài khoản ngân hàng không hợp lệ (cần từ 6 đến 50 chữ số)." : "Invalid bank account number (6 to 50 digits required).");
       return;
     }
     if (!trimmedAccountName) {
-      setCancelError("Vui lòng nhập họ tên chủ tài khoản ngân hàng.");
+      setCancelError(isVi ? "Vui lòng nhập họ tên chủ tài khoản ngân hàng." : "Please enter the bank account holder's full name.");
       return;
     }
 
@@ -361,11 +385,12 @@ export default function BookingHistory() {
             </div>
             <div>
               <h2 className="text-base font-bold text-amber-950">
-                Chính sách hủy phòng — cần lưu ý
+                {isVi ? "Chính sách hủy phòng — cần lưu ý" : "Cancellation policy — Important notice"}
               </h2>
               <p className="mt-1 text-sm text-amber-900/80">
-                Mức hoàn tiền được tính theo thời điểm bạn gửi yêu cầu hủy so
-                với ngày nhận phòng.
+                {isVi
+                  ? "Mức hoàn tiền được tính theo thời điểm bạn gửi yêu cầu hủy so với ngày nhận phòng."
+                  : "Refund rates are calculated based on when your cancellation request is submitted relative to check-in."}
               </p>
             </div>
           </div>
@@ -373,28 +398,28 @@ export default function BookingHistory() {
             <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
               <p className="text-2xl font-extrabold text-emerald-700">100%</p>
               <p className="mt-1 text-sm font-bold text-emerald-900">
-                Hoàn tiền đầy đủ
+                {isVi ? "Hoàn tiền đầy đủ" : "Full refund"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-emerald-800/80">
-                Hủy trước từ 7 ngày trở lên.
+                {isVi ? "Hủy trước từ 7 ngày trở lên." : "Cancel 7+ days before check-in."}
               </p>
             </div>
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="text-2xl font-extrabold text-amber-700">50%</p>
               <p className="mt-1 text-sm font-bold text-amber-900">
-                Hoàn một phần
+                {isVi ? "Hoàn một phần" : "Partial refund"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-amber-800/80">
-                Hủy từ 3 đến dưới 7 ngày.
+                {isVi ? "Hủy từ 3 đến dưới 7 ngày." : "Cancel 3 to under 7 days before check-in."}
               </p>
             </div>
             <div className="rounded-xl border border-red-200 bg-red-50 p-4">
               <p className="text-2xl font-extrabold text-red-700">0%</p>
               <p className="mt-1 text-sm font-bold text-red-900">
-                Không hoàn tiền
+                {isVi ? "Không hoàn tiền" : "Non-refundable"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-red-800/80">
-                Hủy dưới 3 ngày hoặc không đến nhận phòng.
+                {isVi ? "Hủy dưới 3 ngày hoặc không đến nhận phòng." : "Cancel under 3 days or no-show."}
               </p>
             </div>
           </div>
@@ -777,10 +802,10 @@ export default function BookingHistory() {
                   </div>
                   <div>
                     <DialogTitle className="text-lg font-bold text-slate-900">
-                      Xác nhận hủy đặt phòng & Hoàn tiền
+                      {isVi ? "Xác nhận hủy đặt phòng & Hoàn tiền" : "Confirm cancellation & Refund"}
                     </DialogTitle>
                     <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                      Mã đơn: <strong className="font-mono text-primary">{cancelTarget.id}</strong> · {cancelTarget.hotelName}
+                      {isVi ? "Mã đơn: " : "Booking ID: "}<strong className="font-mono text-primary">{cancelTarget.id}</strong> · {cancelTarget.hotelName}
                     </DialogDescription>
                   </div>
                 </div>
@@ -799,10 +824,10 @@ export default function BookingHistory() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm">
                       {policy.refundPercent === 0
-                        ? "Hủy sát ngày (dưới 3 ngày)"
+                        ? (isVi ? "Hủy sát ngày (dưới 3 ngày)" : "Late cancellation (under 3 days)")
                         : policy.refundPercent === 50
-                          ? "Hủy từ 3 đến dưới 7 ngày"
-                          : "Miễn phí hủy phòng (trước 7 ngày)"}
+                          ? (isVi ? "Hủy từ 3 đến dưới 7 ngày" : "Cancellation between 3 to 7 days")
+                          : (isVi ? "Miễn phí hủy phòng (trước 7 ngày)" : "Free cancellation (7+ days prior)")}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
@@ -813,18 +838,18 @@ export default function BookingHistory() {
                             : "bg-emerald-200 text-emerald-800"
                       }`}
                     >
-                      Hoàn {policy.refundPercent}%
+                      {isVi ? `Hoàn ${policy.refundPercent}%` : `${policy.refundPercent}% Refund`}
                     </span>
                   </div>
 
                   <div className="mt-2.5 flex justify-between border-t border-black/10 pt-2 text-muted-foreground">
-                    <span>Tổng tiền phòng:</span>
+                    <span>{isVi ? "Tổng tiền phòng:" : "Room subtotal:"}</span>
                     <span className="font-semibold text-slate-900">
                       {formatVnd(cancelTarget.roomTotal)}
                     </span>
                   </div>
                   <div className="mt-1 flex justify-between text-sm font-bold">
-                    <span>Số tiền hoàn lại dự kiến:</span>
+                    <span>{isVi ? "Số tiền hoàn lại dự kiến:" : "Estimated refund amount:"}</span>
                     <span
                       className={
                         policy.refundPercent === 0
@@ -840,7 +865,8 @@ export default function BookingHistory() {
                 {/* 1. LÝ DO HỦY PHÒNG */}
                 <div className="space-y-2">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    1. Lý do hủy đặt phòng <span className="text-red-500">*</span>
+                    {isVi ? "1. Lý do hủy đặt phòng " : "1. Cancellation reason "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {QUICK_CANCEL_REASONS.map((r) => (
@@ -871,12 +897,13 @@ export default function BookingHistory() {
                 <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
                   <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800">
                     <Landmark className="h-4 w-4 text-primary" />
-                    <span>2. Thông tin tài khoản ngân hàng đối soát / hoàn tiền</span>
+                    <span>{isVi ? "2. Thông tin tài khoản ngân hàng đối soát / hoàn tiền" : "2. Bank account details for verification / refund"}</span>
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-slate-700">
-                      Tên ngân hàng <span className="text-red-500">*</span>
+                      {isVi ? "Tên ngân hàng " : "Bank name "}
+                      <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={cancelBankCode}
@@ -899,7 +926,8 @@ export default function BookingHistory() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label className="block text-xs font-semibold text-slate-700">
-                        Số tài khoản <span className="text-red-500">*</span>
+                        {isVi ? "Số tài khoản " : "Account number "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <div className="relative">
                         <CreditCard className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
@@ -918,7 +946,8 @@ export default function BookingHistory() {
 
                     <div className="space-y-1.5">
                       <label className="block text-xs font-semibold text-slate-700">
-                        Tên chủ tài khoản <span className="text-red-500">*</span>
+                        {isVi ? "Tên chủ tài khoản " : "Account holder name "}
+                        <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -932,7 +961,7 @@ export default function BookingHistory() {
 
                   <div className="space-y-1.5">
                     <label className="block text-xs font-semibold text-slate-700">
-                      Email nhận thông báo hoàn tiền
+                      {isVi ? "Email nhận thông báo hoàn tiền" : "Refund notification email"}
                     </label>
                     <input
                       type="email"
@@ -949,6 +978,14 @@ export default function BookingHistory() {
                     ⚠️ {cancelError}
                   </div>
                 )}
+
+                {!isCancelFormValid && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-800">
+                    ⚠️ {isVi
+                      ? "Bắt buộc nhập đủ 5 thông tin: Lý do hủy, Tên ngân hàng, Mã ngân hàng, Tên chủ tài khoản, Số tài khoản (6-50 số) để mở khóa nút gửi yêu cầu."
+                      : "Required all 5 fields: Cancellation reason, Bank name, Bank code, Account holder name, Account number (6-50 digits) to unlock the submit button."}
+                  </div>
+                )}
               </div>
 
               <DialogFooter className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -959,22 +996,22 @@ export default function BookingHistory() {
                   onClick={() => setCancelTarget(null)}
                   className="rounded-full"
                 >
-                  Giữ lại phòng
+                  {isVi ? "Giữ lại phòng" : "Keep booking"}
                 </Button>
                 <Button
                   type="button"
                   variant="destructive"
-                  disabled={isCancelling}
+                  disabled={isCancelling || !isCancelFormValid}
                   onClick={confirmCancel}
                   className="rounded-full"
                 >
                   {isCancelling ? (
                     <>
                       <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                      Đang gửi yêu cầu hủy...
+                      {isVi ? "Đang gửi yêu cầu hủy..." : "Sending cancellation request..."}
                     </>
                   ) : (
-                    "Xác nhận hủy phòng"
+                    isVi ? "Xác nhận hủy phòng" : "Confirm cancellation"
                   )}
                 </Button>
               </DialogFooter>

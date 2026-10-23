@@ -220,22 +220,24 @@ export default function BookingSuccess() {
 
       // 3. Nếu là tiền mặt hoặc ví điện tử khác
       if (activeOrderId) {
-        try {
-          await fetch("http://localhost:8081/orders/payments", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              orderId: activeOrderId,
-              amount: payAmount,
-              paymentType: paymentMethod,
-              cashFlowType: "RECEIPT",
-              note: "Khách thanh toán trực tuyến trên website",
-            }),
-          });
-        } catch (e) {
-          console.warn("Gửi payment backend thất bại:", e);
+        const token = localStorage.getItem("accessToken");
+        const payRes = await fetch("http://localhost:8081/orders/payments", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({
+            orderId: activeOrderId,
+            amount: payAmount,
+            paymentType: paymentMethod,
+            cashFlowType: "RECEIPT",
+            note: "Khách thanh toán trực tuyến trên website",
+          }),
+        });
+        if (!payRes.ok) {
+          const errText = await payRes.text().catch(() => "");
+          throw new Error(errText || `HTTP ${payRes.status}`);
         }
       }
 
