@@ -90,7 +90,7 @@ export default function ContactPage() {
       {/* ================= HERO BANNER ================= */}
       <section className="relative min-h-[420px] flex items-center justify-center overflow-hidden bg-primary py-20 text-primary-foreground">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,hsl(var(--gold)/.25),transparent_40%),linear-gradient(180deg,hsl(var(--primary))_0%,hsl(var(--primary)/.95)_100%)]" />
-        <img
+        <img loading="lazy" decoding="async"
           src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2000&auto=format&fit=crop"
           alt="Contact Sen Viet"
           className="absolute inset-0 -z-0 h-full w-full object-cover opacity-25"

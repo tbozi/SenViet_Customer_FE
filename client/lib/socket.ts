@@ -84,7 +84,7 @@ export function bindCustomerSocketEvents(nextHandlers: SocketHandlers = {}) {
   });
 
   socket.on("staff_customer_chat_reply", (data: StaffReplyPayload) => {
-    console.log("💬 [Customer Socket] Nhận tin nhắn từ nhân viên:", data);
+    if (import.meta.env.DEV) console.log("💬 [Customer Socket] Nhận tin nhắn từ nhân viên:", data);
     handlers.onStaffReply?.(data);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("senviet_staff_chat_reply", { detail: data }));
@@ -98,7 +98,7 @@ export function initCustomerSocket(
   accountId?: number | string,
   email?: string
 ) {
-  const effectiveToken = token || localStorage.getItem("accessToken") || localStorage.getItem("token") || "guest_token";
+  const effectiveToken = token || localStorage.getItem("senviet_token") || localStorage.getItem("accessToken") || "";
 
   const joinRooms = (sock: Socket) => {
     if (userId) {
@@ -120,17 +120,17 @@ export function initCustomerSocket(
   socket?.disconnect();
   socket = io(SOCKET_URL, {
     transports: ["websocket"],
-    query: { token: effectiveToken },
+    query: effectiveToken ? { token: effectiveToken } : {},
     reconnection: true,
     reconnectionAttempts: 10,
   });
 
   socket.on("connect", () => {
-    console.log("[Customer Socket] connected:", socket?.id);
+    if (import.meta.env.DEV) console.log("[Customer Socket] connected:", socket?.id);
     if (socket) joinRooms(socket);
   });
   socket.on("connect_error", (error) => console.error("[Customer Socket] connect error:", error.message));
-  socket.on("disconnect", (reason) => console.log("[Customer Socket] disconnected:", reason));
+  socket.on("disconnect", (reason) => { if (import.meta.env.DEV) console.log("[Customer Socket] disconnected:", reason); });
 
   bindCustomerSocketEvents(handlers);
   return socket;
@@ -138,7 +138,7 @@ export function initCustomerSocket(
 
 export function sendCustomerChatMessage(payload: CustomerChatPayload) {
   if (!socket || !socket.connected) {
-    console.log("[Customer Socket] Connecting socket before sending chat...");
+    if (import.meta.env.DEV) console.log("[Customer Socket] Connecting socket before sending chat...");
     initCustomerSocket(null, payload.customerId);
   }
   if (socket) {

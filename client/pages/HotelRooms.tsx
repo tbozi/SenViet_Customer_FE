@@ -196,7 +196,7 @@ function RoomDetailsModal({
           {/* CỘT TRÁI: HÌNH ẢNH & SLIDER */}
           <div className="relative flex flex-col justify-between bg-slate-900 p-4 sm:p-6">
             <div className="relative flex min-h-[280px] flex-1 items-center justify-center">
-              <img
+              <img loading="lazy" decoding="async"
                 src={images[imageIndex]}
                 alt={`${room.nameVi} - ảnh ${imageIndex + 1}`}
                 className="aspect-[4/3] max-h-[460px] w-full rounded-xl object-cover shadow-lg"
@@ -247,7 +247,7 @@ function RoomDetailsModal({
                       : "border-transparent opacity-60 hover:opacity-100"
                   }`}
                 >
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={img}
                     alt="thumbnail"
                     className="h-full w-full object-cover"
@@ -938,7 +938,7 @@ export default function HotelRooms() {
       <QuickSearch />
       <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card">
         <div className="grid md:grid-cols-[1fr_1.2fr]">
-          <img
+          <img loading="lazy" decoding="async"
             src={hotel.image}
             alt={hotel.name}
             className="h-64 w-full object-cover md:h-full"
@@ -1095,7 +1095,7 @@ export default function HotelRooms() {
                 >
                   <div className="grid md:grid-cols-[190px_1fr_auto]">
                     <div className="relative">
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={item.image}
                         alt={item.nameVi}
                         className="aspect-[4/3] h-full w-full object-cover md:aspect-auto"

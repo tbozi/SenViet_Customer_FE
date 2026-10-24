@@ -36,7 +36,7 @@ export interface BackendRoomResponse {
   extraChildFee?: number;
 }
 
-const API_BASE_URL = "http://localhost:8081";
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://localhost:8081");
 
 export const hotelSlugToIdMap: Record<string, number> = {
   "sen-viet-sai-gon": 1,

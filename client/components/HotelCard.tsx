@@ -8,7 +8,7 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
   return (
     <article className="group overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
       <div className="relative h-56 overflow-hidden">
-        <img src={hotel.image} alt={hotel.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
+        <img loading="lazy" decoding="async" src={hotel.image} alt={hotel.name} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
         <div className="absolute left-4 top-4 rounded-full bg-background/90 px-3 py-1 text-xs font-semibold text-primary backdrop-blur">Sen Việt</div>
         <div className="absolute bottom-4 right-4 flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground"><Star className="h-3.5 w-3.5 fill-gold text-gold" /> {hotel.rating}</div>
       </div>

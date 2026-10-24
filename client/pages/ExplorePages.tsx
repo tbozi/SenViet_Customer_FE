@@ -464,7 +464,7 @@ export function Offers() {
           <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl p-5 sm:p-7">
             {selectedOffer.image && (
               <div className="relative -mx-5 -mt-5 mb-5 h-48 overflow-hidden rounded-t-2xl sm:-mx-7 sm:-mt-7 sm:h-60">
-                <img
+                <img loading="lazy" decoding="async"
                   src={selectedOffer.image}
                   alt={isVietnamese ? selectedOffer.title : selectedOffer.titleEn}
                   className="h-full w-full object-cover"
@@ -653,7 +653,7 @@ export function Services() {
             >
               {srv.imageUrl && (
                 <div className="h-48 overflow-hidden bg-secondary">
-                  <img
+                  <img loading="lazy" decoding="async"
                     src={srv.imageUrl}
                     alt={srv.name}
                     className="h-full w-full object-cover transition duration-300 group-hover:scale-105"

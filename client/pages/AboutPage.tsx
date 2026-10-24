@@ -77,7 +77,7 @@ export default function AboutPage() {
       {/* ================= HERO SECTION ================= */}
       <section className="relative min-h-[500px] flex items-center justify-center overflow-hidden bg-primary py-24 text-primary-foreground">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,hsl(var(--gold)/.25),transparent_40%),linear-gradient(180deg,hsl(var(--primary))_0%,hsl(var(--primary)/.95)_100%)]" />
-        <img
+        <img loading="lazy" decoding="async"
           src="https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=2000&auto=format&fit=crop"
           alt="Sen Viet Hotels & Resorts"
           className="absolute inset-0 -z-0 h-full w-full object-cover opacity-25"
@@ -189,7 +189,7 @@ export default function AboutPage() {
 
           <div className="relative">
             <div className="overflow-hidden rounded-3xl border border-border shadow-xl">
-              <img
+              <img loading="lazy" decoding="async"
                 src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?q=80&w=1200&auto=format&fit=crop"
                 alt="Sen Viet interior luxury"
                 className="h-[450px] w-full object-cover transition-transform duration-500 hover:scale-105"
@@ -278,7 +278,7 @@ export default function AboutPage() {
               className="group overflow-hidden rounded-2xl border border-border bg-card shadow-xs hover:shadow-lg transition"
             >
               <div className="relative h-48 overflow-hidden">
-                <img 
+                <img loading="lazy" decoding="async" 
                   src={hotel.image} 
                   alt={hotel.name}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 

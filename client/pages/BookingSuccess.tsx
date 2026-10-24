@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://localhost:8081");
+
 function dateTime(date: string, time: string) {
   return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString("vi-VN")}`;
 }
@@ -131,7 +133,7 @@ export default function BookingSuccess() {
 
       // 1. Tra cứu Order của booking từ Backend
       try {
-        const orderRes = await fetch(`http://localhost:8081/orders/booking/${booking.id}`);
+        const orderRes = await fetch(`${API_BASE_URL}/orders/booking/${booking.id}`);
         if (orderRes.ok) {
           const orderJson = await orderRes.json();
           if (orderJson.result?.id) {
@@ -171,7 +173,7 @@ export default function BookingSuccess() {
         let qrCodeUrl = `https://img.vietqr.io/image/BIDV-V3CAS6811679267-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=NGUYEN+LE+ANH+PHONG`;
 
         try {
-          const qrRes = await fetch("http://localhost:8081/payment/create-qr", {
+          const qrRes = await fetch(`${API_BASE_URL}/payment/create-qr`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -220,8 +222,8 @@ export default function BookingSuccess() {
 
       // 3. Nếu là tiền mặt hoặc ví điện tử khác
       if (activeOrderId) {
-        const token = localStorage.getItem("accessToken");
-        const payRes = await fetch("http://localhost:8081/orders/payments", {
+        const token = localStorage.getItem("senviet_token") || localStorage.getItem("accessToken");
+        const payRes = await fetch(`${API_BASE_URL}/orders/payments`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -263,7 +265,7 @@ export default function BookingSuccess() {
     const checkStatus = async () => {
       if (!isSubscribed) return;
       try {
-        const res = await fetch(`http://localhost:8081/payment/check-order-status/${qrData.orderId}`);
+        const res = await fetch(`${API_BASE_URL}/payment/check-order-status/${qrData.orderId}`);
         if (res.ok && isSubscribed) {
           const data = await res.json();
           if (data.isPaid && isSubscribed) {
@@ -298,7 +300,7 @@ export default function BookingSuccess() {
     if (!booking || !qrData?.orderId) return;
     setIsPaying(true);
     try {
-      const res = await fetch(`http://localhost:8081/payment/check-order-status/${qrData.orderId}`);
+      const res = await fetch(`${API_BASE_URL}/payment/check-order-status/${qrData.orderId}`);
       if (res.ok) {
         const data = await res.json();
         if (data.isPaid) {

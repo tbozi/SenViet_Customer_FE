@@ -53,7 +53,7 @@ interface Message {
 }
 
 interface StaffMessage {
-  id: number;
+  id: string | number;
   from: "staff" | "user";
   senderName?: string;
   branchName?: string;
@@ -327,8 +327,18 @@ export function openChatWidget() {
 }
 
 /** Simple markdown-like formatting: **bold**, bullet points, line breaks */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function formatReply(text: string): string {
-  return text
+  const safe = escapeHtml(text || "");
+  return safe
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/^\s*[-•]\s+(.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
     .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul class="my-1 space-y-0.5">$&</ul>')

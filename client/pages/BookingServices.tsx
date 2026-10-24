@@ -498,7 +498,7 @@ export default function BookingServices() {
                         key={service.id}
                         className={`overflow-hidden rounded-xl border bg-card transition ${selected ? "border-primary ring-2 ring-primary/15" : "border-border"}`}
                       >
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={service.image}
                           alt={service.name}
                           className="aspect-[16/9] w-full object-cover"

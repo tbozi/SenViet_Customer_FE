@@ -17,6 +17,8 @@ export interface PromotionItem {
 }
 
 export interface SavedPromotionItem {
+  id?: number | string;
+  title?: string;
   savedId: number | string;
   promotionId: number | string;
   promotionCode?: string;
