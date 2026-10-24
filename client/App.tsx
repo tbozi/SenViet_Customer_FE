@@ -79,8 +79,9 @@ function CustomerSocketLifecycle() {
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, token } = useAuth();
   const location = useLocation();
+  const hasLocalToken = typeof window !== "undefined" && !!localStorage.getItem("senviet_token");
 
-  if (!user && !token) {
+  if (!user && !token && !hasLocalToken) {
     return <Navigate to="/login" state={{ from: `${location.pathname}${location.search}` }} replace />;
   }
   return <>{children}</>;

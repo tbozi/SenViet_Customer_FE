@@ -37,8 +37,17 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 // Provider
 // ============================================================
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    try {
+      const stored = typeof window !== "undefined" ? localStorage.getItem(SESSION_KEY) : null;
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [token, setToken] = useState<string | null>(() => {
+    return typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+  });
 
   // Khôi phục session khi reload trang & tự động đồng bộ profile mới nhất
   useEffect(() => {
