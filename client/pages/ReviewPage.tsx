@@ -33,6 +33,8 @@ export default function ReviewPage() {
   const [service, setService] = useState<number>(5);
   const [facilities, setFacilities] = useState<number>(5);
   const [location, setLocation] = useState<number>(5);
+  const [reviewTitle, setReviewTitle] = useState<string>("");
+  const [comment, setComment] = useState<string>("");
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
@@ -50,7 +52,7 @@ export default function ReviewPage() {
     setError("");
 
     try {
-      // 1. Gửi lên API Backend (chỉ gửi đánh giá sao, không bình luận)
+      // 1. Gửi lên API Backend (hỗ trợ cả sao và nhận xét chi tiết)
       const validBookingId = !isNaN(Number(bookingId)) && Number(bookingId) > 0 ? Number(bookingId) : (bookingId || 505);
       await submitReview({
         bookingId: validBookingId,
@@ -59,7 +61,8 @@ export default function ReviewPage() {
         serviceRating: service,
         facilitiesRating: facilities,
         locationRating: location,
-        comment: "",
+        title: reviewTitle.trim() || undefined,
+        comment: comment.trim() || undefined,
       }).catch((apiErr) => {
         console.warn("Backend API not reachable or errored, saving locally:", apiErr);
       });
@@ -71,7 +74,8 @@ export default function ReviewPage() {
         userEmail: user?.email || "",
         hotelSlug: localBooking?.hotelSlug || "sen-viet-sai-gon",
         rating,
-        comment: "",
+        title: reviewTitle.trim() || undefined,
+        comment: comment.trim(),
         createdAt: new Date().toISOString(),
         status: "published",
       });
@@ -283,6 +287,53 @@ export default function ReviewPage() {
             </div>
           </div>
 
+          <hr className="my-8 border-border" />
+
+          {/* Mục 3: Cảm nhận & Góp ý chi tiết */}
+          <div>
+            <label className="block font-display text-lg font-bold text-primary">
+              3. Chia sẻ chi tiết kỳ nghỉ của bạn
+            </label>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Ý kiến của bạn là thông tin quý báu giúp Sen Việt ngày một hoàn thiện chất lượng dịch vụ
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label htmlFor="review-title" className="block text-xs font-semibold text-primary mb-1.5">
+                  Tiêu đề nhận xét (không bắt buộc)
+                </label>
+                <input
+                  id="review-title"
+                  type="text"
+                  value={reviewTitle}
+                  onChange={(e) => setReviewTitle(e.target.value)}
+                  placeholder="Ví dụ: Kỳ nghỉ tuyệt vời, phòng ốc sạch sẽ, nhân viên chu đáo"
+                  maxLength={120}
+                  className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="review-comment" className="block text-xs font-semibold text-primary mb-1.5">
+                  Nội dung đánh giá chi tiết (không bắt buộc)
+                </label>
+                <textarea
+                  id="review-comment"
+                  rows={4}
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Hãy chia sẻ cảm nhận cụ thể về kỳ nghỉ, chất lượng phòng, bữa sáng hoặc dịch vụ hỗ trợ của nhân viên..."
+                  maxLength={1000}
+                  className="w-full resize-none rounded-xl border border-input bg-background p-4 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                />
+                <div className="mt-1 flex justify-end text-xs text-muted-foreground">
+                  {comment.length}/1000 ký tự
+                </div>
+              </div>
+            </div>
+          </div>
+
           {error && (
             <div className="mt-5 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 text-sm font-medium text-destructive">
               {error}
@@ -304,7 +355,7 @@ export default function ReviewPage() {
               disabled={loading}
               className="rounded-xl bg-primary px-8 py-3.5 font-bold text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90"
             >
-              {loading ? "Đang gửi..." : "Hoàn tất đánh giá sao"}
+              {loading ? "Đang gửi..." : "Gửi đánh giá dịch vụ"}
             </Button>
           </div>
         </form>

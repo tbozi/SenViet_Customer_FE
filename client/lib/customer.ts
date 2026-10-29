@@ -1,4 +1,4 @@
-export interface CustomerReview { id: string; bookingId: string; userEmail: string; hotelSlug: string; rating: number; comment: string; createdAt: string; status: "pending" | "published"; }
+export interface CustomerReview { id: string; bookingId: string; userEmail: string; hotelSlug: string; rating: number; title?: string; comment: string; createdAt: string; status: "pending" | "published"; }
 const REVIEWS_KEY = "senviet_reviews";
 export function getReviews() { try { return JSON.parse(localStorage.getItem(REVIEWS_KEY) || "[]") as CustomerReview[]; } catch { return []; } }
 export function saveReview(review: CustomerReview) { localStorage.setItem(REVIEWS_KEY, JSON.stringify([review, ...getReviews()])); }

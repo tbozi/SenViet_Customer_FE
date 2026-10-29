@@ -38,7 +38,7 @@ import {
 } from "@/lib/bookings";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
-import { useCancelCustomerBookingMutation } from "@/services/bookingApi";
+import { useCancelCustomerBookingMutation, useGetMyBookingsQuery, BookingResponseDto } from "@/services/bookingApi";
 
 const VIETNAMESE_BANKS = [
   { code: "VCB", name: "Vietcombank - Ngân hàng TMCP Ngoại thương Việt Nam" },
@@ -130,10 +130,90 @@ export default function BookingHistory() {
   const [success, setSuccess] = useState("");
   const [cancelCustomerBooking, { isLoading: isCancelling }] =
     useCancelCustomerBookingMutation();
+  const { data: serverBookings } = useGetMyBookingsQuery(undefined, {
+    skip: !user,
+  });
 
   useEffect(() => {
-    setBookings(getBookings().filter((item) => item.userEmail === user?.email));
-  }, [user?.email]);
+    const local = getBookings().filter((item) => !user || item.userEmail === user.email);
+    if (!serverBookings || !Array.isArray(serverBookings) || serverBookings.length === 0) {
+      setBookings(local);
+      return;
+    }
+
+    const serverMapped: Booking[] = serverBookings.map((sb) => {
+      let status: Booking["status"] = "confirmed";
+      const rawStatus = (sb.bookingStatus || "").toUpperCase();
+      if (rawStatus === "PENDING") {
+        status = "pending_payment";
+      } else if (rawStatus === "CANCELLED" || rawStatus === "REFUNDED") {
+        status = "cancelled";
+      } else if (rawStatus === "COMPLETED" || rawStatus === "CHECKED_OUT" || rawStatus === "CHECKED_IN") {
+        status = "completed";
+      } else {
+        status = "confirmed";
+      }
+
+      const firstDetail = sb.bookingDetails?.[0];
+      const hotelName = firstDetail?.room?.hotel?.hotelName || "Sen Việt Hotel & Resort";
+      const hotelSlug = firstDetail?.room?.hotel?.hotelSlug || "sen-viet-sai-gon";
+      const roomName = sb.bookingDetails?.map((d: any) => d.room?.roomName || d.roomTypeName || "Phòng nghỉ").join(", ") || "Phòng nghỉ tiêu chuẩn";
+
+      const checkIn = firstDetail?.checkInTime ? String(firstDetail.checkInTime).slice(0, 10) : "";
+      const checkOut = firstDetail?.checkOutTime ? String(firstDetail.checkOutTime).slice(0, 10) : "";
+      const nights = checkIn && checkOut ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 3600 * 24))) : 1;
+
+      return {
+        id: String(sb.bookingId),
+        userEmail: user?.email || "",
+        hotelSlug,
+        hotelName,
+        roomName,
+        checkIn,
+        checkOut,
+        nights,
+        rooms: sb.bookingDetails?.length || 1,
+        roomPrice: sb.roomTotal || 0,
+        roomTotal: sb.roomTotal || 0,
+        vat: 0,
+        serviceFee: sb.serviceTotal || 0,
+        discount: sb.discountTotal || 0,
+        total: sb.finalAmount || 0,
+        paymentMethod: "qr",
+        status,
+        createdAt: sb.createdAt || new Date().toISOString(),
+        guestName: sb.customerName || user?.name || "Khách hàng",
+        phone: "",
+        email: user?.email || "",
+        specialRequest: "",
+        cancellationDeadline: checkIn ? `${checkIn}T14:00:00` : "",
+        holdUntil: new Date(Date.now() + 5 * 60000).toISOString(),
+      };
+    });
+
+    const map = new Map<string, Booking>();
+    for (const b of local) {
+      map.set(String(b.id), b);
+    }
+    for (const sb of serverMapped) {
+      const existing = map.get(String(sb.id));
+      if (existing) {
+        map.set(String(sb.id), {
+          ...existing,
+          status: sb.status,
+          total: sb.total || existing.total,
+          roomTotal: sb.roomTotal || existing.roomTotal,
+        });
+      } else {
+        map.set(String(sb.id), sb);
+      }
+    }
+
+    const merged = Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+    setBookings(merged);
+  }, [user?.email, user?.name, serverBookings]);
 
   useEffect(() => {
     const createdId = params.get("created");
