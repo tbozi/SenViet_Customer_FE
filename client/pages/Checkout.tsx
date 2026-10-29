@@ -692,7 +692,7 @@ export default function Checkout() {
       specialRequest: request,
       cancellationDeadline: cancellationDeadlineFor(firstCheckIn),
       cancellationPolicy: getCancellationPolicy(firstCheckIn).policy,
-      holdUntil: new Date(Date.now() + 15 * 60000).toISOString(),
+      holdUntil: new Date(Date.now() + 5 * 60000).toISOString(),
       arrivalTime,
       departureTime,
       extraGuestCharge,
