@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+﻿import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Link,
   useLocation,
@@ -62,7 +62,7 @@ function parseSelections(params: URLSearchParams): RoomSelection[] {
   } catch {
     return [];
   }
-  const roomName = params.get("room") || "Phòng Tiêu Chuẩn";
+  const roomName = params.get("room") || "PhÃƒÂ²ng TiÃƒÂªu ChuÃ¡ÂºÂ©n";
   const guests = fallbackGuestForms(params);
   const quantity = Number(params.get("rooms") || 1);
   const nightlyPrice = Number(params.get("roomPrice") || 0);
@@ -88,8 +88,8 @@ function parseSelections(params: URLSearchParams): RoomSelection[] {
       extraGuestCount: 0,
       extraGuestCharge: 0,
       offerId: "legacy",
-      offerName: "Gói ưu đãi đã chọn",
-      offerCancellationPolicy: "Theo chính sách của booking.",
+      offerName: "GÃƒÂ³i Ã†Â°u Ã„â€˜ÃƒÂ£i Ã„â€˜ÃƒÂ£ chÃ¡Â»Ân",
+      offerCancellationPolicy: "Theo chÃƒÂ­nh sÃƒÂ¡ch cÃ¡Â»Â§a booking.",
     },
   ];
 }
@@ -106,7 +106,7 @@ function parseServices(params: URLSearchParams): BookingService[] {
 function selectionStays(selection: RoomSelection): RoomStay[] {
   if (selection.stays?.length) return selection.stays;
   return Array.from({ length: selection.quantity }, (_, index) => ({
-    roomCode: selection.roomCodes?.[index] || `Phòng ${index + 1}`,
+    roomCode: selection.roomCodes?.[index] || `PhÃƒÂ²ng ${index + 1}`,
     checkIn: selection.checkIn || "",
     checkOut: selection.checkOut || "",
     nights: selection.nights || 0,
@@ -273,12 +273,12 @@ export default function Checkout() {
       );
       const backendDiscountText = backendMatch
         ? backendMatch.discountType === "PERCENTAGE" || backendMatch.discountValue <= 100
-          ? `Giảm ${backendMatch.discountValue}%`
-          : `Giảm ${formatVnd(backendMatch.discountValue)}`
+          ? `GiÃ¡ÂºÂ£m ${backendMatch.discountValue}%`
+          : `GiÃ¡ÂºÂ£m ${formatVnd(backendMatch.discountValue)}`
         : activeMatch
           ? activeMatch.discountType === "PERCENTAGE" || activeMatch.discountValue <= 100
-            ? `Giảm ${activeMatch.discountValue}%`
-            : `Giảm ${formatVnd(activeMatch.discountValue)}`
+            ? `GiÃ¡ÂºÂ£m ${activeMatch.discountValue}%`
+            : `GiÃ¡ÂºÂ£m ${formatVnd(activeMatch.discountValue)}`
           : undefined;
       return {
         code,
@@ -287,7 +287,7 @@ export default function Checkout() {
           backendMatch?.title ||
           activeMatch?.name ||
           promotionNames[code] ||
-          "Ưu đãi Sen Việt",
+          "Ã†Â¯u Ã„â€˜ÃƒÂ£i Sen ViÃ¡Â»â€¡t",
         discountText: rule?.discountText || backendDiscountText,
         applicable,
         reason,
@@ -431,9 +431,9 @@ export default function Checkout() {
       ...(extraGuestCharge > 0
         ? [
             {
-              label: "Phụ thu vượt sức chứa",
+              label: "PhÃ¡Â»Â¥ thu vÃ†Â°Ã¡Â»Â£t sÃ¡Â»Â©c chÃ¡Â»Â©a",
               amount: extraGuestCharge,
-              detail: "Theo chính sách khách sạn (người lớn / trẻ em, miễn phí em bé)",
+              detail: "Theo chÃƒÂ­nh sÃƒÂ¡ch khÃƒÂ¡ch sÃ¡ÂºÂ¡n (ngÃ†Â°Ã¡Â»Âi lÃ¡Â»â€ºn / trÃ¡ÂºÂ» em, miÃ¡Â»â€¦n phÃƒÂ­ em bÃƒÂ©)",
               scope: "room" as const,
               kind: "surcharge" as const,
             },
@@ -441,9 +441,9 @@ export default function Checkout() {
         : []),
       ...(roomServiceLines.length ? roomServiceLines : services).map(
         (service) => ({
-          label: `${service.roomCode ? `${service.roomName || "Phòng"} · ${service.roomCode} — ` : ""}Dịch vụ: ${service.name}`,
+          label: `${service.roomCode ? `${service.roomName || "PhÃƒÂ²ng"} Ã‚Â· ${service.roomCode} Ã¢â‚¬â€ ` : ""}DÃ¡Â»â€¹ch vÃ¡Â»Â¥: ${service.name}`,
           amount: service.total,
-          detail: `${service.quantity} đơn vị × ${formatVnd(service.unitPrice)}`,
+          detail: `${service.quantity} Ã„â€˜Ã†Â¡n vÃ¡Â»â€¹ Ãƒâ€” ${formatVnd(service.unitPrice)}`,
           scope: "room" as const,
           kind: "service" as const,
         }),
@@ -473,14 +473,14 @@ export default function Checkout() {
       <main className="container flex min-h-[55vh] items-center justify-center py-16">
         <div className="max-w-lg rounded-3xl border border-border bg-card p-8 text-center shadow-xl">
           <h1 className="font-display text-3xl font-bold text-primary">
-            Thông tin đặt phòng chưa đầy đủ
+            ThÃƒÂ´ng tin Ã„â€˜Ã¡ÂºÂ·t phÃƒÂ²ng chÃ†Â°a Ã„â€˜Ã¡ÂºÂ§y Ã„â€˜Ã¡Â»Â§
           </h1>
           <p className="mt-3 text-muted-foreground">
-            Vui lòng chọn khách sạn, ngày lưu trú hợp lệ và ít nhất một loại
-            phòng trước khi thanh toán.
+            Vui lÃƒÂ²ng chÃ¡Â»Ân khÃƒÂ¡ch sÃ¡ÂºÂ¡n, ngÃƒÂ y lÃ†Â°u trÃƒÂº hÃ¡Â»Â£p lÃ¡Â»â€¡ vÃƒÂ  ÃƒÂ­t nhÃ¡ÂºÂ¥t mÃ¡Â»â„¢t loÃ¡ÂºÂ¡i
+            phÃƒÂ²ng trÃ†Â°Ã¡Â»â€ºc khi thanh toÃƒÂ¡n.
           </p>
           <Button asChild className="mt-6 rounded-full">
-            <Link to="/hotels">Chọn phòng</Link>
+            <Link to="/hotels">ChÃ¡Â»Ân phÃƒÂ²ng</Link>
           </Button>
         </div>
       </main>
@@ -492,12 +492,12 @@ export default function Checkout() {
           <LockKeyhole className="mx-auto h-10 w-10 text-primary" />
           <h1 className="mt-5 font-display text-3xl font-bold text-primary">
             {language === "vi"
-              ? "Đăng nhập để thanh toán"
+              ? "Ã„ÂÃ„Æ’ng nhÃ¡ÂºÂ­p Ã„â€˜Ã¡Â»Æ’ thanh toÃƒÂ¡n"
               : "Log in to continue"}
           </h1>
           <p className="mt-3 text-muted-foreground">
             {language === "vi"
-              ? "Bạn có thể đăng ký ngay hoặc đăng nhập trước khi hoàn tất đặt phòng."
+              ? "BÃ¡ÂºÂ¡n cÃƒÂ³ thÃ¡Â»Æ’ Ã„â€˜Ã„Æ’ng kÃƒÂ½ ngay hoÃ¡ÂºÂ·c Ã„â€˜Ã„Æ’ng nhÃ¡ÂºÂ­p trÃ†Â°Ã¡Â»â€ºc khi hoÃƒÂ n tÃ¡ÂºÂ¥t Ã„â€˜Ã¡ÂºÂ·t phÃƒÂ²ng."
               : "Sign up or log in before completing your reservation."}
           </p>
           <div className="mt-6 flex justify-center gap-3">
@@ -506,7 +506,7 @@ export default function Checkout() {
                 to="/register"
                 state={{ from: `${location.pathname}${location.search}` }}
               >
-                Đăng ký
+                Ã„ÂÃ„Æ’ng kÃƒÂ½
               </Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full">
@@ -514,7 +514,7 @@ export default function Checkout() {
                 to="/login"
                 state={{ from: `${location.pathname}${location.search}` }}
               >
-                Đăng nhập
+                Ã„ÂÃ„Æ’ng nhÃ¡ÂºÂ­p
               </Link>
             </Button>
           </div>
@@ -525,15 +525,15 @@ export default function Checkout() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!name || !phone || !email)
-      return setError("Vui lòng điền đủ thông tin người đại diện nhận phòng.");
+      return setError("Vui lÃƒÂ²ng Ã„â€˜iÃ¡Â»Ân Ã„â€˜Ã¡Â»Â§ thÃƒÂ´ng tin ngÃ†Â°Ã¡Â»Âi Ã„â€˜Ã¡ÂºÂ¡i diÃ¡Â»â€¡n nhÃ¡ÂºÂ­n phÃƒÂ²ng.");
     if (!cccd)
-      return setError("Vui lòng nhập số CCCD / CMND của người đại diện nhận phòng.");
+      return setError("Vui lÃƒÂ²ng nhÃ¡ÂºÂ­p sÃ¡Â»â€˜ CCCD / CMND cÃ¡Â»Â§a ngÃ†Â°Ã¡Â»Âi Ã„â€˜Ã¡ÂºÂ¡i diÃ¡Â»â€¡n nhÃ¡ÂºÂ­n phÃƒÂ²ng.");
     setError("");
     setPaymentState("processing");
 
     const hotelId = hotel.id || (hotel.slug ? hotelSlugToId[hotel.slug] : 1) || 1;
 
-    // Chuẩn bị danh sách chi tiết đặt phòng (BookingDetails) khớp với Backend DTO
+    // ChuÃ¡ÂºÂ©n bÃ¡Â»â€¹ danh sÃƒÂ¡ch chi tiÃ¡ÂºÂ¿t Ã„â€˜Ã¡ÂºÂ·t phÃƒÂ²ng (BookingDetails) khÃ¡Â»â€ºp vÃ¡Â»â€ºi Backend DTO
     const bookingDetailsPayload = selections.flatMap((selection) => {
       const stays = selectionStays(selection);
       return stays.map((stay, stayIndex) => {
@@ -546,13 +546,13 @@ export default function Checkout() {
         const suffixFam = stayIndex > 0 ? "402" : "401";
 
         if (!roomId || roomId === "undefined" || roomId === "legacy" || roomId.length < 5 || roomId.startsWith("ROOM20260922")) {
-          if (typeKey.includes("tiêu chuẩn") || typeKey.includes("standard") || roomId === "101" || roomId === "102") {
+          if (typeKey.includes("tiÃƒÂªu chuÃ¡ÂºÂ©n") || typeKey.includes("standard") || roomId === "101" || roomId === "102") {
             roomId = `ROOM_H${hotelId}_${suffix}`;
-          } else if (typeKey.includes("cao cấp") || typeKey.includes("deluxe") || roomId === "103" || roomId === "104") {
+          } else if (typeKey.includes("cao cÃ¡ÂºÂ¥p") || typeKey.includes("deluxe") || roomId === "103" || roomId === "104") {
             roomId = `ROOM_H${hotelId}_${suffixDlx}`;
           } else if (typeKey.includes("suite") || roomId === "201" || roomId === "202") {
             roomId = `ROOM_H${hotelId}_${suffixSui}`;
-          } else if (typeKey.includes("gia đình") || typeKey.includes("family") || roomId === "203" || roomId === "204") {
+          } else if (typeKey.includes("gia Ã„â€˜ÃƒÂ¬nh") || typeKey.includes("family") || roomId === "203" || roomId === "204") {
             roomId = `ROOM_H${hotelId}_${suffixFam}`;
           } else {
             roomId = `ROOM_H${hotelId}_${suffix}`;
@@ -635,16 +635,16 @@ export default function Checkout() {
       if (res && res.bookingId) {
         generatedId = String(res.bookingId);
       } else {
-        throw new Error("Backend không trả về bookingId hợp lệ");
+        throw new Error("Backend khÃƒÂ´ng trÃ¡ÂºÂ£ vÃ¡Â»Â bookingId hÃ¡Â»Â£p lÃ¡Â»â€¡");
       }
     } catch (err: any) {
-      console.error("Lưu booking vào Backend thất bại:", err);
+      console.error("LÃ†Â°u booking vÃƒÂ o Backend thÃ¡ÂºÂ¥t bÃ¡ÂºÂ¡i:", err);
       setPaymentState("idle");
       const errorMsg =
         err?.data?.message ||
         err?.message ||
-        "Không thể kết nối đến Backend (Port 8081). Hãy đảm bảo Backend trong IntelliJ đang chạy!";
-      setError(`Đặt phòng chưa thành công: ${errorMsg}`);
+        "KhÃƒÂ´ng thÃ¡Â»Æ’ kÃ¡ÂºÂ¿t nÃ¡Â»â€˜i Ã„â€˜Ã¡ÂºÂ¿n Backend (Port 8081). HÃƒÂ£y Ã„â€˜Ã¡ÂºÂ£m bÃ¡ÂºÂ£o Backend trong IntelliJ Ã„â€˜ang chÃ¡ÂºÂ¡y!";
+      setError(`Ã„ÂÃ¡ÂºÂ·t phÃƒÂ²ng chÃ†Â°a thÃƒÂ nh cÃƒÂ´ng: ${errorMsg}`);
       return;
     }
 
@@ -654,7 +654,7 @@ export default function Checkout() {
       hotelSlug: hotel.slug,
       hotelName: hotel.name,
       roomName: selections
-        .map((selection) => `${selection.roomNameVi} × ${selection.quantity}`)
+        .map((selection) => `${selection.roomNameVi} Ãƒâ€” ${selection.quantity}`)
         .join("; "),
       roomSelections: selections,
       services,
@@ -705,14 +705,14 @@ export default function Checkout() {
     <main className="container py-12">
       <div className="mx-auto max-w-5xl">
         <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
-          Sen Việt checkout
+          Sen ViÃ¡Â»â€¡t checkout
         </p>
         <h1 className="mt-2 font-display text-4xl font-bold text-primary">
-          {language === "vi" ? "Xác nhận đặt phòng" : "Confirm your booking"}
+          {language === "vi" ? "XÃƒÂ¡c nhÃ¡ÂºÂ­n Ã„â€˜Ã¡ÂºÂ·t phÃƒÂ²ng" : "Confirm your booking"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Thông tin người đại diện chỉ cần nhập một lần. Từng phòng cụ thể,
-          khoảng ngày, dịch vụ và phụ phí được liệt kê riêng bên dưới.
+          ThÃƒÂ´ng tin ngÃ†Â°Ã¡Â»Âi Ã„â€˜Ã¡ÂºÂ¡i diÃ¡Â»â€¡n chÃ¡Â»â€° cÃ¡ÂºÂ§n nhÃ¡ÂºÂ­p mÃ¡Â»â„¢t lÃ¡ÂºÂ§n. TÃ¡Â»Â«ng phÃƒÂ²ng cÃ¡Â»Â¥ thÃ¡Â»Æ’,
+          khoÃ¡ÂºÂ£ng ngÃƒÂ y, dÃ¡Â»â€¹ch vÃ¡Â»Â¥ vÃƒÂ  phÃ¡Â»Â¥ phÃƒÂ­ Ã„â€˜Ã†Â°Ã¡Â»Â£c liÃ¡Â»â€¡t kÃƒÂª riÃƒÂªng bÃƒÂªn dÃ†Â°Ã¡Â»â€ºi.
         </p>
         <form
           onSubmit={submit}
@@ -723,16 +723,16 @@ export default function Checkout() {
               <div className="flex items-center gap-2">
                 <UserRound className="h-5 w-5 text-primary" />
                 <h2 className="font-display text-2xl font-bold text-primary">
-                  Thông tin người đại diện nhận phòng
+                  ThÃƒÂ´ng tin ngÃ†Â°Ã¡Â»Âi Ã„â€˜Ã¡ÂºÂ¡i diÃ¡Â»â€¡n nhÃ¡ÂºÂ­n phÃƒÂ²ng
                 </h2>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Thông tin này áp dụng cho tất cả các phòng trong cùng một lượt
-                đặt.
+                ThÃƒÂ´ng tin nÃƒÂ y ÃƒÂ¡p dÃ¡Â»Â¥ng cho tÃ¡ÂºÂ¥t cÃ¡ÂºÂ£ cÃƒÂ¡c phÃƒÂ²ng trong cÃƒÂ¹ng mÃ¡Â»â„¢t lÃ†Â°Ã¡Â»Â£t
+                Ã„â€˜Ã¡ÂºÂ·t.
               </p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-medium text-primary">
-                  Họ tên
+                  HÃ¡Â»Â tÃƒÂªn
                   <input
                     required
                     value={name}
@@ -741,7 +741,7 @@ export default function Checkout() {
                   />
                 </label>
                 <label className="text-sm font-medium text-primary">
-                  Số điện thoại
+                  SÃ¡Â»â€˜ Ã„â€˜iÃ¡Â»â€¡n thoÃ¡ÂºÂ¡i
                   <input
                     required
                     value={phone}
@@ -760,22 +760,22 @@ export default function Checkout() {
                   />
                 </label>
                 <label className="text-sm font-medium text-primary">
-                  Số CCCD / CMND
+                  SÃ¡Â»â€˜ CCCD / CMND
                   <input
                     required
                     value={cccd}
                     onChange={(event) => setCccd(event.target.value)}
-                    placeholder="Nhập số CCCD (12 số)"
+                    placeholder="NhÃ¡ÂºÂ­p sÃ¡Â»â€˜ CCCD (12 sÃ¡Â»â€˜)"
                     className="mt-1 w-full rounded-xl border border-input p-3"
                   />
                 </label>
                 <label className="text-sm font-medium text-primary sm:col-span-2">
-                  Yêu cầu đặc biệt
+                  YÃƒÂªu cÃ¡ÂºÂ§u Ã„â€˜Ã¡ÂºÂ·c biÃ¡Â»â€¡t
                   <textarea
                     value={request}
                     onChange={(event) => setRequest(event.target.value)}
                     rows={3}
-                    placeholder="Ví dụ: đến sau 22:00, cần baby cot..."
+                    placeholder="VÃƒÂ­ dÃ¡Â»Â¥: Ã„â€˜Ã¡ÂºÂ¿n sau 22:00, cÃ¡ÂºÂ§n baby cot..."
                     className="mt-1 w-full rounded-xl border border-input p-3"
                   />
                 </label>
@@ -783,14 +783,14 @@ export default function Checkout() {
             </div>
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="font-display text-2xl font-bold text-primary">
-                Phương thức thanh toán
+                PhÃ†Â°Ã†Â¡ng thÃ¡Â»Â©c thanh toÃƒÂ¡n
               </h2>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 {(
                   [
-                    ["qr", "Quét mã ngân hàng", QrCode],
-                    ["cash", "Tiền mặt tại lễ tân", Banknote],
-                    ["vnpay", "VNPay / ví điện tử", CreditCard],
+                    ["qr", "QuÃƒÂ©t mÃƒÂ£ ngÃƒÂ¢n hÃƒÂ ng", QrCode],
+                    ["cash", "TiÃ¡Â»Ân mÃ¡ÂºÂ·t tÃ¡ÂºÂ¡i lÃ¡Â»â€¦ tÃƒÂ¢n", Banknote],
+                    ["vnpay", "VNPay / vÃƒÂ­ Ã„â€˜iÃ¡Â»â€¡n tÃ¡Â»Â­", CreditCard],
                   ] as const
                 ).map(([value, label, Icon]) => (
                   <button
@@ -804,6 +804,15 @@ export default function Checkout() {
                   </button>
                 ))}
               </div>
+              {payment === "cash" && (
+                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
+                  <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                  <div>
+                    <span className="font-semibold text-amber-950">Chế độ Thử nghiệm (Demo):</span>{" "}
+                    Đơn đặt phòng sẽ được giữ chỗ ở trạng thái &quot;Chờ thanh toán tại quầy&quot;. Quý khách sẽ thanh toán tiền mặt trực tiếp cho Lễ tân khi làm thủ tục Check-in (không mất phí tài khoản online).
+                  </div>
+                </div>
+              )}
             </div>
             {error && (
               <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -832,14 +841,14 @@ export default function Checkout() {
             promo={
               <div className="mt-5 space-y-2">
                 <label className="block text-sm font-medium text-primary">
-                  Mã khuyến mãi
+                  MÃƒÂ£ khuyÃ¡ÂºÂ¿n mÃƒÂ£i
                   <div className="mt-1 flex gap-2">
                     <input
                       value={promo}
                       onChange={(event) =>
                         setPromo(event.target.value.toUpperCase().trim())
                       }
-                      placeholder="Nhập hoặc chọn mã ưu đãi"
+                      placeholder="NhÃ¡ÂºÂ­p hoÃ¡ÂºÂ·c chÃ¡Â»Ân mÃƒÂ£ Ã†Â°u Ã„â€˜ÃƒÂ£i"
                       className="w-full rounded-xl border border-input p-3 font-mono font-bold uppercase tracking-wider text-primary"
                     />
                     {promo && (
@@ -848,33 +857,33 @@ export default function Checkout() {
                         onClick={() => setPromo("")}
                         className="shrink-0 whitespace-nowrap rounded-xl border border-input px-4 text-xs font-medium text-muted-foreground transition hover:bg-secondary hover:text-primary"
                       >
-                        Xóa
+                        XÃƒÂ³a
                       </button>
                     )}
                   </div>
                 </label>
                 {promo && !promoApplicability.applicable && (
                   <p className="rounded-lg bg-rose-50 p-2 text-xs font-medium text-rose-700">
-                    ✕ {promoApplicability.reason || "Mã không áp dụng cho khách sạn này."}
+                    Ã¢Å“â€¢ {promoApplicability.reason || "MÃƒÂ£ khÃƒÂ´ng ÃƒÂ¡p dÃ¡Â»Â¥ng cho khÃƒÂ¡ch sÃ¡ÂºÂ¡n nÃƒÂ y."}
                   </p>
                 )}
                 {promo && promoMinBookingFailed && (
                   <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
-                    ⚠ Mã {matchedActivePromo?.code} yêu cầu giá trị tiền phòng tối thiểu {matchedActivePromo?.minBookingValue?.toLocaleString("vi-VN")}đ (hiện tại: {roomSubtotal.toLocaleString("vi-VN")}đ).
+                    Ã¢Å¡Â  MÃƒÂ£ {matchedActivePromo?.code} yÃƒÂªu cÃ¡ÂºÂ§u giÃƒÂ¡ trÃ¡Â»â€¹ tiÃ¡Â»Ân phÃƒÂ²ng tÃ¡Â»â€˜i thiÃ¡Â»Æ’u {matchedActivePromo?.minBookingValue?.toLocaleString("vi-VN")}Ã„â€˜ (hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i: {roomSubtotal.toLocaleString("vi-VN")}Ã„â€˜).
                   </p>
                 )}
                 {promo && promoApplicability.applicable && !promoMinBookingFailed && discount === 0 && (
                   <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
-                    ⚠ Mã chưa đủ điều kiện cho đơn này (ví dụ: số đêm tối thiểu).
+                    Ã¢Å¡Â  MÃƒÂ£ chÃ†Â°a Ã„â€˜Ã¡Â»Â§ Ã„â€˜iÃ¡Â»Âu kiÃ¡Â»â€¡n cho Ã„â€˜Ã†Â¡n nÃƒÂ y (vÃƒÂ­ dÃ¡Â»Â¥: sÃ¡Â»â€˜ Ã„â€˜ÃƒÂªm tÃ¡Â»â€˜i thiÃ¡Â»Æ’u).
                   </p>
                 )}
                 {promo && discount > 0 && (
                   <p className="rounded-lg bg-emerald-50 p-2 text-xs font-semibold text-emerald-700">
-                    ✓ Áp dụng thành công: giảm {formatVnd(discount)} {isDemoPromo ? "(Chế độ Demo: Tổng tiền 2.000đ)" : ""}
+                    Ã¢Å“â€œ ÃƒÂp dÃ¡Â»Â¥ng thÃƒÂ nh cÃƒÂ´ng: giÃ¡ÂºÂ£m {formatVnd(discount)} {isDemoPromo ? "(ChÃ¡ÂºÂ¿ Ã„â€˜Ã¡Â»â„¢ Demo: TÃ¡Â»â€¢ng tiÃ¡Â»Ân 2.000Ã„â€˜)" : ""}
                   </p>
                 )}
 
-                {/* Nút bấm nhanh chế độ Demo Đồ án 2.000đ */}
+                {/* NÃƒÂºt bÃ¡ÂºÂ¥m nhanh chÃ¡ÂºÂ¿ Ã„â€˜Ã¡Â»â„¢ Demo Ã„ÂÃ¡Â»â€œ ÃƒÂ¡n 2.000Ã„â€˜ */}
                 <div className="pt-1">
                   <button
                     type="button"
@@ -886,11 +895,11 @@ export default function Checkout() {
                     }`}
                   >
                     <span className="flex items-center gap-1.5">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white font-bold">⚡</span>
-                      <span>Chế độ Demo (Thanh toán 2.000đ)</span>
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white font-bold">Ã¢Å¡Â¡</span>
+                      <span>ChÃ¡ÂºÂ¿ Ã„â€˜Ã¡Â»â„¢ Demo (Thanh toÃƒÂ¡n 2.000Ã„â€˜)</span>
                     </span>
                     <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {promo === "DEMO" ? "Đang áp dụng" : "Bật mã DEMO"}
+                      {promo === "DEMO" ? "Ã„Âang ÃƒÂ¡p dÃ¡Â»Â¥ng" : "BÃ¡ÂºÂ­t mÃƒÂ£ DEMO"}
                     </span>
                   </button>
                 </div>
@@ -907,12 +916,12 @@ export default function Checkout() {
                   className="w-full rounded-xl"
                 >
                   {paymentState === "processing"
-                    ? "Đang tạo đơn..."
-                    : "Xác nhận đặt phòng"}
+                    ? "Ã„Âang tÃ¡ÂºÂ¡o Ã„â€˜Ã†Â¡n..."
+                    : "XÃƒÂ¡c nhÃ¡ÂºÂ­n Ã„â€˜Ã¡ÂºÂ·t phÃƒÂ²ng"}
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Nhận phòng từ 14:00 · Trả phòng trước 12:00 · Giữ phòng 15
-                  phút.
+                  NhÃ¡ÂºÂ­n phÃƒÂ²ng tÃ¡Â»Â« 14:00 Ã‚Â· TrÃ¡ÂºÂ£ phÃƒÂ²ng trÃ†Â°Ã¡Â»â€ºc 12:00 Ã‚Â· GiÃ¡Â»Â¯ phÃƒÂ²ng 15
+                  phÃƒÂºt.
                 </p>
               </>
             }
