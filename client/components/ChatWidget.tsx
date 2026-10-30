@@ -26,6 +26,9 @@ import {
   Headset,
   PhoneCall,
   MessageSquareText,
+  AlertTriangle,
+  AlertCircle,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
@@ -422,6 +425,9 @@ export default function ChatWidget() {
   const [activePaymentOrderId, setActivePaymentOrderId] = useState<string | null>(null);
   const currentBookingIdRef = useRef<string | null>(null);
   const confirmedOrdersRef = useRef<Set<string>>(new Set());
+  const cancelledOrdersRef = useRef<Set<string>>(new Set());
+  const [cancelledBookingIds, setCancelledBookingIds] = useState<string[]>([]);
+  const [botUnreadCount, setBotUnreadCount] = useState(0);
 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -448,6 +454,79 @@ export default function ChatWidget() {
       };
     }
   }, []);
+
+  // Tự động đồng bộ các đơn đã bị hủy từ bộ nhớ lưu trữ
+  useEffect(() => {
+    try {
+      const stored = getBookings();
+      const cancelled = stored.filter((b) => b.status === "cancelled").map((b) => b.id);
+      if (cancelled.length > 0) {
+        cancelled.forEach((id) => cancelledOrdersRef.current.add(id));
+        setCancelledBookingIds((prev) => Array.from(new Set([...prev, ...cancelled])));
+      }
+    } catch {}
+  }, []);
+
+  // Tự động cuộn xuống dưới cùng khi có tin nhắn mới hoặc thông báo hủy
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          top: scrollRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, open]);
+
+  // Xử lý thông báo hủy phòng tập trung trong chatbot
+  const handleBookingCancellation = useCallback(
+    (targetBookingId: string, cancelReason?: string) => {
+      if (!targetBookingId) return;
+      const cleanId = String(targetBookingId).trim();
+
+      cancelledOrdersRef.current.add(cleanId);
+      setCancelledBookingIds((prev) => (prev.includes(cleanId) ? prev : [...prev, cleanId]));
+      setActivePaymentOrderId((cur) => (cur === cleanId ? null : cur));
+      updateBooking(cleanId, { status: "cancelled" });
+
+      const savedBooking = getBookings().find(
+        (b) => b.id === cleanId || b.id === cleanId.replace(/^BK_?/, "")
+      );
+      const hotelName = savedBooking?.hotelName;
+      const roomName = savedBooking?.roomName;
+      const cleanReason = cancelReason || "Quá thời gian chờ thanh toán";
+
+      setMessages((prev) => {
+        const alreadyNotified = prev.some(
+          (m) =>
+            m.text.includes("THÔNG BÁO HỦY ĐẶT PHÒNG") &&
+            (m.text.includes(cleanId) || m.text.includes(cleanId.replace(/^BK_?/, "")))
+        );
+        if (alreadyNotified) return prev;
+
+        const roomDetail =
+          hotelName && roomName
+            ? `\n- **Khách sạn:** ${hotelName}\n- **Hạng phòng:** ${roomName}`
+            : "";
+
+        return [
+          ...prev,
+          {
+            id: Date.now() + 4,
+            from: "bot",
+            text: `⚠️ **THÔNG BÁO HỦY ĐẶT PHÒNG**\n\nĐơn đặt phòng **#${cleanId}** đã bị hủy trên hệ thống.\n\n📌 **Lý do hủy:** *${cleanReason}*${roomDetail}\n⏳ Mã QR thanh toán PayOS của đơn này hiện đã **hết hạn hiệu lực**.\n\nNếu quý khách vẫn muốn đặt phòng hoặc cần em tư vấn thêm phòng trống chi nhánh khác, quý khách hãy nhắn ngay cho em tại đây nhé! Em luôn sẵn sàng hỗ trợ ạ! 🙏`,
+          },
+        ];
+      });
+
+      if (!open) {
+        setBotUnreadCount((c) => c + 1);
+      }
+    },
+    [open]
+  );
 
   const toggleListening = () => {
     if (isListening) {
@@ -751,6 +830,7 @@ export default function ChatWidget() {
         const res = await fetch(`/payment/check-order-status/${orderToCheck}`);
         if (!res.ok) return;
         const data = await res.json();
+        // 1. Nếu đơn hàng thanh toán thành công
         if (data.isPaid || data.status === "PAID" || data.status === "CLOSED") {
           clearInterval(interval);
           if (isCancelled) return;
@@ -785,6 +865,26 @@ export default function ChatWidget() {
               },
             ];
           });
+          return;
+        }
+
+        // 2. Nếu đơn hàng bị hủy hoặc quá thời gian chờ thanh toán (Payment Timeout)
+        const isStatusCancelled =
+          data.status === "CANCELLED" ||
+          data.status === "EXPIRED" ||
+          (typeof data.bookingStatus === "string" && data.bookingStatus.toUpperCase().startsWith("CANCEL")) ||
+          data.gatewayStatus === "CANCELLED";
+
+        if (isStatusCancelled) {
+          clearInterval(interval);
+          if (isCancelled) return;
+          setActivePaymentOrderId(null);
+          const bId = currentBookingIdRef.current || orderToCheck;
+          handleBookingCancellation(
+            bId,
+            data.cancelReason || data.message || "Quá thời gian chờ thanh toán"
+          );
+          return;
         }
       } catch (err) {
         console.error("[ChatWidget] Payment status check error:", err);
@@ -795,7 +895,64 @@ export default function ChatWidget() {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [activePaymentOrderId]);
+  }, [activePaymentOrderId, handleBookingCancellation]);
+
+  // Lắng nghe sự kiện socket và event hủy booking từ hệ thống
+  useEffect(() => {
+    const handleSocketBookingUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const bStatus = String(detail.bookingStatus || detail.status || "").toUpperCase();
+      const bId = detail.id || detail.bookingId;
+      if (bStatus.startsWith("CANCEL")) {
+        const reason = detail.cancellationReason || detail.reason || "Quá thời gian chờ thanh toán";
+        handleBookingCancellation(String(bId), reason);
+      }
+    };
+
+    const handleSocketNotification = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const title = String(detail.title || "").toLowerCase();
+      const desc = String(detail.description || "");
+      const type = String(detail.type || "").toUpperCase();
+
+      if (type === "BOOKING_CANCELLED" || title.includes("hủy") || desc.toLowerCase().includes("bị hủy")) {
+        let bId = detail.referenceId ? String(detail.referenceId) : null;
+        if (!bId) {
+          const match = desc.match(/#([A-Za-z0-9_]+)/);
+          if (match) bId = match[1];
+        }
+        if (bId) {
+          let reason = "Quá thời gian chờ thanh toán";
+          if (desc.includes(":")) {
+            reason = desc.split(":").slice(1).join(":").trim();
+          }
+          handleBookingCancellation(bId, reason);
+        }
+      }
+    };
+
+    const handleClientBookingCancelled = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+      const bId = detail.bookingId || detail.id;
+      if (bId) {
+        handleBookingCancellation(String(bId), detail.reason || "Người dùng yêu cầu hủy phòng");
+      }
+    };
+
+    window.addEventListener("senviet_socket_booking_updated", handleSocketBookingUpdate);
+    window.addEventListener("senviet_socket_notification", handleSocketNotification);
+    window.addEventListener("senviet_booking_cancelled", handleClientBookingCancelled);
+
+    return () => {
+      window.removeEventListener("senviet_socket_booking_updated", handleSocketBookingUpdate);
+      window.removeEventListener("senviet_socket_notification", handleSocketNotification);
+      window.removeEventListener("senviet_booking_cancelled", handleClientBookingCancelled);
+    };
+  }, [handleBookingCancellation]);
+
 
   const lastBotMsg = messages.filter((m) => m.from === "bot").slice(-1)[0]?.text?.toLowerCase() || "";
   const isAwaitingConfirmation =
@@ -1072,10 +1229,16 @@ export default function ChatWidget() {
           <>
             <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-gold text-gold-foreground">
               <Headset className="h-4 w-4" />
-              <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              </span>
+              {botUnreadCount > 0 ? (
+                <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-md animate-bounce">
+                  {botUnreadCount}
+                </span>
+              ) : (
+                <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                </span>
+              )}
             </span>
             <span className="text-sm font-bold tracking-wide">Liên hệ</span>
           </>
@@ -1102,6 +1265,7 @@ export default function ChatWidget() {
                 setMenuOpen(false);
                 setStaffOpen(false);
                 setOpen(true);
+                setBotUnreadCount(0);
               }}
               className="flex w-full items-start gap-3.5 rounded-xl p-3 text-left transition hover:bg-secondary/70"
             >
@@ -1113,9 +1277,15 @@ export default function ChatWidget() {
                   <span className="text-sm font-bold text-primary">
                     Nhận tư vấn từ Trợ lý AI
                   </span>
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-                    24/7
-                  </span>
+                  {botUnreadCount > 0 ? (
+                    <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 animate-pulse">
+                      {botUnreadCount} mới
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                      24/7
+                    </span>
+                  )}
                 </div>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                   Tra cứu phòng trống, báo giá tự động, săn mã giảm giá & đặt phòng nhanh
@@ -1648,98 +1818,188 @@ export default function ChatWidget() {
                   )}
 
                   {/* THẺ THANH TOÁN PAYOS / VIETQR (AI AGENT CREATED BOOKING) */}
-                  {payosPayment && (
-                    <div className="mt-3 overflow-hidden rounded-xl border border-emerald-500/50 bg-card p-4 shadow-lg">
-                      <div className="flex items-center justify-between border-b border-border/60 pb-2">
-                        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                          <Clock className="h-4 w-4" /> Đơn giữ chỗ tạm thời (5 phút)
-                        </span>
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                          Mã #{payosPayment.orderId || payosPayment.bookingId}
-                        </span>
-                      </div>
+                  {payosPayment && (() => {
+                    const isCardCancelled =
+                      (payosPayment.bookingId && cancelledBookingIds.includes(String(payosPayment.bookingId))) ||
+                      (payosPayment.orderId && cancelledBookingIds.includes(String(payosPayment.orderId))) ||
+                      getBookings().some(
+                        (b) =>
+                          (b.id === payosPayment.bookingId || b.id === payosPayment.orderId) &&
+                          b.status === "cancelled"
+                      );
 
-                      <div className={isExpanded ? "mt-3 grid grid-cols-1 sm:grid-cols-2 gap-5 items-center" : "mt-2.5 space-y-1.5 text-xs text-muted-foreground"}>
-                        {/* Thông tin phòng & khách */}
-                        <div className="space-y-1.5 text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1.5 font-semibold text-primary">
-                            <Building2 className="h-3.5 w-3.5 text-gold shrink-0" />
-                            <span className="truncate">{payosPayment.hotelName}</span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <BedDouble className="h-3.5 w-3.5 text-gold shrink-0" />
-                            <span className="font-medium text-foreground">{payosPayment.roomName}</span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <CalendarDays className="h-3.5 w-3.5 text-gold shrink-0" />
-                            <span>{payosPayment.checkIn} ➔ {payosPayment.checkOut}</span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            <UserIcon className="h-3.5 w-3.5 text-gold shrink-0" />
-                            <span>{payosPayment.customerName} · {payosPayment.customerPhone}</span>
-                          </div>
-
-                          {payosPayment.services && (
-                            <div className="flex items-center gap-1.5 text-[11.5px]">
-                              <Sparkles className="h-3.5 w-3.5 text-gold shrink-0" />
-                              <span>Dịch vụ thêm: <strong className="text-foreground">{payosPayment.services}</strong></span>
-                            </div>
-                          )}
-
-                          {payosPayment.promotion && (
-                            <div className="flex items-center gap-1.5 text-[11.5px]">
-                              <Tag className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                              <span>Ưu đãi: <strong className="text-emerald-600 dark:text-emerald-400">{payosPayment.promotion}</strong></span>
-                            </div>
-                          )}
-
-                          <div className="mt-2 flex items-center justify-between rounded-lg bg-emerald-500/10 px-2.5 py-1.5">
-                            <span className="text-xs font-medium text-foreground">Tổng thanh toán:</span>
-                            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                              {formatVnd(payosPayment.totalAmount)}
+                    return (
+                      <div
+                        className={`mt-3 overflow-hidden rounded-xl border p-4 shadow-lg transition-colors ${
+                          isCardCancelled
+                            ? "border-rose-500/40 bg-rose-500/5 dark:bg-rose-950/20"
+                            : "border-emerald-500/50 bg-card"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                          {isCardCancelled ? (
+                            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                              <XCircle className="h-4 w-4" /> Đơn đã bị hủy (Hết hạn giữ chỗ)
                             </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                              <Clock className="h-4 w-4" /> Đơn giữ chỗ tạm thời (5 phút)
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                              isCardCancelled
+                                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                                : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            }`}
+                          >
+                            Mã #{payosPayment.orderId || payosPayment.bookingId}
+                          </span>
+                        </div>
+
+                        <div className={isExpanded ? "mt-3 grid grid-cols-1 sm:grid-cols-2 gap-5 items-center" : "mt-2.5 space-y-1.5 text-xs text-muted-foreground"}>
+                          {/* Thông tin phòng & khách */}
+                          <div className="space-y-1.5 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5 font-semibold text-primary">
+                              <Building2 className="h-3.5 w-3.5 text-gold shrink-0" />
+                              <span className="truncate">{payosPayment.hotelName}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <BedDouble className="h-3.5 w-3.5 text-gold shrink-0" />
+                              <span className="font-medium text-foreground">{payosPayment.roomName}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <CalendarDays className="h-3.5 w-3.5 text-gold shrink-0" />
+                              <span>{payosPayment.checkIn} ➔ {payosPayment.checkOut}</span>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <UserIcon className="h-3.5 w-3.5 text-gold shrink-0" />
+                              <span>{payosPayment.customerName} · {payosPayment.customerPhone}</span>
+                            </div>
+
+                            {payosPayment.services && (
+                              <div className="flex items-center gap-1.5 text-[11.5px]">
+                                <Sparkles className="h-3.5 w-3.5 text-gold shrink-0" />
+                                <span>Dịch vụ thêm: <strong className="text-foreground">{payosPayment.services}</strong></span>
+                              </div>
+                            )}
+
+                            {payosPayment.promotion && (
+                              <div className="flex items-center gap-1.5 text-[11.5px]">
+                                <Tag className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                <span>Ưu đãi: <strong className="text-emerald-600 dark:text-emerald-400">{payosPayment.promotion}</strong></span>
+                              </div>
+                            )}
+
+                            <div
+                              className={`mt-2 flex items-center justify-between rounded-lg px-2.5 py-1.5 ${
+                                isCardCancelled
+                                  ? "bg-rose-500/10 text-muted-foreground"
+                                  : "bg-emerald-500/10 text-foreground"
+                              }`}
+                            >
+                              <span className="text-xs font-medium">Tổng thanh toán:</span>
+                              <span
+                                className={`text-sm font-bold ${
+                                  isCardCancelled
+                                    ? "text-rose-600 dark:text-rose-400 line-through opacity-80"
+                                    : "text-emerald-600 dark:text-emerald-400"
+                                }`}
+                              >
+                                {formatVnd(payosPayment.totalAmount)}
+                              </span>
+                            </div>
+
+                            {isCardCancelled ? (
+                              <div className="mt-2.5">
+                                <Button
+                                  onClick={() => {
+                                    const prompt = `Em muốn đặt lại phòng ${payosPayment.roomName} tại ${payosPayment.hotelName} từ ${payosPayment.checkIn} đến ${payosPayment.checkOut}`;
+                                    send(prompt);
+                                  }}
+                                  size="sm"
+                                  className="w-full rounded-xl bg-amber-600 font-semibold text-white shadow-sm hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600"
+                                >
+                                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Đặt lại phòng này
+                                </Button>
+                              </div>
+                            ) : (
+                              payosPayment.checkoutUrl && (
+                                <div className="mt-2.5">
+                                  <Button
+                                    asChild
+                                    size="sm"
+                                    className="w-full rounded-xl bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
+                                  >
+                                    <a href={payosPayment.checkoutUrl} target="_blank" rel="noopener noreferrer">
+                                      Mở cổng thanh toán PayOS <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                                    </a>
+                                  </Button>
+                                </div>
+                              )
+                            )}
                           </div>
 
-                          {payosPayment.checkoutUrl && (
-                            <div className="mt-2.5">
-                              <Button
-                                asChild
-                                size="sm"
-                                className="w-full rounded-xl bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
+                          {/* QR Code PayOS */}
+                          {payosPayment.qrCodeUrl && (
+                            <div className="text-center">
+                              <div
+                                className={`relative inline-block rounded-xl border-2 border-dashed p-2 shadow-inner overflow-hidden ${
+                                  isCardCancelled
+                                    ? "border-rose-400/40 bg-muted/40"
+                                    : "border-emerald-500/40 bg-white"
+                                }`}
                               >
-                                <a href={payosPayment.checkoutUrl} target="_blank" rel="noopener noreferrer">
-                                  Mở cổng thanh toán PayOS <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-                                </a>
-                              </Button>
+                                <img
+                                  src={
+                                    payosPayment.qrCodeUrl.startsWith("http")
+                                      ? payosPayment.qrCodeUrl
+                                      : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payosPayment.qrCodeUrl)}`
+                                  }
+                                  alt="Mã QR PayOS"
+                                  className={`h-44 w-44 object-contain mx-auto ${
+                                    isCardCancelled ? "opacity-25 grayscale" : ""
+                                  }`}
+                                />
+                                {isCardCancelled && (
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-[1px] p-2 text-center">
+                                    <AlertTriangle className="h-7 w-7 text-rose-500 mb-1" />
+                                    <p className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                                      Mã QR đã hết hạn
+                                    </p>
+                                    <p className="text-[10.5px] text-muted-foreground mt-0.5 max-w-[140px] leading-tight">
+                                      Đơn phòng đã bị hủy. Bấm "Đặt lại phòng này" để tạo đơn mới.
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              <p
+                                className={`mt-1.5 text-[11px] flex items-center justify-center gap-1 ${
+                                  isCardCancelled
+                                    ? "text-rose-600 dark:text-rose-400 font-medium"
+                                    : "text-muted-foreground"
+                                }`}
+                              >
+                                {isCardCancelled ? (
+                                  <>
+                                    <XCircle className="h-3.5 w-3.5" /> Giao dịch giữ chỗ đã đóng
+                                  </>
+                                ) : (
+                                  <>
+                                    <QrCode className="h-3.5 w-3.5 text-emerald-500" /> Quét mã bằng ứng dụng ngân hàng bất kỳ
+                                  </>
+                                )}
+                              </p>
                             </div>
                           )}
                         </div>
-
-                        {/* QR Code PayOS */}
-                        {payosPayment.qrCodeUrl && (
-                          <div className="text-center">
-                            <div className="inline-block rounded-xl border-2 border-dashed border-emerald-500/40 bg-white p-2 shadow-inner">
-                              <img
-                                src={
-                                  payosPayment.qrCodeUrl.startsWith("http")
-                                    ? payosPayment.qrCodeUrl
-                                    : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payosPayment.qrCodeUrl)}`
-                                }
-                                alt="Mã QR PayOS"
-                                className="h-44 w-44 object-contain mx-auto"
-                              />
-                            </div>
-                            <p className="mt-1.5 text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-                              <QrCode className="h-3.5 w-3.5 text-emerald-500" /> Quét mã bằng ứng dụng ngân hàng bất kỳ
-                            </p>
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
+
 
                   {/* THẺ ĐẶT PHÒNG TƯƠNG TÁC (AI AGENT ACTION CARD) */}
                   {bookingCard && (

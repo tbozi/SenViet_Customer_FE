@@ -410,6 +410,18 @@ export default function BookingHistory() {
       refundEmail: trimmedEmail,
     };
     updateBooking(cancelTarget.id, { status: "cancelled", cancellation });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("senviet_booking_cancelled", {
+          detail: {
+            id: cancelTarget.id,
+            bookingId: cancelTarget.id,
+            reason: trimmedReason,
+            refundAmount,
+          },
+        })
+      );
+    }
     setBookings((current) =>
       current.map((item) =>
         item.id === cancelTarget.id
