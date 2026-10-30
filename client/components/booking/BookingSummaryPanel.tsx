@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { AlertCircle, BookmarkCheck, CalendarDays, Check, Tag, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatVnd } from "@/data/hotels";
+import { useLanguage } from "@/lib/i18n";
 import {
   getCancellationNotice,
   getCancellationSchedule,
@@ -80,9 +81,9 @@ function selectionStays(selection: RoomSelection): RoomStay[] {
   }));
 }
 
-function dateTimeLabel(date: string, time: string) {
-  if (!date) return "Chưa chọn";
-  return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString("vi-VN")}`;
+function dateTimeLabel(date: string, time: string, isEn = false) {
+  if (!date) return isEn ? "Not selected" : "Chưa chọn";
+  return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString(isEn ? "en-US" : "vi-VN")}`;
 }
 
 export default function BookingSummaryPanel({
@@ -103,6 +104,8 @@ export default function BookingSummaryPanel({
   className = "",
   onRemoveRoom,
 }: BookingSummaryPanelProps) {
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const roomBreakdowns = selections.flatMap((selection, selectionIndex) =>
     selectionStays(selection).map((stay, stayIndex) => {
       const nightlyPrice = stay.nightlyPrice || selection.nightlyPrice;
@@ -164,15 +167,15 @@ export default function BookingSummaryPanel({
       <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[.14em] text-gold">
-            Tóm tắt lựa chọn
+            {isEn ? "Selection Summary" : "Tóm tắt lựa chọn"}
           </p>
           <h2 className="mt-1 font-display text-2xl font-bold text-primary">
-            Chi tiết đặt phòng
+            {isEn ? "Reservation Details" : "Chi tiết đặt phòng"}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{hotelName}</p>
         </div>
         <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-primary">
-          {roomCount} phòng
+          {roomCount} {isEn ? (roomCount === 1 ? "Room" : "Rooms") : "phòng"}
         </span>
       </div>
 
@@ -225,19 +228,19 @@ export default function BookingSummaryPanel({
                 <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
                   <p className="flex items-start gap-2">
                     <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" />
-                    Nhận: {dateTimeLabel(stay.checkIn, arrivalTime)}
+                    {isEn ? "Check-in:" : "Nhận:"} {dateTimeLabel(stay.checkIn, arrivalTime, isEn)}
                   </p>
                   <p className="flex items-start gap-2">
                     <CalendarDays className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" />
-                    Trả: {dateTimeLabel(stay.checkOut, departureTime)}
+                    {isEn ? "Check-out:" : "Trả:"} {dateTimeLabel(stay.checkOut, departureTime, isEn)}
                   </p>
                   <p className="flex items-start gap-2">
                     <Users className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold" />
-                    {stay.guest.adults} người lớn · {stay.guest.children} trẻ em
-                    · {stay.guest.infants} em bé · {stay.nights} đêm
+                    {stay.guest.adults} {isEn ? (stay.guest.adults === 1 ? "Adult" : "Adults") : "người lớn"} · {stay.guest.children} {isEn ? (stay.guest.children === 1 ? "Child" : "Children") : "trẻ em"}
+                    · {stay.guest.infants} {isEn ? (stay.guest.infants === 1 ? "Infant" : "Infants") : "em bé"} · {stay.nights} {isEn ? (stay.nights === 1 ? "night" : "nights") : "đêm"}
                   </p>
                   {stay.checkIn ? (() => {
-                    const notice = getCancellationNotice(stay.checkIn);
+                    const notice = getCancellationNotice(stay.checkIn, new Date(), isEn);
                     return (
                       <p
                         className={`flex items-center gap-1.5 text-[11px] font-medium ${
@@ -263,17 +266,17 @@ export default function BookingSummaryPanel({
 
                 <div className="mt-3 space-y-2 border-t border-primary/10 pt-3 text-xs">
                   <div className="flex justify-between gap-3">
-                    <span>Tiền phòng ({stay.nights} đêm)</span>
+                    <span>{isEn ? `Room rate (${stay.nights} ${stay.nights === 1 ? "night" : "nights"})` : `Tiền phòng (${stay.nights} đêm)`}</span>
                     <span className="font-semibold text-slate-800">{formatVnd(breakdown.roomPrice)}</span>
                   </div>
                   {breakdown.extraGuestSurcharge > 0 && (
                     <div className="flex justify-between gap-3 font-medium text-amber-700">
-                      <span>Phụ thu vượt sức chứa</span>
+                      <span>{isEn ? "Extra guest surcharge" : "Phụ thu vượt sức chứa"}</span>
                       <span>+{formatVnd(breakdown.extraGuestSurcharge)}</span>
                     </div>
                   )}
                   <div className="border-t border-primary/10 pt-2">
-                    <p className="mb-1 font-semibold text-primary">Dịch vụ</p>
+                    <p className="mb-1 font-semibold text-primary">{isEn ? "Services" : "Dịch vụ"}</p>
                     {breakdown.services.length ? (
                       <div className="space-y-1">
                         {breakdown.services.map((service) => (
@@ -289,11 +292,11 @@ export default function BookingSummaryPanel({
                         ))}
                       </div>
                     ) : (
-                      <p className="text-muted-foreground">Chưa chọn dịch vụ</p>
+                      <p className="text-muted-foreground">{isEn ? "No services selected" : "Chưa chọn dịch vụ"}</p>
                     )}
                   </div>
                   <div className="flex justify-between gap-3 border-t border-primary/10 pt-2 font-bold text-primary">
-                    <span>Tạm tính phòng</span>
+                    <span>{isEn ? "Room Subtotal" : "Tạm tính phòng"}</span>
                     <span>{formatVnd(breakdown.subtotal)}</span>
                   </div>
                 </div>
@@ -304,7 +307,7 @@ export default function BookingSummaryPanel({
       ) : (
         emptyState || (
           <p className="mt-4 text-sm text-muted-foreground">
-            Chưa có phòng được chọn.
+            {isEn ? "No rooms selected." : "Chưa có phòng được chọn."}
           </p>
         )
       )}
@@ -318,10 +321,10 @@ export default function BookingSummaryPanel({
                 <div className="flex items-center gap-1.5 text-amber-900">
                   <BookmarkCheck className="h-4 w-4 text-amber-700" />
                   <p className="text-xs font-bold uppercase tracking-wider">
-                    Ưu đãi đã lưu ({savedPromotions.length})
+                    {isEn ? `Saved Offers (${savedPromotions.length})` : `Ưu đãi đã lưu (${savedPromotions.length})`}
                   </p>
                 </div>
-                <span className="text-[11px] text-muted-foreground">Chọn để áp dụng</span>
+                <span className="text-[11px] text-muted-foreground">{isEn ? "Select to apply" : "Chọn để áp dụng"}</span>
               </div>
               <div className="mt-2.5 space-y-2">
                 {savedPromotions.map((promotion) => {
@@ -349,7 +352,7 @@ export default function BookingSummaryPanel({
                           </strong>
                           {isSelected && (
                             <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                              Đang áp dụng
+                              {isEn ? "Applied" : "Đang áp dụng"}
                             </span>
                           )}
                         </div>
@@ -381,11 +384,11 @@ export default function BookingSummaryPanel({
                               : "bg-primary text-primary-foreground hover:bg-primary/90"
                           }`}
                         >
-                          {isSelected ? "Bỏ chọn" : "Áp dụng"}
+                          {isSelected ? (isEn ? "Remove" : "Bỏ chọn") : (isEn ? "Apply" : "Áp dụng")}
                         </button>
                       ) : (
                         <span className="shrink-0 rounded-md border border-slate-200 bg-slate-200/80 px-2.5 py-1 text-xs font-medium text-slate-500">
-                          Không áp dụng
+                          {isEn ? "Not applicable" : "Không áp dụng"}
                         </span>
                       )}
                     </div>
@@ -395,12 +398,12 @@ export default function BookingSummaryPanel({
             </div>
           ) : (
             <div className="mt-3 text-xs text-muted-foreground">
-              Chưa lưu mã giảm giá?{" "}
+              {isEn ? "No saved vouchers?" : "Chưa lưu mã giảm giá?"}{" "}
               <Link
                 to="/offers"
                 className="font-semibold text-primary underline hover:text-gold"
               >
-                Xem & lưu voucher
+                {isEn ? "Browse & save offers" : "Xem & lưu voucher"}
               </Link>
             </div>
           )}
@@ -412,7 +415,7 @@ export default function BookingSummaryPanel({
               <div className="space-y-2 text-sm">
                 {totals?.subtotal !== undefined && (
                   <div className="flex justify-between gap-3">
-                    <span>{totals.subtotalLabel || "Tạm tính các phòng"}</span>
+                    <span>{totals.subtotalLabel || (isEn ? "Room Subtotal" : "Tạm tính các phòng")}</span>
                     <span>{formatVnd(totals.subtotal)}</span>
                   </div>
                 )}
@@ -434,25 +437,25 @@ export default function BookingSummaryPanel({
                 ))}
                 {vatAndSystemFee > 0 && (
                   <div className="flex justify-between gap-3">
-                    <span>Thuế VAT (8%)</span>
+                    <span>{isEn ? "VAT (8%)" : "Thuế VAT (8%)"}</span>
                     <span>{formatVnd(vatAndSystemFee)}</span>
                   </div>
                 )}
                 {discount > 0 && (
                   <div className="flex justify-between gap-3 text-emerald-700">
-                    <span>Giảm giá</span>
+                    <span>{isEn ? "Discount" : "Giảm giá"}</span>
                     <span>-{formatVnd(discount)}</span>
                   </div>
                 )}
               </div>
             ) : null}
             <div className="flex items-center justify-between gap-3 text-lg font-bold text-primary">
-              <span>{showOuterBreakdown ? "Tổng cộng" : "Tạm tính"}</span>
+              <span>{showOuterBreakdown ? (isEn ? "Total" : "Tổng cộng") : (isEn ? "Subtotal" : "Tạm tính")}</span>
               <span>{formatVnd(total)}</span>
             </div>
             {!showOuterBreakdown && (
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                Tổng hợp tất cả phòng, phụ thu và dịch vụ đã chọn.
+                {isEn ? "Includes all selected rooms, surcharges, and services." : "Tổng hợp tất cả phòng, phụ thu và dịch vụ đã chọn."}
               </p>
             )}
           </div>

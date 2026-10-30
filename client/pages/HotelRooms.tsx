@@ -486,6 +486,7 @@ export default function HotelRooms() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { language } = useLanguage();
+  const isEn = language === "en";
   const [searchParams] = useSearchParams();
   const hotel = hotels.find((item) => item.slug === slug) || hotels[0];
   const [rooms, setRooms] = useState<RoomType[]>(defaultRooms);
@@ -973,16 +974,17 @@ export default function HotelRooms() {
         <div className="flex items-center gap-2">
           <CalendarDays className="h-5 w-5 text-primary" />
           <h2 className="font-display text-xl font-bold text-primary">
-            Ngày mặc định cho phòng mới
+            {isEn ? "Default Stay Dates" : "Ngày mặc định cho phòng mới"}
           </h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Ngày của từng phòng có thể chỉnh riêng bên dưới, kể cả các phòng cùng
-          một loại.
+          {isEn
+            ? "Stay dates can be customized individually for each room below, even within the same type."
+            : "Ngày của từng phòng có thể chỉnh riêng bên dưới, kể cả các phòng cùng một loại."}
         </p>
         <div className="mt-4 grid gap-4 md:grid-cols-4">
           <label className="text-sm font-medium text-primary">
-            Ngày nhận phòng
+            {isEn ? "Check-in Date" : "Ngày nhận phòng"}
             <input
               type="date"
               min={dateValue(today)}
@@ -999,11 +1001,11 @@ export default function HotelRooms() {
               className="mt-1 w-full rounded-xl border border-input p-2.5"
             />
             <span className="mt-1 block text-xs text-muted-foreground">
-              Nhận phòng từ 14:00
+              {isEn ? "Check-in from 14:00" : "Nhận phòng từ 14:00"}
             </span>
           </label>
           <label className="text-sm font-medium text-primary">
-            Ngày trả phòng
+            {isEn ? "Check-out Date" : "Ngày trả phòng"}
             <input
               type="date"
               min={defaultDates.checkIn}
@@ -1017,11 +1019,11 @@ export default function HotelRooms() {
               className="mt-1 w-full rounded-xl border border-input p-2.5"
             />
             <span className="mt-1 block text-xs text-muted-foreground">
-              Trả phòng trước 12:00
+              {isEn ? "Check-out before 12:00" : "Trả phòng trước 12:00"}
             </span>
           </label>
           <label className="text-sm font-medium text-primary">
-            Giờ đến dự kiến
+            {isEn ? "Estimated Arrival Time" : "Giờ đến dự kiến"}
             <input
               type="time"
               value={arrivalTime}
@@ -1029,11 +1031,11 @@ export default function HotelRooms() {
               className="mt-1 w-full rounded-xl border border-input p-2.5"
             />
             <span className="mt-1 block text-xs text-muted-foreground">
-              Sau 22:00 vui lòng ghi chú lễ tân
+              {isEn ? "Please notify front desk if arriving after 22:00" : "Sau 22:00 vui lòng ghi chú lễ tân"}
             </span>
           </label>
           <label className="text-sm font-medium text-primary">
-            Giờ trả dự kiến
+            {isEn ? "Estimated Departure Time" : "Giờ trả dự kiến"}
             <input
               type="time"
               value={departureTime}
@@ -1050,11 +1052,12 @@ export default function HotelRooms() {
               Sen Việt rooms
             </p>
             <h2 className="mt-2 font-display text-3xl font-bold text-primary">
-              Chọn phòng phù hợp
+              {isEn ? "Select Your Rooms" : "Chọn phòng phù hợp"}
             </h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Số lượng phòng tối đa luôn khớp với số phòng còn trống trong
-              khoảng ngày đã chọn.
+              {isEn
+                ? "Maximum room selection matches live availability for the selected dates."
+                : "Số lượng phòng tối đa luôn khớp với số phòng còn trống trong khoảng ngày đã chọn."}
             </p>
           </div>
           {error && (
@@ -1139,7 +1142,7 @@ export default function HotelRooms() {
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Users className="h-4 w-4 text-gold" />
-                          Chuẩn {standardGuests} người lớn{maxTotalGuests > standardGuests ? ` (tối đa ${maxTotalGuests} khách)` : ""}
+                          {isEn ? `Standard ${standardGuests} adults${maxTotalGuests > standardGuests ? ` (max ${maxTotalGuests} guests)` : ""}` : `Chuẩn ${standardGuests} người lớn${maxTotalGuests > standardGuests ? ` (tối đa ${maxTotalGuests} khách)` : ""}`}
                         </span>
                       </div>
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -1150,15 +1153,15 @@ export default function HotelRooms() {
                           className={`rounded-full px-3 py-1 font-semibold ${maxQuantity > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
                         >
                           {maxQuantity > 0
-                            ? `Còn ${maxQuantity} phòng`
-                            : "Hết phòng"}
+                            ? (isEn ? `${maxQuantity} rooms left` : `Còn ${maxQuantity} phòng`)
+                            : (isEn ? "Sold out" : "Hết phòng")}
                         </span>
                         <span className="text-muted-foreground">
-                          Tòa {item.building} · Tầng {item.floor} · {hasDynamicPricing ? "Giá theo ngày" : "Giá tiêu chuẩn"}
+                          {isEn ? "Building" : "Tòa"} {item.building} · {isEn ? "Floor" : "Tầng"} {item.floor} · {hasDynamicPricing ? (isEn ? "Daily pricing" : "Giá theo ngày") : (isEn ? "Standard rate" : "Giá tiêu chuẩn")}
                         </span>
                       </div>
                       {(() => {
-                        const notice = getCancellationNotice(dates.checkIn);
+                        const notice = getCancellationNotice(dates.checkIn, new Date(), isEn);
                         return (
                           <div
                             className={`mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${notice.badgeClass}`}
@@ -1183,26 +1186,26 @@ export default function HotelRooms() {
                           }}
                           className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary"
                         >
-                          Xem chi tiết phòng
+                          {isEn ? "View room details" : "Xem chi tiết phòng"}
                         </button>
                       </div>
                     </div>
                     <div className="border-t border-border bg-secondary/30 p-5 md:border-l md:border-t-0">
-                      <p className="text-xs text-muted-foreground">{hasDynamicPricing ? "Giá ngày đã chọn" : "Giá từ"}</p>
+                      <p className="text-xs text-muted-foreground">{hasDynamicPricing ? (isEn ? "Selected date rate" : "Giá ngày đã chọn") : (isEn ? "Rates from" : "Giá từ")}</p>
                       <p className="mt-1 text-2xl font-bold text-primary">
                         {formatVnd(displayNightlyPrice)}
                         <span className="text-xs font-normal text-muted-foreground">
                           {" "}
-                          / đêm
+                          / {isEn ? "night" : "đêm"}
                         </span>
                       </p>
                       {hasDynamicPricing && (
                         <p className="mt-0.5 text-[11px] font-medium text-emerald-700">
-                          Đã cập nhật theo lịch
+                          {isEn ? "Calendar rate applied" : "Đã cập nhật theo lịch"}
                         </p>
                       )}
                       <label className="mt-4 block text-xs font-semibold text-primary">
-                        Số phòng
+                        {isEn ? "Rooms" : "Số phòng"}
                         <select
                           value={quantity}
                           onChange={(event) => {

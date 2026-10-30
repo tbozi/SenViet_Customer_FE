@@ -282,14 +282,14 @@ export function getCancellationScheduleText(checkIn: string) {
   return `Hoàn 100% nếu hủy trước hoặc trong ngày ${schedule.fullRefundUntil}; hoàn 50% từ ${schedule.halfRefundFrom} đến ${schedule.halfRefundUntil}; từ ${schedule.noRefundFrom} hoặc no-show: không hoàn.`;
 }
 
-export function getCancellationNotice(checkIn: string, now = new Date()) {
+export function getCancellationNotice(checkIn: string, now = new Date(), isEn = false) {
   if (!checkIn) {
     return {
       type: "free" as const,
-      text: "Miễn phí hủy trước ngày nhận phòng 7 ngày",
+      text: isEn ? "Free cancellation 7+ days prior to check-in" : "Miễn phí hủy trước ngày nhận phòng 7 ngày",
       badgeClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/60",
-      statusText: "Hoàn 100%",
-      detail: "Hủy trước 7 ngày nhận phòng",
+      statusText: isEn ? "100% Refund" : "Hoàn 100%",
+      detail: isEn ? "Cancel 7+ days before check-in" : "Hủy trước 7 ngày nhận phòng",
     };
   }
 
@@ -304,16 +304,16 @@ export function getCancellationNotice(checkIn: string, now = new Date()) {
   const halfRefundUntil = new Date(checkInDate);
   halfRefundUntil.setDate(halfRefundUntil.getDate() - 3);
 
-  const format = (date: Date) => date.toLocaleDateString("vi-VN");
+  const format = (date: Date) => date.toLocaleDateString(isEn ? "en-US" : "vi-VN");
 
   // TH1: Hạn hoàn 100% vẫn còn trong tương lai hoặc hôm nay
   if (fullRefundUntil.getTime() >= todayDate.getTime()) {
     return {
       type: "free" as const,
-      text: `Miễn phí hủy trước ngày ${format(fullRefundUntil)}`,
+      text: isEn ? `Free cancellation before ${format(fullRefundUntil)}` : `Miễn phí hủy trước ngày ${format(fullRefundUntil)}`,
       badgeClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/60",
-      statusText: "Hoàn 100%",
-      detail: "Hủy trước 7 ngày nhận phòng",
+      statusText: isEn ? "100% Refund" : "Hoàn 100%",
+      detail: isEn ? "Cancel 7+ days before check-in" : "Hủy trước 7 ngày nhận phòng",
     };
   }
 
@@ -321,29 +321,29 @@ export function getCancellationNotice(checkIn: string, now = new Date()) {
   if (halfRefundUntil.getTime() >= todayDate.getTime()) {
     return {
       type: "partial" as const,
-      text: `Hủy trước ngày ${format(halfRefundUntil)}: hoàn 50%`,
+      text: isEn ? `Cancel before ${format(halfRefundUntil)}: 50% refund` : `Hủy trước ngày ${format(halfRefundUntil)}: hoàn 50%`,
       badgeClass: "text-amber-700 bg-amber-50/80 border-amber-200/60",
-      statusText: "Hoàn 50%",
-      detail: "Đã quá hạn miễn phí hủy 100%",
+      statusText: isEn ? "50% Refund" : "Hoàn 50%",
+      detail: isEn ? "Free 100% cancellation deadline has passed" : "Đã quá hạn miễn phí hủy 100%",
     };
   }
 
   // TH3: Đặt sát ngày (dưới 3 ngày trước nhận phòng)
   return {
     type: "non-refundable" as const,
-    text: "Không hoàn tiền khi hủy (dưới 3 ngày)",
+    text: isEn ? "Non-refundable (under 3 days)" : "Không hoàn tiền khi hủy (dưới 3 ngày)",
     badgeClass: "text-rose-700 bg-rose-50/80 border-rose-200/60",
-    statusText: "Không hoàn tiền",
-    detail: "Hủy dưới 3 ngày trước nhận phòng: hoàn 0%",
+    statusText: isEn ? "Non-refundable" : "Không hoàn tiền",
+    detail: isEn ? "Cancel under 3 days before check-in: 0% refund" : "Hủy dưới 3 ngày trước nhận phòng: hoàn 0%",
   };
 }
 
-export function getCancellationPolicy(checkIn: string, now = new Date()) {
+export function getCancellationPolicy(checkIn: string, now = new Date(), isEn = false) {
   if (!checkIn) {
     return {
       canCancel: true,
       refundPercent: 100,
-      policy: "Hủy từ 7 ngày trước ngày nhận phòng: hoàn 100%.",
+      policy: isEn ? "Cancel 7+ days before check-in: 100% refund." : "Hủy từ 7 ngày trước ngày nhận phòng: hoàn 100%.",
       daysBefore: 999,
     };
   }
@@ -356,21 +356,22 @@ export function getCancellationPolicy(checkIn: string, now = new Date()) {
     return {
       canCancel: true,
       refundPercent: 100,
-      policy: "Hủy từ 7 ngày trước ngày nhận phòng: hoàn 100%.",
+      policy: isEn ? "Cancel 7+ days before check-in: 100% refund." : "Hủy từ 7 ngày trước ngày nhận phòng: hoàn 100%.",
       daysBefore,
     };
   if (daysBefore >= 3)
     return {
       canCancel: true,
       refundPercent: 50,
-      policy: "Hủy từ 3 đến dưới 7 ngày trước ngày nhận phòng: hoàn 50%.",
+      policy: isEn ? "Cancel 3 to 7 days before check-in: 50% refund." : "Hủy từ 3 đến dưới 7 ngày trước ngày nhận phòng: hoàn 50%.",
       daysBefore,
     };
   return {
     canCancel: true,
     refundPercent: 0,
-    policy:
-      "Hủy dưới 3 ngày trước ngày nhận phòng: không hoàn tiền (hoàn 0%).",
+    policy: isEn
+      ? "Cancel less than 3 days before check-in: non-refundable (0% refund)."
+      : "Hủy dưới 3 ngày trước ngày nhận phòng: không hoàn tiền (hoàn 0%).",
     daysBefore,
   };
 }

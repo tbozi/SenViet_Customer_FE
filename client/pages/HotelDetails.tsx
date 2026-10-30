@@ -24,6 +24,7 @@ import { toLocalDateStr } from "@/lib/utils";
 import { rooms as fallbackRooms, type RoomType } from "@/data/rooms";
 import { fetchRoomsByHotel } from "@/services/roomApi";
 import { fetchHotelReviews, type HotelReviewSummary } from "@/services/reviewApi";
+import { useLanguage } from "@/lib/i18n";
 
 const fallbackGallery = [
   "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?q=80&w=1400&auto=format&fit=crop",
@@ -61,6 +62,8 @@ function SectionHeading({ eyebrow, title, description }: { eyebrow: string; titl
 
 export default function HotelDetails() {
   const { slug } = useParams();
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const hotel = hotels.find((item) => item.slug === slug);
   const [selectedImage, setSelectedImage] = useState(0);
   const [checkIn, setCheckIn] = useState(dateValue(today));
@@ -171,33 +174,33 @@ export default function HotelDetails() {
               {formatHotelLocation(hotel)}
             </p>
             <h1 className="mt-3 font-display text-4xl font-bold leading-tight text-primary md:text-5xl">{hotel.name}</h1>
-            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><span className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 font-semibold text-primary"><Star className="h-4 w-4 fill-gold text-gold" /> {hotel.rating} đánh giá</span><span className="rounded-full border border-border px-3 py-1.5 text-muted-foreground">Khách sạn {regionLabels[hotel.region]}</span></div>
-            <p className="mt-6 text-base leading-8 text-muted-foreground">{hotel.description}</p>
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-sm"><span className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 font-semibold text-primary"><Star className="h-4 w-4 fill-gold text-gold" /> {hotel.rating} {isEn ? "reviews" : "đánh giá"}</span><span className="rounded-full border border-border px-3 py-1.5 text-muted-foreground">{isEn ? `Hotel in ${hotel.city}` : `Khách sạn ${regionLabels[hotel.region]}`}</span></div>
+            <p className="mt-6 text-base leading-8 text-muted-foreground">{isEn ? (hotel.descriptionEn || hotel.description) : hotel.description}</p>
             <div className="mt-5 rounded-2xl border-l-4 border-gold bg-secondary/60 p-5"><div className="flex items-start gap-3"><Building2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" /><div><p className="font-semibold text-primary">Một điểm đến trong hệ thống Sen Việt</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">{hotel.name} mang tinh thần hiếu khách của Sen Việt Hotels & Resorts, kết hợp nét riêng của {hotel.city} với dịch vụ nhất quán và sự chăm sóc tận tâm.</p></div></div></div>
           </div>
         </div>
 
         <aside className="rounded-3xl border border-primary/15 bg-white p-5 shadow-xl shadow-primary/10 sm:p-6 lg:sticky lg:top-6">
-          <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[.12em] text-gold">Đặt phòng trực tiếp</p><h2 className="mt-2 font-display text-2xl font-bold text-primary">Bắt đầu kỳ nghỉ</h2></div><CalendarDays className="h-7 w-7 text-primary" /></div>
-          <p className="mt-3 text-sm text-muted-foreground">Giá tốt nhất từ Sen Việt, minh bạch và không bao gồm ăn uống.</p>
+          <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-semibold uppercase tracking-[.12em] text-gold">{isEn ? "Direct Reservation" : "Đặt phòng trực tiếp"}</p><h2 className="mt-2 font-display text-2xl font-bold text-primary">{isEn ? "Start Your Stay" : "Bắt đầu kỳ nghỉ"}</h2></div><CalendarDays className="h-7 w-7 text-primary" /></div>
+          <p className="mt-3 text-sm text-muted-foreground">{isEn ? "Best rates from Sen Việt, transparent and room only." : "Giá tốt nhất từ Sen Việt, minh bạch và không bao gồm ăn uống."}</p>
           <div className="mt-6 space-y-4">
-            <label className="block text-sm font-semibold text-primary">Nhận phòng<input type="date" min={dateValue(today)} value={checkIn} onChange={(event) => { const next = event.target.value; setCheckIn(next); if (checkOut <= next) { const following = new Date(`${next}T12:00:00`); following.setDate(following.getDate() + 1); setCheckOut(dateValue(following)); } }} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
-            <label className="block text-sm font-semibold text-primary">Trả phòng<input type="date" min={checkIn} value={checkOut} onChange={(event) => setCheckOut(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+            <label className="block text-sm font-semibold text-primary">{isEn ? "Check-in" : "Nhận phòng"}<input type="date" min={dateValue(today)} value={checkIn} onChange={(event) => { const next = event.target.value; setCheckIn(next); if (checkOut <= next) { const following = new Date(`${next}T12:00:00`); following.setDate(following.getDate() + 1); setCheckOut(dateValue(following)); } }} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
+            <label className="block text-sm font-semibold text-primary">{isEn ? "Check-out" : "Trả phòng"}<input type="date" min={checkIn} value={checkOut} onChange={(event) => setCheckOut(event.target.value)} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" /></label>
             <div className="grid grid-cols-2 gap-3">
-              <label className="block text-sm font-semibold text-primary">Người lớn<select value={adults} onChange={(event) => setAdults(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none focus:border-primary"><option value={1}>1 người</option><option value={2}>2 người</option><option value={3}>3 người</option><option value={4}>4 người</option></select></label>
-              <label className="block text-sm font-semibold text-primary">Trẻ em<select value={children} onChange={(event) => setChildren(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none focus:border-primary"><option value={0}>0 trẻ</option><option value={1}>1 trẻ</option><option value={2}>2 trẻ</option></select></label>
-              <label className="block text-sm font-semibold text-primary">Phòng<select value={roomsCount} onChange={(event) => setRoomsCount(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none focus:border-primary"><option value={1}>1 phòng</option><option value={2}>2 phòng</option><option value={3}>3 phòng</option><option value={4}>4 phòng</option></select></label>
+              <label className="block text-sm font-semibold text-primary">{isEn ? "Adults" : "Người lớn"}<select value={adults} onChange={(event) => setAdults(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none focus:border-primary">{[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {isEn ? (n === 1 ? "adult" : "adults") : "người"}</option>)}</select></label>
+              <label className="block text-sm font-semibold text-primary">{isEn ? "Children" : "Trẻ em"}<select value={children} onChange={(event) => setChildren(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none focus:border-primary">{[0, 1, 2].map(n => <option key={n} value={n}>{n} {isEn ? (n === 1 ? "child" : "children") : "trẻ"}</option>)}</select></label>
+              <label className="block text-sm font-semibold text-primary">{isEn ? "Rooms" : "Phòng"}<select value={roomsCount} onChange={(event) => setRoomsCount(Number(event.target.value))} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal outline-none focus:border-primary">{[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {isEn ? (n === 1 ? "room" : "rooms") : "phòng"}</option>)}</select></label>
             </div>
-            <label className="block text-sm font-semibold text-primary">Mã khuyến mãi<input value={promo} onChange={(event) => setPromo(event.target.value)} placeholder="Nhập mã nếu có" className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal uppercase outline-none focus:border-primary" /></label>
+            <label className="block text-sm font-semibold text-primary">{isEn ? "Promo Code" : "Mã khuyến mãi"}<input value={promo} onChange={(event) => setPromo(event.target.value)} placeholder={isEn ? "Enter code if any" : "Nhập mã nếu có"} className="mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 font-normal uppercase outline-none focus:border-primary" /></label>
           </div>
           <div className="mt-6 flex items-end justify-between border-t border-border pt-5">
             <div>
-              <p className="text-xs text-muted-foreground">Giá phòng từ</p>
+              <p className="text-xs text-muted-foreground">{isEn ? "Rates from" : "Giá phòng từ"}</p>
               <p className="mt-1 text-2xl font-bold text-primary">{formatVnd(sortedRooms[0]?.price || hotel.price)}<span className="text-xs font-normal text-muted-foreground"> / đêm</span></p>
             </div>
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> Giá tốt nhất</span>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" /> {isEn ? "Best Rate Guarantee" : "Giá tốt nhất"}</span>
           </div>
-          <Link to={bookingHref} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90">Tìm phòng trống <ArrowRight className="h-4 w-4" /></Link>
+          <Link to={bookingHref} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 transition hover:bg-primary/90">{isEn ? "Check Availability" : "Tìm phòng trống"} <ArrowRight className="h-4 w-4" /></Link>
           <button
             type="button"
             onClick={() => {
@@ -205,7 +208,7 @@ export default function HotelDetails() {
             }}
             className="mt-4 flex w-full items-center justify-center text-sm font-semibold text-primary underline decoration-gold decoration-2 underline-offset-4 transition hover:text-gold"
           >
-            Xem các loại phòng
+            {isEn ? "View Room Types" : "Xem các loại phòng"}
           </button>
         </aside>
       </section>

@@ -613,14 +613,14 @@ export default function BookingHistory() {
                                   </p>
                             )}
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Nhận phòng:{" "}
+                              {isVi ? "Nhận phòng: " : "Check-in: "}{" "}
                               {dateTime(
                                 stay.checkIn,
                                 booking.arrivalTime || "14:00",
                               )}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Trả phòng:{" "}
+                              {isVi ? "Trả phòng: " : "Check-out: "}{" "}
                               {dateTime(
                                 stay.checkOut,
                                 booking.departureTime || "12:00",
@@ -628,18 +628,18 @@ export default function BookingHistory() {
                             </p>
                             <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                               <p className="font-semibold text-primary">
-                                Tiền phòng: {formatVnd(roomPrice)}
+                                {isVi ? "Tiền phòng: " : "Room rate: "}{formatVnd(roomPrice)}
                               </p>
                               {extraGuestSurcharge > 0 && (
                                 <p>
-                                  Khách thêm: {formatVnd(extraGuestSurcharge)}
+                                  {isVi ? "Khách thêm: " : "Extra guest: "}{formatVnd(extraGuestSurcharge)}
                                 </p>
                               )}
                             </div>
                             {stay.services?.length ? (
                               <div className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
                                 <p className="font-semibold text-primary">
-                                  Dịch vụ
+                                  {isVi ? "Dịch vụ" : "Services"}
                                 </p>
                                 {stay.services.map((service) => (
                                   <p key={service.id}>
@@ -690,11 +690,11 @@ export default function BookingHistory() {
                 </div>
                 <div className="mt-5 rounded-xl border border-border bg-slate-50 p-4 text-sm">
                   <p className="font-semibold text-primary">
-                    Chi tiết thanh toán
+                    {isVi ? "Chi tiết thanh toán" : "Payment Details"}
                   </p>
                   <div className="mt-3 space-y-2">
                     <div className="flex justify-between gap-3">
-                      <span>Tạm tính các phòng</span>
+                      <span>{isVi ? "Tạm tính các phòng" : "Room Subtotal"}</span>
                       <strong>
                         {formatVnd(
                           booking.total -
@@ -725,19 +725,19 @@ export default function BookingHistory() {
                         </div>
                       ))}
                     <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
-                      <span>Thuế VAT (8%)</span>
+                      <span>{isVi ? "Thuế VAT (8%)" : "VAT (8%)"}</span>
                       <strong>
                         {formatVnd(booking.vat)}
                       </strong>
                     </div>
                     {booking.discount > 0 && (
                       <div className="flex justify-between gap-3 text-emerald-700">
-                        <span>Giảm giá</span>
+                        <span>{isVi ? "Giảm giá" : "Discount"}</span>
                         <strong>-{formatVnd(booking.discount)}</strong>
                       </div>
                     )}
                     <div className="flex justify-between gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
-                      <span>Tổng thanh toán</span>
+                      <span>{isVi ? "Tổng thanh toán" : "Total Payment"}</span>
                       <span>{formatVnd(booking.total)}</span>
                     </div>
                   </div>
@@ -780,7 +780,7 @@ export default function BookingHistory() {
                 )}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                   <p className="text-lg font-bold text-primary">
-                    Tổng: {formatVnd(booking.total)}
+                    {isVi ? "Tổng: " : "Total: "}{formatVnd(booking.total)}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -790,7 +790,7 @@ export default function BookingHistory() {
                       className="rounded-full border-primary/40 text-primary hover:bg-primary/10 shadow-sm font-semibold"
                     >
                       <Receipt className="mr-1.5 h-4 w-4 text-primary" />
-                      Xem chi tiết hóa đơn
+                      {isVi ? "Xem chi tiết hóa đơn" : "View Invoice Details"}
                     </Button>
                     {booking.status !== "pending_payment" && (
                       <Button
@@ -800,7 +800,7 @@ export default function BookingHistory() {
                       >
                         <Link to={`/invoices/${booking.id}`}>
                           <FileText className="mr-2 h-4 w-4" />
-                          In hóa đơn
+                          {isVi ? "In hóa đơn" : "Print Invoice"}
                         </Link>
                       </Button>
                     )}
@@ -811,7 +811,7 @@ export default function BookingHistory() {
                       >
                         <Link to={`/reviews/${booking.id}`}>
                           <Star className="mr-1.5 h-4 w-4 fill-primary text-primary" />
-                          Đánh giá kỳ nghỉ
+                          {isVi ? "Đánh giá kỳ nghỉ" : "Review Stay"}
                         </Link>
                       </Button>
                     )}
@@ -821,7 +821,7 @@ export default function BookingHistory() {
                         onClick={() => completePayment(booking)}
                         className="rounded-full"
                       >
-                        Thanh toán
+                        {isVi ? "Thanh toán" : "Pay Now"}
                       </Button>
                     )}
                     {booking.status !== "cancelled" &&
@@ -833,7 +833,7 @@ export default function BookingHistory() {
                           className="rounded-full text-red-600 hover:bg-red-50 hover:text-red-700"
                         >
                           <XCircle className="mr-1.5 h-4 w-4" />
-                          Hủy phòng
+                          {isVi ? "Hủy phòng" : "Cancel Booking"}
                         </Button>
                       )}
                   </div>

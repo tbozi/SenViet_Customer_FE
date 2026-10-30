@@ -30,14 +30,17 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://localhost:8081");
 
-function dateTime(date: string, time: string) {
-  return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString("vi-VN")}`;
+function dateTime(date: string, time: string, isEn = false) {
+  return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString(isEn ? "en-US" : "vi-VN")}`;
 }
 
 export default function BookingSuccess() {
+  const { language } = useLanguage();
+  const isEn = language === "en";
   const { bookingId } = useParams();
   const [searchParams] = useSearchParams();
   const targetId = bookingId || searchParams.get("id") || searchParams.get("bookingId");
@@ -401,17 +404,17 @@ export default function BookingSuccess() {
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold text-primary">
             {isCancelled
-              ? "Đơn đặt phòng đã hết hạn thanh toán"
+              ? (isEn ? "Booking Payment Expired" : "Đơn đặt phòng đã hết hạn thanh toán")
               : pending
-              ? "Đơn đang chờ thanh toán"
-              : "Đặt phòng & Thanh toán thành công"}
+              ? (isEn ? "Booking Awaiting Payment" : "Đơn đang chờ thanh toán")
+              : (isEn ? "Booking & Payment Successful" : "Đặt phòng & Thanh toán thành công")}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
             {isCancelled
-              ? "Thời gian giữ phòng (5 phút) đã kết thúc. Phòng đã được hệ thống tự động hoàn trả để phục vụ khách hàng khác. Quý khách vui lòng đặt lại phòng nếu vẫn có nhu cầu lưu trú."
+              ? (isEn ? "Hold time (5 minutes) has ended. Rooms were automatically released for other guests. Please rebook if you still wish to stay." : "Thời gian giữ phòng (5 phút) đã kết thúc. Phòng đã được hệ thống tự động hoàn trả để phục vụ khách hàng khác. Quý khách vui lòng đặt lại phòng nếu vẫn có nhu cầu lưu trú.")
               : pending
-              ? "Phòng đang được giữ trong 5 phút. Vui lòng hoàn tất thanh toán để xác nhận booking."
-              : "Cảm ơn bạn đã lựa chọn Sen Việt Hotels & Resorts. Đơn đặt phòng của bạn đã được thanh toán thành công."}
+              ? (isEn ? "Room is being held for 5 minutes. Please complete payment to confirm your booking." : "Phòng đang được giữ trong 5 phút. Vui lòng hoàn tất thanh toán để xác nhận booking.")
+              : (isEn ? "Thank you for choosing Sen Việt Hotels & Resorts. Your reservation has been successfully paid." : "Cảm ơn bạn đã lựa chọn Sen Việt Hotels & Resorts. Đơn đặt phòng của bạn đã được thanh toán thành công.")}
           </p>
         </header>
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
@@ -421,10 +424,10 @@ export default function BookingSuccess() {
                 <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
                 <div>
                   <p className="font-bold text-sm text-rose-900">
-                    Đơn đặt phòng đã bị hủy tự động
+                    {isEn ? "Reservation automatically cancelled" : "Đơn đặt phòng đã bị hủy tự động"}
                   </p>
                   <p className="mt-1 text-rose-700 leading-relaxed">
-                    Theo quy định của chuỗi khách sạn Sen Việt, sau 5 phút nếu đơn đặt phòng chưa hoàn tất thanh toán, hệ thống sẽ tự động hủy đơn và mở lại phòng cho các khách hàng khác.
+                    {isEn ? "According to Sen Việt policy, if payment is not completed within 5 minutes, reservations are automatically cancelled and rooms released for other guests." : "Theo quy định của chuỗi khách sạn Sen Việt, sau 5 phút nếu đơn đặt phòng chưa hoàn tất thanh toán, hệ thống sẽ tự động hủy đơn và mở lại phòng cho các khách hàng khác."}
                   </p>
                 </div>
               </div>
@@ -434,7 +437,7 @@ export default function BookingSuccess() {
               <div>
                 <p className="font-semibold text-primary">{booking.hotelName}</p>
                 <p className="text-sm text-muted-foreground">
-                  Mã booking: {booking.id}
+                  {isEn ? "Booking ID:" : "Mã booking:"} {booking.id}
                 </p>
               </div>
             </div>
@@ -451,7 +454,7 @@ export default function BookingSuccess() {
                           <span className="font-semibold text-primary">
                             {selection.roomNameVi} · {stay.roomCode}
                           </span>
-                          <span>{stay.nights} đêm</span>
+                          <span>{stay.nights} {isEn ? (stay.nights === 1 ? 'night' : 'nights') : 'đêm'}</span>
                         </div>
                         {(stay.offerName || selection.offerName) && (
                           <p className="mt-1 text-xs font-medium text-primary">
@@ -459,19 +462,20 @@ export default function BookingSuccess() {
                           </p>
                         )}
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Nhận phòng: {" "}
-                          {dateTime(stay.checkIn, booking.arrivalTime || "14:00")}
+                          {isEn ? "Check-in: " : "Nhận phòng: "}{" "}
+                          {dateTime(stay.checkIn, booking.arrivalTime || "14:00", isEn)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Trả phòng: {" "}
+                          {isEn ? "Check-out: " : "Trả phòng: "}{" "}
                           {dateTime(
                             stay.checkOut,
                             booking.departureTime || "12:00",
+                            isEn,
                           )}
                         </p>
                         <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                           <p className="font-semibold text-primary">
-                            Tiền phòng: {" "}
+                            {isEn ? "Room rate: " : "Tiền phòng: "}{" "}
                             {formatVnd(
                               (stay.nightlyPrice || selection.nightlyPrice) * Math.max(0, stay.nights),
                             )}
@@ -480,7 +484,7 @@ export default function BookingSuccess() {
                             Math.max(0, stay.nights) >
                             0 && (
                             <p>
-                              Khách thêm: {" "}
+                              {isEn ? "Extra guests: " : "Khách thêm: "}{" "}
                               {formatVnd(
                                 Number(stay.extraGuestCharge || 0) *
                                   Math.max(0, stay.nights),
@@ -490,7 +494,7 @@ export default function BookingSuccess() {
                         </div>
                         {stay.services?.length ? (
                           <div className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
-                            <p className="font-semibold text-primary">Dịch vụ</p>
+                            <p className="font-semibold text-primary">{isEn ? "Services" : "Dịch vụ"}</p>
                             {stay.services.map((service) => (
                               <p key={service.id}>
                                 {service.name} × {service.quantity} · {" "}
@@ -560,7 +564,7 @@ export default function BookingSuccess() {
             </div>
             {!hasRoomServices && booking.services?.length ? (
               <div className="mt-5 border-t border-border pt-4">
-                <p className="font-semibold text-primary">Dịch vụ đã chọn</p>
+                <p className="font-semibold text-primary">{isEn ? "Selected services" : "Dịch vụ đã chọn"}</p>
                 {booking.services.map((service) => (
                   <div
                     key={service.id}
@@ -576,21 +580,21 @@ export default function BookingSuccess() {
             ) : null}
             {booking.cancellationPolicy && (
               <div className="mt-5 rounded-xl border border-amber-200/70 bg-amber-50/50 p-4 text-xs">
-                <p className="font-semibold text-amber-900">Chính sách hủy phòng áp dụng</p>
+                <p className="font-semibold text-amber-900">{isEn ? "Applicable Cancellation Policy" : "Chính sách hủy phòng áp dụng"}</p>
                 <p className="mt-1 text-amber-800/90">{booking.cancellationPolicy}</p>
               </div>
             )}
           </section>
           <aside className="rounded-2xl border border-border bg-white p-6 shadow-lg lg:sticky lg:top-6">
             <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
-              Thanh toán
+              {isEn ? "Payment" : "Thanh toán"}
             </p>
             <h2 className="mt-2 font-display text-2xl font-bold text-primary">
-              Chi tiết thanh toán
+              {isEn ? "Payment Details" : "Chi tiết thanh toán"}
             </h2>
             <div className="mt-5 space-y-2 text-sm">
               <div className="flex justify-between gap-3">
-                <span>Tạm tính các phòng</span>
+                <span>{isEn ? "Room Subtotal" : "Tạm tính các phòng"}</span>
                 <strong>{formatVnd(subtotalBeforeDiscount)}</strong>
               </div>
               {commonFeeLines.map((fee) => (
@@ -610,17 +614,17 @@ export default function BookingSuccess() {
                 </div>
               ))}
               <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
-                <span>Thuế VAT (8%)</span>
+                <span>{isEn ? "VAT (8%)" : "Thuế VAT (8%)"}</span>
                 <strong>{formatVnd(booking.vat)}</strong>
               </div>
               {booking.discount > 0 && (
                 <div className="flex justify-between gap-3 text-emerald-700">
-                  <span>Giảm giá</span>
+                  <span>{isEn ? "Discount" : "Giảm giá"}</span>
                   <strong>-{formatVnd(booking.discount)}</strong>
                 </div>
               )}
               <div className="flex justify-between gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
-                <span>Tổng thanh toán</span>
+                <span>{isEn ? "Total Payment" : "Tổng thanh toán"}</span>
                 <span>{formatVnd(booking.total)}</span>
               </div>
             </div>
@@ -628,7 +632,7 @@ export default function BookingSuccess() {
             {pending && (
               <div className="mt-5 space-y-3 rounded-xl border border-primary/15 bg-secondary/30 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  Phương thức thanh toán
+                  {isEn ? "Payment Method" : "Phương thức thanh toán"}
                 </p>
                 <div className="space-y-2 text-xs">
                   <label
@@ -647,7 +651,7 @@ export default function BookingSuccess() {
                       className="accent-primary"
                     />
                     <QrCode className="h-4 w-4 text-primary" />
-                    <span>Chuyển khoản / Quét mã QR</span>
+                    <span>{isEn ? "Bank Transfer / QR Code" : "Chuyển khoản / Quét mã QR"}</span>
                   </label>
 
                   <label
@@ -666,7 +670,7 @@ export default function BookingSuccess() {
                       className="accent-primary"
                     />
                     <Wallet className="h-4 w-4 text-primary" />
-                    <span>Ví MoMo / VNPay</span>
+                    <span>{isEn ? "MoMo / VNPay E-wallet" : "Ví MoMo / VNPay"}</span>
                   </label>
 
                   <label
@@ -685,7 +689,7 @@ export default function BookingSuccess() {
                       className="accent-primary"
                     />
                     <CreditCard className="h-4 w-4 text-primary" />
-                    <span>Thanh toán tại quầy lễ tân</span>
+                    <span>{isEn ? "Pay at Front Desk" : "Thanh toán tại quầy lễ tân"}</span>
                   </label>
                 </div>
 
@@ -698,12 +702,12 @@ export default function BookingSuccess() {
                   {isPaying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang xử lý thanh toán...
+                      {isEn ? "Processing payment..." : "Đang xử lý thanh toán..."}
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="mr-2 h-5 w-5" />
-                      Thanh toán ngay ({formatVnd(booking.total)})
+                      {isEn ? `Pay Now (${formatVnd(booking.total)})` : `Thanh toán ngay (${formatVnd(booking.total)})`}
                     </>
                   )}
                 </Button>
@@ -732,10 +736,10 @@ export default function BookingSuccess() {
               <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-center">
                 <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" />
-                  Đã thanh toán thành công
+                  {isEn ? "Payment Confirmed Successfully" : "Đã thanh toán thành công"}
                 </p>
                 <p className="mt-1 text-[11px] text-emerald-600">
-                  Đơn đặt phòng của bạn đã được thanh toán và xác nhận đảm bảo giữ phòng.
+                  {isEn ? "Your reservation has been confirmed with guaranteed room hold." : "Đơn đặt phòng của bạn đã được thanh toán và xác nhận đảm bảo giữ phòng."}
                 </p>
               </div>
             )}
@@ -743,21 +747,21 @@ export default function BookingSuccess() {
             <div className="mt-6 flex flex-col gap-3">
               <Button asChild className="rounded-full">
                 <Link to={`/bookings?created=${booking.id}`}>
-                  Xem lịch sử đặt phòng
+                  {isEn ? "View Booking History" : "Xem lịch sử đặt phòng"}
                 </Link>
               </Button>
               {!pending && !isCancelled && (
                 <Button asChild variant="outline" className="rounded-full">
                   <Link to={`/invoices/${booking.id}`}>
                     <FileText className="mr-2 h-4 w-4" />
-                    Xem & in hóa đơn
+                    {isEn ? "View & Print Invoice" : "Xem & in hóa đơn"}
                   </Link>
                 </Button>
               )}
               <Button asChild variant="outline" className="rounded-full">
                 <Link to="/hotels">
                   <HotelIcon className="mr-2 h-4 w-4" />
-                  {isCancelled ? "Tìm khách sạn khác" : "Đặt thêm phòng"}
+                  {isCancelled ? (isEn ? "Explore Other Hotels" : "Tìm khách sạn khác") : (isEn ? "Book More Rooms" : "Đặt thêm phòng")}
                 </Link>
               </Button>
             </div>
@@ -771,8 +775,8 @@ export default function BookingSuccess() {
           {/* Header Modal */}
           <div className="flex items-center justify-between border-b border-slate-100 bg-white px-7 py-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Thanh toán qua mã QR</h2>
-              <p className="text-xs text-slate-500 mt-0.5">Mã QR có hiệu lực trong 5 phút</p>
+              <h2 className="text-xl font-bold text-slate-900">{isEn ? "Pay via QR Code" : "Thanh toán qua mã QR"}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{isEn ? "QR code is valid for 5 minutes" : "Mã QR có hiệu lực trong 5 phút"}</p>
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-sm">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -805,7 +809,11 @@ export default function BookingSuccess() {
             <div className="flex items-start gap-2.5 rounded-xl bg-amber-50/80 px-4 py-3 text-xs text-amber-900 border border-amber-200/80">
               <Lightbulb className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
               <span className="leading-relaxed">
-                Mở <strong>App Ngân hàng bất kỳ</strong> để <strong>quét mã VietQR</strong> hoặc <strong>chuyển khoản</strong> chính xác số tiền, nội dung bên dưới
+                {isEn ? (
+                  <>Open <strong>any Mobile Banking app</strong> to <strong>scan VietQR</strong> or <strong>transfer</strong> the exact amount and description below</>
+                ) : (
+                  <>Mở <strong>App Ngân hàng bất kỳ</strong> để <strong>quét mã VietQR</strong> hoặc <strong>chuyển khoản</strong> chính xác số tiền, nội dung bên dưới</>
+                )}
               </span>
             </div>
 
@@ -830,10 +838,10 @@ export default function BookingSuccess() {
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 p-3 text-center rounded-xl">
                         <AlertCircle className="h-9 w-9 text-rose-500 mb-1" />
                         <span className="text-xs font-bold text-rose-600 uppercase tracking-wide">
-                          Mã QR đã hết hạn
+                          {isEn ? "QR code has expired" : "Mã QR đã hết hạn"}
                         </span>
                         <span className="text-[11px] text-slate-500 mt-1">
-                          Vui lòng bấm tạo mã mới
+                          {isEn ? "Please click to generate a new QR code" : "Vui lòng bấm tạo mã mới"}
                         </span>
                       </div>
                     )}
@@ -853,14 +861,14 @@ export default function BookingSuccess() {
                   {/* Hàng 1: Khách hàng & Mã hóa đơn */}
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                      <p className="text-[11px] text-slate-500">Khách hàng</p>
+                      <p className="text-[11px] text-slate-500">{isEn ? "Customer" : "Khách hàng"}</p>
                       <p className="font-bold text-slate-900 text-xs truncate mt-0.5" title={qrData.customerName || booking.guestName}>
-                        {qrData.customerName || booking.guestName || "Khách đặt"}
+                        {qrData.customerName || booking.guestName || (isEn ? "Guest" : "Khách đặt")}
                       </p>
                     </div>
                     <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                       <div className="min-w-0 pr-1">
-                        <p className="text-[11px] text-slate-500">Mã hóa đơn</p>
+                        <p className="text-[11px] text-slate-500">{isEn ? "Invoice Code" : "Mã hóa đơn"}</p>
                         <p className="font-mono font-bold text-slate-900 text-xs truncate mt-0.5" title={qrData.orderId}>
                           {qrData.orderId}
                         </p>
@@ -880,7 +888,7 @@ export default function BookingSuccess() {
 
                   {/* Hàng 2: Số tiền cần thanh toán (Không có nút sao chép) */}
                   <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-3.5 py-2.5">
-                    <p className="text-[11px] font-medium text-emerald-800">Số tiền thanh toán</p>
+                    <p className="text-[11px] font-medium text-emerald-800">{isEn ? "Payment Amount" : "Số tiền thanh toán"}</p>
                     <p className="font-mono font-bold text-emerald-600 text-xl tracking-tight mt-0.5">
                       {formatVnd(qrData.amount)}
                     </p>
@@ -889,13 +897,13 @@ export default function BookingSuccess() {
                   {/* Hàng 3: Ngân hàng & Chủ tài khoản */}
                   <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 space-y-1.5">
                     <div className="flex justify-between items-start gap-2">
-                      <span className="text-[11px] text-slate-500 shrink-0">Ngân hàng thụ hưởng:</span>
+                      <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Beneficiary Bank:" : "Ngân hàng thụ hưởng:"}</span>
                       <span className="font-bold text-slate-900 text-xs text-right leading-tight">
                         {qrData.bankName}
                       </span>
                     </div>
                     <div className="flex justify-between items-center border-t border-slate-200/70 pt-1.5">
-                      <span className="text-[11px] text-slate-500 shrink-0">Chủ tài khoản:</span>
+                      <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Account Name:" : "Chủ tài khoản:"}</span>
                       <span className="font-bold text-slate-900 text-xs uppercase text-right">
                         {qrData.accountName}
                       </span>
@@ -905,7 +913,7 @@ export default function BookingSuccess() {
                   {/* Hàng 4: Số tài khoản */}
                   <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
                     <div>
-                      <p className="text-[11px] text-slate-500">Số tài khoản</p>
+                      <p className="text-[11px] text-slate-500">{isEn ? "Account Number" : "Số tài khoản"}</p>
                       <p className="font-mono font-bold text-slate-900 text-sm tracking-wide">{qrData.accountNo}</p>
                     </div>
                     <Button
@@ -916,14 +924,14 @@ export default function BookingSuccess() {
                       className="h-7 px-2.5 gap-1 rounded-lg text-xs font-medium border-slate-200 hover:bg-slate-100"
                     >
                       {copiedField === "Số tài khoản" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                      <span>Sao chép</span>
+                      <span>{isEn ? "Copy" : "Sao chép"}</span>
                     </Button>
                   </div>
 
                   {/* Hàng 5: Nội dung chuyển khoản */}
                   <div className="flex items-center justify-between rounded-xl border border-amber-200/90 bg-amber-50/70 px-3 py-2">
                     <div className="min-w-0 pr-2">
-                      <p className="text-[11px] font-semibold text-amber-900">Nội dung chuyển khoản</p>
+                      <p className="text-[11px] font-semibold text-amber-900">{isEn ? "Payment Description" : "Nội dung chuyển khoản"}</p>
                       <p className="font-mono font-bold text-amber-950 text-xs truncate tracking-wide mt-0.5" title={qrData.description}>
                         {qrData.description}
                       </p>
@@ -936,7 +944,7 @@ export default function BookingSuccess() {
                       className="h-7 px-2.5 gap-1 rounded-lg text-xs font-semibold border-amber-300 text-amber-900 hover:bg-amber-100 shrink-0"
                     >
                       {copiedField === "Nội dung" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                      <span>Sao chép</span>
+                      <span>{isEn ? "Copy" : "Sao chép"}</span>
                     </Button>
                   </div>
                 </div>
@@ -947,7 +955,7 @@ export default function BookingSuccess() {
             <div className="border-t border-slate-100 pt-2.5 text-center space-y-1">
               {countdown > 0 ? (
                 <p className="text-xs font-semibold text-amber-700">
-                  Thời gian còn lại: <span className="font-mono text-sm font-bold">{formatCountdown(countdown)}</span>
+                  {isEn ? "Time remaining:" : "Thời gian còn lại:"} <span className="font-mono text-sm font-bold">{formatCountdown(countdown)}</span>
                 </p>
               ) : (
                 <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600">
@@ -995,7 +1003,7 @@ export default function BookingSuccess() {
                 onClick={() => setQrModalOpen(false)}
                 className="w-1/3 rounded-xl border-slate-300"
               >
-                Đóng
+                {isEn ? "Close" : "Đóng"}
               </Button>
               {countdown > 0 ? (
                 <Button
@@ -1007,12 +1015,12 @@ export default function BookingSuccess() {
                   {isPaying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang kiểm tra từ ngân hàng...
+                      {isEn ? "Checking bank status..." : "Đang kiểm tra từ ngân hàng..."}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Kiểm tra thanh toán ngay
+                      {isEn ? "Check Payment Status" : "Kiểm tra thanh toán ngay"}
                     </>
                   )}
                 </Button>
@@ -1026,12 +1034,12 @@ export default function BookingSuccess() {
                   {isPaying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang tạo mã QR mới...
+                      {isEn ? "Generating new QR code..." : "Đang tạo mã QR mới..."}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Tạo lại mã QR mới
+                      {isEn ? "Generate New QR Code" : "Tạo lại mã QR mới"}
                     </>
                   )}
                 </Button>

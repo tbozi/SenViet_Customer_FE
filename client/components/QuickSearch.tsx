@@ -7,7 +7,8 @@ import { useLanguage } from "@/lib/i18n";
 import { toLocalDateStr } from "@/lib/utils";
 
 export default function QuickSearch() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEn = language === "en";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [location, setLocation] = useState(() => searchParams.get("location") || "");
@@ -29,10 +30,10 @@ export default function QuickSearch() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (!location) return setError("Vui lòng chọn địa điểm.");
-    if (!checkIn || !checkOut) return setError("Vui lòng chọn ngày nhận phòng và ngày trả phòng.");
-    if (checkIn < today) return setError("Ngày nhận phòng không thể ở trong quá khứ (trước ngày hôm nay).");
-    if (checkOut <= checkIn) return setError("Ngày trả phòng phải sau ngày nhận phòng.");
+    if (!location) return setError(isEn ? "Please select a destination." : "Vui lòng chọn địa điểm.");
+    if (!checkIn || !checkOut) return setError(isEn ? "Please select check-in and check-out dates." : "Vui lòng chọn ngày nhận phòng và ngày trả phòng.");
+    if (checkIn < today) return setError(isEn ? "Check-in date cannot be in the past." : "Ngày nhận phòng không thể ở trong quá khứ (trước ngày hôm nay).");
+    if (checkOut <= checkIn) return setError(isEn ? "Check-out date must be after check-in date." : "Ngày trả phòng phải sau ngày nhận phòng.");
     setError("");
     const query = new URLSearchParams({
       location,
@@ -131,11 +132,11 @@ export default function QuickSearch() {
           aria-label={t("hotels.searchRooms")}
           className="w-full bg-transparent text-sm outline-none"
         >
-          <option value="1">1 phòng</option>
-          <option value="2">2 phòng</option>
-          <option value="3">3 phòng</option>
-          <option value="4">4 phòng</option>
-          <option value="5">5 phòng</option>
+          {[1, 2, 3, 4, 5].map((count) => (
+            <option value={String(count)} key={count}>
+              {count} {isEn ? (count === 1 ? "Room" : "Rooms") : "phòng"}
+            </option>
+          ))}
         </select>
       </label>
 
@@ -144,12 +145,12 @@ export default function QuickSearch() {
         <select
           value={adults}
           onChange={(e) => setAdults(e.target.value)}
-          aria-label="Người lớn"
+          aria-label={isEn ? "Adults" : "Người lớn"}
           className="w-full bg-transparent text-sm outline-none"
         >
           {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
             <option value={count} key={count}>
-              {count} người lớn
+              {count} {isEn ? (count === 1 ? "Adult" : "Adults") : "người lớn"}
             </option>
           ))}
         </select>
@@ -160,14 +161,15 @@ export default function QuickSearch() {
         <select
           value={children}
           onChange={(e) => changeChildren(e.target.value)}
-          aria-label="Trẻ em"
+          aria-label={isEn ? "Children" : "Trẻ em"}
           className="w-full bg-transparent text-sm outline-none"
         >
-          <option value="0">Không có trẻ em</option>
-          <option value="1">1 trẻ em</option>
-          <option value="2">2 trẻ em</option>
-          <option value="3">3 trẻ em</option>
-          <option value="4">4 trẻ em</option>
+          <option value="0">{isEn ? "No children" : "Không có trẻ em"}</option>
+          {[1, 2, 3, 4].map((count) => (
+            <option value={count} key={count}>
+              {count} {isEn ? (count === 1 ? "Child" : "Children") : "trẻ em"}
+            </option>
+          ))}
         </select>
       </label>
 
@@ -192,7 +194,7 @@ export default function QuickSearch() {
 
       {Number(children) > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl bg-secondary/40 p-2 text-xs md:col-span-2 lg:col-span-full">
-          <span className="font-semibold text-primary">Độ tuổi trẻ em:</span>
+          <span className="font-semibold text-primary">{isEn ? "Child ages:" : "Độ tuổi trẻ em:"}</span>
           {childAges.map((age, index) => (
             <select
               key={index}
@@ -204,16 +206,15 @@ export default function QuickSearch() {
                   )
                 )
               }
-              aria-label={`Tuổi trẻ em ${index + 1}`}
+              aria-label={isEn ? `Child ${index + 1} age` : `Tuổi trẻ em ${index + 1}`}
               className="rounded-lg border border-input bg-white p-1.5"
             >
-              <option value="0">{index + 1}: 0–5 tuổi</option>
-              <option value="6">{index + 1}: 6 tuổi</option>
-              <option value="7">{index + 1}: 7 tuổi</option>
-              <option value="8">{index + 1}: 8 tuổi</option>
-              <option value="9">{index + 1}: 9 tuổi</option>
-              <option value="10">{index + 1}: 10 tuổi</option>
-              <option value="11">{index + 1}: 11 tuổi</option>
+              <option value="0">{index + 1}: {isEn ? "0–5 years old" : "0–5 tuổi"}</option>
+              {[6, 7, 8, 9, 10, 11].map((a) => (
+                <option value={String(a)} key={a}>
+                  {index + 1}: {a} {isEn ? "years old" : "tuổi"}
+                </option>
+              ))}
             </select>
           ))}
         </div>

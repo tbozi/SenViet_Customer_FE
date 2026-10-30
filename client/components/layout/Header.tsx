@@ -140,6 +140,7 @@ function getNotificationIcon(n: HeaderNotification) {
 export default function Header() {
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
+  const isEn = language === "en";
   const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[0];
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -226,14 +227,18 @@ export default function Header() {
         return;
       }
       const statusText = isConfirmed
-        ? "Đã xác nhận thanh toán thành công"
-        : "Đã hủy đơn";
-      const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+        ? (isEn ? "Payment confirmed successfully" : "Đã xác nhận thanh toán thành công")
+        : (isEn ? "Booking cancelled" : "Đã hủy đơn");
+      const nowTime = new Date().toLocaleTimeString(isEn ? "en-US" : "vi-VN", { hour: "2-digit", minute: "2-digit" });
 
       const newNotif: HeaderNotification = {
         id: `booking_update_${bId}_${Date.now()}`,
-        title: isConfirmed ? "Thanh toán thành công" : `Cập nhật đơn #${bId}`,
-        description: `Đơn #${bId}: ${statusText}. Quý khách có thể kiểm tra chi tiết trong Lịch sử booking.`,
+        title: isConfirmed
+          ? (isEn ? "Payment Successful" : "Thanh toán thành công")
+          : (isEn ? `Booking Update #${bId}` : `Cập nhật đơn #${bId}`),
+        description: isEn
+          ? `Booking #${bId}: ${statusText}. You can check the full details in your booking history.`
+          : `Đơn #${bId}: ${statusText}. Quý khách có thể kiểm tra chi tiết trong Lịch sử booking.`,
         time: nowTime,
         read: false,
         type: isConfirmed ? "PAYMENT" : "BOOKING",
@@ -341,10 +346,10 @@ export default function Header() {
               >
                 <div className="flex items-center justify-between border-b border-border/70 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm text-foreground">Thông báo</h3>
+                    <h3 className="font-bold text-sm text-foreground">{isEn ? "Notifications" : "Thông báo"}</h3>
                     {unreadCount > 0 && (
                       <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-primary">
-                        {unreadCount} mới
+                        {unreadCount} {isEn ? "new" : "mới"}
                       </span>
                     )}
                   </div>
@@ -355,7 +360,7 @@ export default function Header() {
                         onClick={markAllAsRead}
                         className="text-[11px] font-semibold text-primary/80 hover:text-primary transition"
                       >
-                        Đánh dấu đã đọc
+                        {isEn ? "Mark all as read" : "Đánh dấu đã đọc"}
                       </button>
                       <span className="text-border">|</span>
                       <button
@@ -368,7 +373,7 @@ export default function Header() {
                         }}
                         className="text-[11px] font-semibold text-muted-foreground hover:text-destructive transition"
                       >
-                        Xóa tất cả
+                        {isEn ? "Clear all" : "Xóa tất cả"}
                       </button>
                     </div>
                   )}
@@ -378,7 +383,7 @@ export default function Header() {
                   {notifications.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground space-y-2">
                       <Bell className="h-8 w-8 mx-auto text-muted-foreground/40" />
-                      <p className="text-xs">Chưa có thông báo mới nào</p>
+                      <p className="text-xs">{isEn ? "No new notifications yet" : "Chưa có thông báo mới nào"}</p>
                     </div>
                   ) : (
                     notifications.map((n) => (
@@ -417,7 +422,7 @@ export default function Header() {
                       navigate("/bookings");
                     }}
                   >
-                    <span>Xem tất cả lịch sử đặt phòng</span>
+                    <span>{isEn ? "View all booking history" : "Xem tất cả lịch sử đặt phòng"}</span>
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -467,7 +472,7 @@ export default function Header() {
                 <div className="px-3 py-2">
                   <p className="font-semibold text-primary">{user.name}</p>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
-                  <p className="text-xs text-muted-foreground">{user.phone || "Chưa cập nhật số điện thoại"}</p>
+                  <p className="text-xs text-muted-foreground">{user.phone || (isEn ? "Phone not updated" : "Chưa cập nhật số điện thoại")}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -477,7 +482,7 @@ export default function Header() {
                   <Link to="/loyalty">{t("nav.loyalty")}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/crm">CRM cá nhân</Link>
+                  <Link to="/crm">{isEn ? "Personal CRM" : "CRM cá nhân"}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/profile">{t("nav.profile")}</Link>

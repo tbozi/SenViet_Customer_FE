@@ -408,7 +408,8 @@ function getInitialCachedMessages(cacheKey: string): Message[] {
 }
 
 export default function ChatWidget() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const isEn = language === "en";
   const { user } = useAuth();
   const userKey = getUserStorageKey(user?.email);
   const sessionKey = `senviet_chat_session_${userKey}`;
@@ -969,7 +970,9 @@ export default function ChatWidget() {
     !lastBotMsg.includes("payos_payment");
 
   const quickReplies = isAwaitingConfirmation
-    ? ["✅ Xác nhận đặt phòng", "Chỉnh sửa thông tin", "Dịch vụ đưa đón sân bay"]
+    ? (isEn
+        ? ["✅ Confirm booking", "Edit details", "Airport pickup service"]
+        : ["✅ Xác nhận đặt phòng", "Chỉnh sửa thông tin", "Dịch vụ đưa đón sân bay"])
     : [
         t("ai.quickBook"),
         t("ai.quickOffer"),
@@ -1236,12 +1239,19 @@ export default function ChatWidget() {
     }
   };
 
-  const staffQuickTopics = [
-    "Hỗ trợ hoàn tiền & hủy phòng",
-    "Yêu cầu xuất hóa đơn VAT",
-    "Xin nhận phòng sớm / trả phòng muộn",
-    "Tư vấn đặt phòng đoàn / sự kiện",
-  ];
+  const staffQuickTopics = isEn
+    ? [
+        "Refund & cancellation support",
+        "Request VAT invoice",
+        "Early check-in / late check-out",
+        "Group booking & event inquiry",
+      ]
+    : [
+        "Hỗ trợ hoàn tiền & hủy phòng",
+        "Yêu cầu xuất hóa đơn VAT",
+        "Xin nhận phòng sớm / trả phòng muộn",
+        "Tư vấn đặt phòng đoàn / sự kiện",
+      ];
 
   const handleToggleLauncher = () => {
     if (open || staffOpen) {
@@ -1258,13 +1268,13 @@ export default function ChatWidget() {
       {/* Nút Floating "Liên hệ" kiểu CellphoneS */}
       <button
         onClick={handleToggleLauncher}
-        aria-label="Liên hệ tư vấn Sen Việt"
+        aria-label={isEn ? "Contact Sen Việt Support" : "Liên hệ tư vấn Sen Việt"}
         className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-primary via-primary to-slate-900 px-5 py-3.5 text-white shadow-xl shadow-black/25 ring-2 ring-gold/60 transition hover:scale-105"
       >
         {open || staffOpen || menuOpen ? (
           <>
             <X className="h-5 w-5 text-gold" />
-            <span className="text-sm font-bold tracking-wide">Đóng</span>
+            <span className="text-sm font-bold tracking-wide">{isEn ? "Close" : "Đóng"}</span>
           </>
         ) : (
           <>
@@ -1281,7 +1291,7 @@ export default function ChatWidget() {
                 </span>
               )}
             </span>
-            <span className="text-sm font-bold tracking-wide">Liên hệ</span>
+            <span className="text-sm font-bold tracking-wide">{isEn ? "Support" : "Liên hệ"}</span>
           </>
         )}
       </button>
@@ -1291,10 +1301,10 @@ export default function ChatWidget() {
         <div className="fixed bottom-20 right-5 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gold/40 bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200">
           <div className="bg-gradient-to-r from-primary to-slate-900 px-4 py-3 text-white">
             <p className="text-xs font-bold uppercase tracking-wider text-gold">
-              Trung tâm Hỗ trợ Sen Việt 24/7
+              {isEn ? "Sen Việt 24/7 Support Center" : "Trung tâm Hỗ trợ Sen Việt 24/7"}
             </p>
             <p className="mt-0.5 text-xs text-white/80">
-              Chọn kênh tư vấn phù hợp với nhu cầu của quý khách
+              {isEn ? "Choose your preferred channel for instant assistance" : "Chọn kênh tư vấn phù hợp với nhu cầu của quý khách"}
             </p>
           </div>
 
@@ -1316,11 +1326,11 @@ export default function ChatWidget() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-primary">
-                    Nhận tư vấn từ Trợ lý AI
+                    {isEn ? "AI Concierge Consultation" : "Nhận tư vấn từ Trợ lý AI"}
                   </span>
                   {botUnreadCount > 0 ? (
                     <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 animate-pulse">
-                      {botUnreadCount} mới
+                      {botUnreadCount} {isEn ? "new" : "mới"}
                     </span>
                   ) : (
                     <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
@@ -1329,7 +1339,7 @@ export default function ChatWidget() {
                   )}
                 </div>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  Tra cứu phòng trống, báo giá tự động, săn mã giảm giá & đặt phòng nhanh
+                  {isEn ? "Instant room availability, automated rates, promo codes & quick booking" : "Tra cứu phòng trống, báo giá tự động, săn mã giảm giá & đặt phòng nhanh"}
                 </p>
               </div>
             </button>
@@ -1351,14 +1361,14 @@ export default function ChatWidget() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-primary">
-                    Chat với Nhân viên & Zalo
+                    {isEn ? "Front Desk & Zalo Chat" : "Chat với Nhân viên & Zalo"}
                   </span>
                   <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
                     Zalo OA
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  Trao đổi trực tiếp với Lễ tân trên Web hoặc chuyển sang ứng dụng Zalo
+                  {isEn ? "Talk directly to hotel receptionists on Web or connect via Zalo" : "Trao đổi trực tiếp với Lễ tân trên Web hoặc chuyển sang ứng dụng Zalo"}
                 </p>
               </div>
             </button>
@@ -1384,15 +1394,15 @@ export default function ChatWidget() {
               </span>
               <div>
                 <div className="text-sm font-bold leading-tight flex items-center gap-2">
-                  <span>Tư vấn viên & Lễ tân Sen Việt</span>
+                  <span>{isEn ? "Sen Việt Front Desk & Concierge" : "Tư vấn viên & Lễ tân Sen Việt"}</span>
                   {isStaffExpanded && (
                     <span className="hidden sm:inline-block rounded-full bg-blue-400/20 px-2 py-0.5 text-[10px] font-medium text-blue-200">
-                      Chế độ mở rộng
+                      {isEn ? "Expanded mode" : "Chế độ mở rộng"}
                     </span>
                   )}
                 </div>
                 <div className="text-[11px] text-white/80">
-                  Hỗ trợ trực tuyến trên Web & Zalo Official
+                  {isEn ? "Live Support on Web & Official Zalo" : "Hỗ trợ trực tuyến trên Web & Zalo Official"}
                 </div>
               </div>
             </div>
@@ -1439,7 +1449,7 @@ export default function ChatWidget() {
               }`}
             >
               <MessageCircle className="h-3.5 w-3.5" />
-              Chat trên Web
+              {isEn ? "Web Chat" : "Chat trên Web"}
             </button>
             <button
               type="button"
@@ -1451,7 +1461,7 @@ export default function ChatWidget() {
               }`}
             >
               <QrCode className="h-3.5 w-3.5" />
-              Nhắn qua Zalo
+              {isEn ? "Chat on Zalo" : "Nhắn qua Zalo"}
             </button>
           </div>
 
@@ -1460,7 +1470,7 @@ export default function ChatWidget() {
               {/* Bộ chọn chi nhánh cần hỗ trợ (Routing về 1 đầu mối) */}
               <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary/30 px-3.5 py-2 text-xs">
                 <span className="shrink-0 font-semibold text-muted-foreground">
-                  Chi nhánh:
+                  {isEn ? "Branch:" : "Chi nhánh:"}
                 </span>
                 <select
                   value={selectedBranch}
@@ -1542,7 +1552,7 @@ export default function ChatWidget() {
                 {isStaffTyping && (
                   <div className="flex max-w-[85%] items-center gap-2 rounded-2xl bg-secondary px-3.5 py-2 text-xs text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
-                    <span>Lễ tân đang phản hồi...</span>
+                    <span>{isEn ? "Front desk is typing..." : "Lễ tân đang phản hồi..."}</span>
                   </div>
                 )}
               </div>
@@ -1572,7 +1582,7 @@ export default function ChatWidget() {
                 <input
                   value={staffInput}
                   onChange={(e) => setStaffInput(e.target.value)}
-                  placeholder="Nhập nội dung cần nhân viên hỗ trợ..."
+                  placeholder={isEn ? "Type a message for front desk support..." : "Nhập nội dung cần nhân viên hỗ trợ..."}
                   className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
                 />
                 <Button
@@ -2168,7 +2178,7 @@ export default function ChatWidget() {
             {isTyping && (
               <div className="flex max-w-[88%] items-center gap-2 rounded-2xl bg-secondary px-3.5 py-2.5 text-sm text-secondary-foreground">
                 <Loader2 className="h-4 w-4 animate-spin text-gold" />
-                <span className="animate-pulse">Trợ lý AI đang soạn câu trả lời...</span>
+                <span className="animate-pulse">{isEn ? "AI Concierge is typing a response..." : "Trợ lý AI đang soạn câu trả lời..."}</span>
               </div>
             )}
           </div>
