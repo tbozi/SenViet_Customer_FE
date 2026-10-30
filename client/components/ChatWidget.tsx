@@ -158,7 +158,18 @@ export interface HotelReservationData {
   paymentMethod?: string;
 }
 
-function getSlugFromHotelName(name?: string): string {
+const hotelIdToSlugMap: Record<number, string> = {
+  1: "sen-viet-sai-gon",
+  2: "sen-viet-ha-noi",
+  3: "sen-viet-da-nang",
+  4: "sen-viet-nha-trang",
+  5: "sen-viet-da-lat",
+  6: "sen-viet-go-cong",
+  7: "sen-viet-an-nhon",
+};
+
+function getSlugFromHotelName(name?: string, id?: number): string {
+  if (id && hotelIdToSlugMap[id]) return hotelIdToSlugMap[id];
   if (!name) return "sen-viet-an-nhon";
   const lower = name.toLowerCase();
   if (lower.includes("sài gòn") || lower.includes("sai gon") || lower.includes("hồ chí minh") || lower.includes("tphcm")) {
@@ -1542,10 +1553,14 @@ export default function ChatWidget() {
 
               // 2. Ánh xạ thẻ xác nhận đặt phòng khi chưa thanh toán
               if (m.state?.branch && m.state?.currentStep !== "PAYMENT_PROCESSING") {
+                const branchId = Number(m.state.branch?.id || m.state.hotelId || 1);
+                const rawName = m.state.branch?.name;
+                const hotelSlug = getSlugFromHotelName(rawName, branchId);
+                const hotelName = rawName || hotels.find((h) => h.slug === hotelSlug)?.name || "Khách sạn Sen Việt";
                 const qtyPrefix = m.state.roomQty && m.state.roomQty > 1 ? `${m.state.roomQty} x ` : "";
                 bookingCard = {
-                  hotelName: m.state.branch?.name || "Chi nhánh Sen Việt",
-                  hotelSlug: "sen-viet",
+                  hotelName,
+                  hotelSlug,
                   checkInDate: m.state.checkIn,
                   checkOutDate: m.state.checkOut,
                   adults: m.state.guests?.adults,
