@@ -42,8 +42,9 @@ import {
   type RoomStay,
 } from "@/lib/bookings";
 import { useLanguage } from "@/lib/i18n";
+import { toLocalDateStr } from "@/lib/utils";
 const today = new Date();
-const dateValue = (date: Date) => date.toISOString().slice(0, 10);
+const dateValue = (date: Date) => toLocalDateStr(date);
 const defaultGuest = (searchParams: URLSearchParams, maxCapacity = 4): GuestForm => {
   const rawAdults = Number(searchParams.get("adults") || 2);
   const adults = Math.min(maxCapacity, Math.max(1, rawAdults > maxCapacity ? 2 : rawAdults));

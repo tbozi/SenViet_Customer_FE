@@ -8,6 +8,7 @@ import {
   X,
 } from "lucide-react";
 import { formatVnd } from "@/data/hotels";
+import { toLocalDateStr } from "@/lib/utils";
 import { getDailyRoomAvailability, getDailyRoomPrice } from "@/lib/bookings";
 
 interface RoomAvailabilityCalendarProps {
@@ -27,7 +28,7 @@ type CalendarDay = {
   isCurrentMonth: boolean;
 };
 
-const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+const formatDate = (date: Date) => toLocalDateStr(date);
 const parseDate = (date: string) => new Date(`${date}T12:00:00`);
 const today = formatDate(new Date());
 const weekdays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];

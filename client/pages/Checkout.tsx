@@ -13,6 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toLocalDateStr } from "@/lib/utils";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 import { formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
 import {
@@ -528,6 +529,11 @@ export default function Checkout() {
       return setError("Vui lòng điền đủ thông tin người đại diện nhận phòng.");
     if (!cccd)
       return setError("Vui lòng nhập số CCCD / CMND của người đại diện nhận phòng.");
+    const todayStr = toLocalDateStr();
+    const pastSelection = selections.find((s) => s.checkIn && s.checkIn < todayStr);
+    if (pastSelection) {
+      return setError(`Ngày nhận phòng (${pastSelection.checkIn}) đã ở trong quá khứ so với ngày hiện tại (${todayStr}). Vui lòng chọn lại ngày lưu trú.`);
+    }
     setError("");
     setPaymentState("processing");
 

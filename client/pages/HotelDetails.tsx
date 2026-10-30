@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import HotelCard from "@/components/HotelCard";
 import { formatHotelLocation, formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
+import { toLocalDateStr } from "@/lib/utils";
 import { rooms as fallbackRooms, type RoomType } from "@/data/rooms";
 import { fetchRoomsByHotel } from "@/services/roomApi";
 import { fetchHotelReviews, type HotelReviewSummary } from "@/services/reviewApi";
@@ -31,7 +32,7 @@ const fallbackGallery = [
 ];
 
 const today = new Date();
-const dateValue = (date: Date) => date.toISOString().slice(0, 10);
+const dateValue = (date: Date) => toLocalDateStr(date);
 const nextDay = new Date(today.getTime() + 86400000);
 
 const regionLabels = {

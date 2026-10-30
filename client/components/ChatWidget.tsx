@@ -38,6 +38,7 @@ import { useAuth } from "@/lib/auth";
 import { useSendChatMessageMutation, useLazyGetChatHistoryQuery } from "@/services/chatApi";
 import type { ChatMessage as ChatMessageType } from "@/services/chatApi";
 import { formatVnd, hotels } from "@/data/hotels";
+import { toLocalDateStr } from "@/lib/utils";
 import { sendCustomerChatMessage, initCustomerSocket, type StaffReplyPayload } from "@/lib/socket";
 import {
   saveBooking,
@@ -692,8 +693,16 @@ export default function ChatWidget() {
           currentBookingIdRef.current = state.bookingId;
           const existing = getBookings().find((b) => b.id === state.bookingId);
           if (!existing) {
-            const checkIn = state.checkIn || new Date().toISOString().split("T")[0];
-            const checkOut = state.checkOut || new Date(Date.now() + 86400000).toISOString().split("T")[0];
+            const todayStr = toLocalDateStr();
+            const tomorrowStr = toLocalDateStr(new Date(Date.now() + 86400000));
+            let checkIn = state.checkIn || todayStr;
+            if (checkIn < todayStr) checkIn = todayStr;
+            let checkOut = state.checkOut || tomorrowStr;
+            if (checkOut <= checkIn) {
+              const nextDay = new Date(`${checkIn}T00:00:00`);
+              nextDay.setDate(nextDay.getDate() + 1);
+              checkOut = toLocalDateStr(nextDay);
+            }
             const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
             const payAmount = Number(state.amountToPay || 2000);
 
