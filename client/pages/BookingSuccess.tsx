@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -51,7 +51,7 @@ export default function BookingSuccess() {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"BANK" | "EWALLET" | "CASH">("BANK");
 
-  // QR Modal States (Chuáº©n giao diá»‡n POS / VietQR cá»§a Dung)
+  // QR Modal States (Chuẩn giao diện POS / VietQR của Dung)
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(300);
@@ -73,7 +73,7 @@ export default function BookingSuccess() {
       timer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
-            toast.error("Thá»i gian giá»¯ phÃ²ng (5 phÃºt) Ä‘Ã£ háº¿t háº¡n! ÄÆ¡n Ä‘áº·t phÃ²ng Ä‘Ã£ Ä‘Æ°á»£c tá»± Ä‘á»™ng há»§y.");
+            toast.error("Thời gian giữ phòng (5 phút) đã hết hạn! Đơn đặt phòng đã được tự động hủy.");
             setQrModalOpen(false);
             if (booking) {
               updateBooking(booking.id, { status: "cancelled" });
@@ -97,7 +97,7 @@ export default function BookingSuccess() {
   const copyToClipboard = (text: string, fieldName: string) => {
     navigator.clipboard.writeText(text);
     setCopiedField(fieldName);
-    toast.success(`ÄÃ£ sao chÃ©p ${fieldName}`);
+    toast.success(`Đã sao chép ${fieldName}`);
     setTimeout(() => setCopiedField(null), 2000);
   };
 
@@ -131,7 +131,7 @@ export default function BookingSuccess() {
       let orderId = "";
       const payAmount = booking.total;
 
-      // 1. Tra cá»©u Order cá»§a booking tá»« Backend
+      // 1. Tra cứu Order của booking từ Backend
       try {
         const orderRes = await fetch(`${API_BASE_URL}/orders/booking/${booking.id}`);
         if (orderRes.ok) {
@@ -141,12 +141,12 @@ export default function BookingSuccess() {
           }
         }
       } catch (e) {
-        console.warn("KhÃ´ng tra cá»©u Ä‘Æ°á»£c Order tá»« backend:", e);
+        console.warn("Không tra cứu được Order từ backend:", e);
       }
 
       const activeOrderId = orderId || String(booking.id);
       
-      // TrÃ­ch xuáº¥t tÃªn khÃ¡ch hÃ ng khÃ´ng dáº¥u ngáº¯n gá»n
+      // Trích xuất tên khách hàng không dấu ngắn gọn
       let customerShortName = "";
       if (booking.guestName) {
         const parts = booking.guestName.trim().split(/\s+/);
@@ -154,11 +154,11 @@ export default function BookingSuccess() {
         customerShortName = lastName
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
-          .replace(/Ä‘/gi, "d")
+          .replace(/đ/gi, "d")
           .replace(/[^a-zA-Z0-9]/g, "")
           .toUpperCase();
       }
-      // RÃºt gá»n mÃ£ hÃ³a Ä‘Æ¡n: láº¥y HD + 5 kÃ½ tá»± cuá»‘i
+      // Rút gọn mã hóa đơn: lấy HD + 5 ký tự cuối
       const shortOrderCode = activeOrderId.length > 7 ? `HD${activeOrderId.slice(-5)}` : activeOrderId;
       let paymentDescription = customerShortName 
         ? `${customerShortName}_${shortOrderCode}_${Math.round(payAmount)}`
@@ -167,7 +167,7 @@ export default function BookingSuccess() {
         paymentDescription = paymentDescription.substring(0, 25).trim();
       }
 
-      // 2. Náº¿u chá»n Chuyá»ƒn khoáº£n / QuÃ©t mÃ£ QR -> Má»Ÿ mÃ n hÃ¬nh quÃ©t mÃ£ VietQR PayOS
+      // 2. Nếu chọn Chuyển khoản / Quét mã QR -> Mở màn hình quét mã VietQR PayOS
       if (paymentMethod === "BANK") {
         let checkoutUrl: string | undefined = undefined;
         let qrCodeUrl = `https://img.vietqr.io/image/BIDV-V3CAS6811679267-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=NGUYEN+LE+ANH+PHONG`;
@@ -200,14 +200,14 @@ export default function BookingSuccess() {
             }
           }
         } catch (e) {
-          console.warn("Lá»—i gá»i /payment/create-qr:", e);
+          console.warn("Lỗi gọi /payment/create-qr:", e);
         }
 
         setQrData({
           orderId: activeOrderId,
           amount: payAmount,
-          customerName: booking.guestName || "KhÃ¡ch Ä‘áº·t phÃ²ng",
-          bankName: "NgÃ¢n hÃ ng TMCP Äáº§u tÆ° vÃ  PhÃ¡t triá»ƒn Viá»‡t Nam (BIDV)",
+          customerName: booking.guestName || "Khách đặt phòng",
+          bankName: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam (BIDV)",
           accountNo: "V3CAS6811679267",
           accountName: "NGUYEN LE ANH PHONG",
           description: paymentDescription,
@@ -220,7 +220,7 @@ export default function BookingSuccess() {
         return;
       }
 
-      // 3. Náº¿u lÃ  tiá»n máº·t hoáº·c vÃ­ Ä‘iá»‡n tá»­ khÃ¡c
+      // 3. Nếu là tiền mặt hoặc ví điện tử khác
       if (activeOrderId) {
         const token = localStorage.getItem("senviet_token") || localStorage.getItem("accessToken");
         const payRes = await fetch(`${API_BASE_URL}/orders/payments`, {
@@ -234,7 +234,7 @@ export default function BookingSuccess() {
             amount: payAmount,
             paymentType: paymentMethod,
             cashFlowType: "RECEIPT",
-            note: "KhÃ¡ch thanh toÃ¡n trá»±c tuyáº¿n trÃªn website",
+            note: "Khách thanh toán trực tuyến trên website",
           }),
         });
         if (!payRes.ok) {
@@ -245,16 +245,16 @@ export default function BookingSuccess() {
 
       updateBooking(booking.id, { status: "confirmed" });
       setBooking((prev) => (prev ? { ...prev, status: "confirmed" } : undefined));
-      toast.success("Thanh toÃ¡n Ä‘Æ¡n Ä‘áº·t phÃ²ng thÃ nh cÃ´ng!");
+      toast.success("Thanh toán đơn đặt phòng thành công!");
     } catch (err) {
-      console.error("Lá»—i khi xá»­ lÃ½ thanh toÃ¡n:", err);
-      toast.error("Thanh toÃ¡n tháº¥t báº¡i, vui lÃ²ng thá»­ láº¡i!");
+      console.error("Lỗi khi xử lý thanh toán:", err);
+      toast.error("Thanh toán thất bại, vui lòng thử lại!");
     } finally {
       setIsPaying(false);
     }
   };
 
-  // Tá»± Ä‘á»™ng kiá»ƒm tra tráº¡ng thÃ¡i thanh toÃ¡n tá»« PayOS má»—i 2 giÃ¢y khi modal QR má»Ÿ
+  // Tự động kiểm tra trạng thái thanh toán từ PayOS mỗi 2 giây khi modal QR mở
   useEffect(() => {
     if (!qrModalOpen || !qrData?.orderId || booking?.status === "confirmed") {
       return;
@@ -270,7 +270,7 @@ export default function BookingSuccess() {
           const data = await res.json();
           if (data.isPaid && isSubscribed) {
             isSubscribed = false;
-            toast.success("NgÃ¢n hÃ ng Ä‘Ã£ xÃ¡c nháº­n thanh toÃ¡n thÃ nh cÃ´ng!");
+            toast.success("Ngân hàng đã xác nhận thanh toán thành công!");
             if (booking?.id) {
               updateBooking(booking.id, { status: "confirmed" });
             }
@@ -284,10 +284,6 @@ export default function BookingSuccess() {
         console.warn("Polling payment status error:", e);
       }
     };
-
-    // Kiá»ƒm tra ngay sau 1.2s vÃ  sau Ä‘Ã³ láº·p láº¡i Ä‘á»u Ä‘áº·n má»—i 2 giÃ¢y
-    const initialTimer = setTimeout(checkStatus, 1200);
-    const interval = setInterval(checkStatus, 2000);
 
     const handleSocketUpdate = (evt: Event) => {
       const customEvt = evt as CustomEvent;
@@ -312,6 +308,10 @@ export default function BookingSuccess() {
       window.addEventListener("senviet_socket_booking_updated", handleSocketUpdate);
     }
 
+    // Kiểm tra ngay sau 1.2s và sau đó lặp lại đều đặn mỗi 2 giây
+    const initialTimer = setTimeout(checkStatus, 1200);
+    const interval = setInterval(checkStatus, 2000);
+
     return () => {
       isSubscribed = false;
       clearTimeout(initialTimer);
@@ -330,17 +330,17 @@ export default function BookingSuccess() {
       if (res.ok) {
         const data = await res.json();
         if (data.isPaid) {
-          toast.success("NgÃ¢n hÃ ng Ä‘Ã£ xÃ¡c nháº­n thanh toÃ¡n thÃ nh cÃ´ng!");
+          toast.success("Ngân hàng đã xác nhận thanh toán thành công!");
           updateBooking(booking.id, { status: "confirmed" });
           setBooking((prev) => (prev ? { ...prev, status: "confirmed" } : undefined));
           setQrModalOpen(false);
           return;
         }
       }
-      toast.warning("Há»‡ thá»‘ng chÆ°a nháº­n Ä‘Æ°á»£c tiá»n tá»« ngÃ¢n hÃ ng. Náº¿u báº¡n vá»«a chuyá»ƒn khoáº£n, vui lÃ²ng Ä‘á»£i vÃ i giÃ¢y Ä‘á»ƒ ngÃ¢n hÃ ng xá»­ lÃ½ hoáº·c kiá»ƒm tra láº¡i thÃ´ng tin chuyá»ƒn khoáº£n.");
+      toast.warning("Hệ thống chưa nhận được tiền từ ngân hàng. Nếu bạn vừa chuyển khoản, vui lòng đợi vài giây để ngân hàng xử lý hoặc kiểm tra lại thông tin chuyển khoản.");
     } catch (e) {
-      console.error("Lá»—i xÃ¡c nháº­n thanh toÃ¡n:", e);
-      toast.error("KhÃ´ng thá»ƒ káº¿t ná»‘i Ä‘áº¿n mÃ¡y chá»§ kiá»ƒm tra thanh toÃ¡n!");
+      console.error("Lỗi xác nhận thanh toán:", e);
+      toast.error("Không thể kết nối đến máy chủ kiểm tra thanh toán!");
     } finally {
       setIsPaying(false);
     }
@@ -351,10 +351,10 @@ export default function BookingSuccess() {
       <main className="container flex min-h-[55vh] items-center justify-center py-16">
         <div className="text-center">
           <h1 className="font-display text-3xl font-bold text-primary">
-            KhÃ´ng tÃ¬m tháº¥y Ä‘Æ¡n Ä‘áº·t phÃ²ng
+            Không tìm thấy đơn đặt phòng
           </h1>
           <Button asChild className="mt-5 rounded-full">
-            <Link to="/hotels">Quay láº¡i chá»n phÃ²ng</Link>
+            <Link to="/hotels">Quay lại chọn phòng</Link>
           </Button>
         </div>
       </main>
@@ -397,21 +397,21 @@ export default function BookingSuccess() {
               isCancelled ? "text-rose-600" : "text-gold"
             }`}
           >
-            Sen Viá»‡t booking
+            Sen Việt booking
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold text-primary">
             {isCancelled
-              ? "ÄÆ¡n Ä‘áº·t phÃ²ng Ä‘Ã£ háº¿t háº¡n thanh toÃ¡n"
+              ? "Đơn đặt phòng đã hết hạn thanh toán"
               : pending
-              ? "ÄÆ¡n Ä‘ang chá» thanh toÃ¡n"
-              : "Äáº·t phÃ²ng & Thanh toÃ¡n thÃ nh cÃ´ng"}
+              ? "Đơn đang chờ thanh toán"
+              : "Đặt phòng & Thanh toán thành công"}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
             {isCancelled
-              ? "Thá»i gian giá»¯ phÃ²ng (5 phÃºt) Ä‘Ã£ káº¿t thÃºc. PhÃ²ng Ä‘Ã£ Ä‘Æ°á»£c há»‡ thá»‘ng tá»± Ä‘á»™ng hoÃ n tráº£ Ä‘á»ƒ phá»¥c vá»¥ khÃ¡ch hÃ ng khÃ¡c. QuÃ½ khÃ¡ch vui lÃ²ng Ä‘áº·t láº¡i phÃ²ng náº¿u váº«n cÃ³ nhu cáº§u lÆ°u trÃº."
+              ? "Thời gian giữ phòng (5 phút) đã kết thúc. Phòng đã được hệ thống tự động hoàn trả để phục vụ khách hàng khác. Quý khách vui lòng đặt lại phòng nếu vẫn có nhu cầu lưu trú."
               : pending
-              ? "PhÃ²ng Ä‘ang Ä‘Æ°á»£c giá»¯ trong 5 phÃºt. Vui lÃ²ng hoÃ n táº¥t thanh toÃ¡n Ä‘á»ƒ xÃ¡c nháº­n booking."
-              : "Cáº£m Æ¡n báº¡n Ä‘Ã£ lá»±a chá»n Sen Viá»‡t Hotels & Resorts. ÄÆ¡n Ä‘áº·t phÃ²ng cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c thanh toÃ¡n thÃ nh cÃ´ng."}
+              ? "Phòng đang được giữ trong 5 phút. Vui lòng hoàn tất thanh toán để xác nhận booking."
+              : "Cảm ơn bạn đã lựa chọn Sen Việt Hotels & Resorts. Đơn đặt phòng của bạn đã được thanh toán thành công."}
           </p>
         </header>
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
@@ -421,10 +421,10 @@ export default function BookingSuccess() {
                 <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
                 <div>
                   <p className="font-bold text-sm text-rose-900">
-                    ÄÆ¡n Ä‘áº·t phÃ²ng Ä‘Ã£ bá»‹ há»§y tá»± Ä‘á»™ng
+                    Đơn đặt phòng đã bị hủy tự động
                   </p>
                   <p className="mt-1 text-rose-700 leading-relaxed">
-                    Theo quy Ä‘á»‹nh cá»§a chuá»—i khÃ¡ch sáº¡n Sen Viá»‡t, sau 5 phÃºt náº¿u Ä‘Æ¡n Ä‘áº·t phÃ²ng chÆ°a hoÃ n táº¥t thanh toÃ¡n, há»‡ thá»‘ng sáº½ tá»± Ä‘á»™ng há»§y Ä‘Æ¡n vÃ  má»Ÿ láº¡i phÃ²ng cho cÃ¡c khÃ¡ch hÃ ng khÃ¡c.
+                    Theo quy định của chuỗi khách sạn Sen Việt, sau 5 phút nếu đơn đặt phòng chưa hoàn tất thanh toán, hệ thống sẽ tự động hủy đơn và mở lại phòng cho các khách hàng khác.
                   </p>
                 </div>
               </div>
@@ -434,7 +434,7 @@ export default function BookingSuccess() {
               <div>
                 <p className="font-semibold text-primary">{booking.hotelName}</p>
                 <p className="text-sm text-muted-foreground">
-                  MÃ£ booking: {booking.id}
+                  Mã booking: {booking.id}
                 </p>
               </div>
             </div>
@@ -449,9 +449,9 @@ export default function BookingSuccess() {
                       >
                         <div className="flex justify-between gap-3">
                           <span className="font-semibold text-primary">
-                            {selection.roomNameVi} Â· {stay.roomCode}
+                            {selection.roomNameVi} · {stay.roomCode}
                           </span>
-                          <span>{stay.nights} Ä‘Ãªm</span>
+                          <span>{stay.nights} đêm</span>
                         </div>
                         {(stay.offerName || selection.offerName) && (
                           <p className="mt-1 text-xs font-medium text-primary">
@@ -459,11 +459,11 @@ export default function BookingSuccess() {
                           </p>
                         )}
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Nháº­n phÃ²ng: {" "}
+                          Nhận phòng: {" "}
                           {dateTime(stay.checkIn, booking.arrivalTime || "14:00")}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          Tráº£ phÃ²ng: {" "}
+                          Trả phòng: {" "}
                           {dateTime(
                             stay.checkOut,
                             booking.departureTime || "12:00",
@@ -471,7 +471,7 @@ export default function BookingSuccess() {
                         </p>
                         <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                           <p className="font-semibold text-primary">
-                            Tiá»n phÃ²ng: {" "}
+                            Tiền phòng: {" "}
                             {formatVnd(
                               (stay.nightlyPrice || selection.nightlyPrice) * Math.max(0, stay.nights),
                             )}
@@ -480,7 +480,7 @@ export default function BookingSuccess() {
                             Math.max(0, stay.nights) >
                             0 && (
                             <p>
-                              KhÃ¡ch thÃªm: {" "}
+                              Khách thêm: {" "}
                               {formatVnd(
                                 Number(stay.extraGuestCharge || 0) *
                                   Math.max(0, stay.nights),
@@ -490,10 +490,10 @@ export default function BookingSuccess() {
                         </div>
                         {stay.services?.length ? (
                           <div className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
-                            <p className="font-semibold text-primary">Dá»‹ch vá»¥</p>
+                            <p className="font-semibold text-primary">Dịch vụ</p>
                             {stay.services.map((service) => (
                               <p key={service.id}>
-                                {service.name} Ã— {service.quantity} Â· {" "}
+                                {service.name} × {service.quantity} · {" "}
                                 {formatVnd(service.total)}
                               </p>
                             ))}
@@ -507,29 +507,29 @@ export default function BookingSuccess() {
                       className="rounded-xl bg-secondary/50 p-4 text-sm"
                     >
                       <p className="font-semibold text-primary">
-                        {selection.roomNameVi} Ã— {selection.quantity}
+                        {selection.roomNameVi} × {selection.quantity}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Nháº­n phÃ²ng: {" "}
+                        Nhận phòng: {" "}
                         {dateTime(
                           selection.checkIn || booking.checkIn,
                           booking.arrivalTime || "14:00",
                         )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Tráº£ phÃ²ng: {" "}
+                        Trả phòng: {" "}
                         {dateTime(
                           selection.checkOut || booking.checkOut,
                           booking.departureTime || "12:00",
                         )}
                       </p>
                       <p className="mt-2 text-xs font-semibold text-primary">
-                        Tiá»n phÃ²ng: {formatVnd(booking.roomTotal)}
+                        Tiền phòng: {formatVnd(booking.roomTotal)}
                       </p>
                       {booking.extraGuestCharge &&
                       booking.extraGuestCharge > 0 ? (
                         <p className="text-xs text-muted-foreground">
-                          Phá»¥ thu khÃ¡ch thÃªm: {" "}
+                          Phụ thu khách thêm: {" "}
                           {formatVnd(booking.extraGuestCharge)}
                         </p>
                       ) : null}
@@ -540,19 +540,19 @@ export default function BookingSuccess() {
                 <div className="rounded-xl bg-secondary/50 p-4 text-sm">
                   <p className="font-semibold text-primary">{booking.roomName}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Nháº­n phÃ²ng: {" "}
+                    Nhận phòng: {" "}
                     {dateTime(booking.checkIn, booking.arrivalTime || "14:00")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Tráº£ phÃ²ng: {" "}
+                    Trả phòng: {" "}
                     {dateTime(booking.checkOut, booking.departureTime || "12:00")}
                   </p>
                   <p className="mt-2 text-xs font-semibold text-primary">
-                    Tiá»n phÃ²ng: {formatVnd(booking.roomTotal)}
+                    Tiền phòng: {formatVnd(booking.roomTotal)}
                   </p>
                   {booking.extraGuestCharge && booking.extraGuestCharge > 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      Phá»¥ thu khÃ¡ch thÃªm: {formatVnd(booking.extraGuestCharge)}
+                      Phụ thu khách thêm: {formatVnd(booking.extraGuestCharge)}
                     </p>
                   ) : null}
                 </div>
@@ -560,14 +560,14 @@ export default function BookingSuccess() {
             </div>
             {!hasRoomServices && booking.services?.length ? (
               <div className="mt-5 border-t border-border pt-4">
-                <p className="font-semibold text-primary">Dá»‹ch vá»¥ Ä‘Ã£ chá»n</p>
+                <p className="font-semibold text-primary">Dịch vụ đã chọn</p>
                 {booking.services.map((service) => (
                   <div
                     key={service.id}
                     className="mt-1 flex justify-between text-sm"
                   >
                     <span>
-                      {service.name} Ã— {service.quantity}
+                      {service.name} × {service.quantity}
                     </span>
                     <span>{formatVnd(service.total)}</span>
                   </div>
@@ -576,21 +576,21 @@ export default function BookingSuccess() {
             ) : null}
             {booking.cancellationPolicy && (
               <div className="mt-5 rounded-xl border border-amber-200/70 bg-amber-50/50 p-4 text-xs">
-                <p className="font-semibold text-amber-900">ChÃ­nh sÃ¡ch há»§y phÃ²ng Ã¡p dá»¥ng</p>
+                <p className="font-semibold text-amber-900">Chính sách hủy phòng áp dụng</p>
                 <p className="mt-1 text-amber-800/90">{booking.cancellationPolicy}</p>
               </div>
             )}
           </section>
           <aside className="rounded-2xl border border-border bg-white p-6 shadow-lg lg:sticky lg:top-6">
             <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
-              Thanh toÃ¡n
+              Thanh toán
             </p>
             <h2 className="mt-2 font-display text-2xl font-bold text-primary">
-              Chi tiáº¿t thanh toÃ¡n
+              Chi tiết thanh toán
             </h2>
             <div className="mt-5 space-y-2 text-sm">
               <div className="flex justify-between gap-3">
-                <span>Táº¡m tÃ­nh cÃ¡c phÃ²ng</span>
+                <span>Tạm tính các phòng</span>
                 <strong>{formatVnd(subtotalBeforeDiscount)}</strong>
               </div>
               {commonFeeLines.map((fee) => (
@@ -610,17 +610,17 @@ export default function BookingSuccess() {
                 </div>
               ))}
               <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
-                <span>Thuáº¿ VAT (8%)</span>
+                <span>Thuế VAT (8%)</span>
                 <strong>{formatVnd(booking.vat)}</strong>
               </div>
               {booking.discount > 0 && (
                 <div className="flex justify-between gap-3 text-emerald-700">
-                  <span>Giáº£m giÃ¡</span>
+                  <span>Giảm giá</span>
                   <strong>-{formatVnd(booking.discount)}</strong>
                 </div>
               )}
               <div className="flex justify-between gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
-                <span>Tá»•ng thanh toÃ¡n</span>
+                <span>Tổng thanh toán</span>
                 <span>{formatVnd(booking.total)}</span>
               </div>
             </div>
@@ -628,7 +628,7 @@ export default function BookingSuccess() {
             {pending && (
               <div className="mt-5 space-y-3 rounded-xl border border-primary/15 bg-secondary/30 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  PhÆ°Æ¡ng thá»©c thanh toÃ¡n
+                  Phương thức thanh toán
                 </p>
                 <div className="space-y-2 text-xs">
                   <label
@@ -647,7 +647,7 @@ export default function BookingSuccess() {
                       className="accent-primary"
                     />
                     <QrCode className="h-4 w-4 text-primary" />
-                    <span>Chuyá»ƒn khoáº£n / QuÃ©t mÃ£ QR</span>
+                    <span>Chuyển khoản / Quét mã QR</span>
                   </label>
 
                   <label
@@ -666,7 +666,7 @@ export default function BookingSuccess() {
                       className="accent-primary"
                     />
                     <Wallet className="h-4 w-4 text-primary" />
-                    <span>VÃ­ MoMo / VNPay</span>
+                    <span>Ví MoMo / VNPay</span>
                   </label>
 
                   <label
@@ -685,7 +685,7 @@ export default function BookingSuccess() {
                       className="accent-primary"
                     />
                     <CreditCard className="h-4 w-4 text-primary" />
-                    <span>Thanh toÃ¡n táº¡i quáº§y lá»… tÃ¢n</span>
+                    <span>Thanh toán tại quầy lễ tân</span>
                   </label>
                 </div>
 
@@ -698,12 +698,12 @@ export default function BookingSuccess() {
                   {isPaying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Äang xá»­ lÃ½ thanh toÃ¡n...
+                      Đang xử lý thanh toán...
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="mr-2 h-5 w-5" />
-                      Thanh toÃ¡n ngay ({formatVnd(booking.total)})
+                      Thanh toán ngay ({formatVnd(booking.total)})
                     </>
                   )}
                 </Button>
@@ -714,15 +714,15 @@ export default function BookingSuccess() {
               <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-center">
                 <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-rose-700">
                   <AlertCircle className="h-4 w-4" />
-                  ÄÃ£ háº¿t háº¡n giá»¯ phÃ²ng
+                  Đã hết hạn giữ phòng
                 </p>
                 <p className="mt-1 text-xs text-rose-600">
-                  Thá»i gian giá»¯ phÃ²ng 5 phÃºt Ä‘Ã£ káº¿t thÃºc vÃ  phÃ²ng Ä‘Ã£ Ä‘Æ°á»£c nháº£ vá» há»‡ thá»‘ng.
+                  Thời gian giữ phòng 5 phút đã kết thúc và phòng đã được nhả về hệ thống.
                 </p>
                 <Button asChild className="mt-4 w-full rounded-full bg-rose-600 font-bold text-white shadow-md hover:bg-rose-700">
                   <Link to={booking.hotelSlug ? `/hotels/${booking.hotelSlug}` : "/hotels"}>
                     <RefreshCw className="mr-2 h-4 w-4" />
-                    Äáº·t láº¡i phÃ²ng nÃ y
+                    Đặt lại phòng này
                   </Link>
                 </Button>
               </div>
@@ -732,10 +732,10 @@ export default function BookingSuccess() {
               <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-center">
                 <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700">
                   <CheckCircle2 className="h-4 w-4" />
-                  ÄÃ£ thanh toÃ¡n thÃ nh cÃ´ng
+                  Đã thanh toán thành công
                 </p>
                 <p className="mt-1 text-[11px] text-emerald-600">
-                  ÄÆ¡n Ä‘áº·t phÃ²ng cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c thanh toÃ¡n vÃ  xÃ¡c nháº­n Ä‘áº£m báº£o giá»¯ phÃ²ng.
+                  Đơn đặt phòng của bạn đã được thanh toán và xác nhận đảm bảo giữ phòng.
                 </p>
               </div>
             )}
@@ -743,21 +743,21 @@ export default function BookingSuccess() {
             <div className="mt-6 flex flex-col gap-3">
               <Button asChild className="rounded-full">
                 <Link to={`/bookings?created=${booking.id}`}>
-                  Xem lá»‹ch sá»­ Ä‘áº·t phÃ²ng
+                  Xem lịch sử đặt phòng
                 </Link>
               </Button>
               {!pending && !isCancelled && (
                 <Button asChild variant="outline" className="rounded-full">
                   <Link to={`/invoices/${booking.id}`}>
                     <FileText className="mr-2 h-4 w-4" />
-                    Xem & in hÃ³a Ä‘Æ¡n
+                    Xem & in hóa đơn
                   </Link>
                 </Button>
               )}
               <Button asChild variant="outline" className="rounded-full">
                 <Link to="/hotels">
                   <HotelIcon className="mr-2 h-4 w-4" />
-                  {isCancelled ? "TÃ¬m khÃ¡ch sáº¡n khÃ¡c" : "Äáº·t thÃªm phÃ²ng"}
+                  {isCancelled ? "Tìm khách sạn khác" : "Đặt thêm phòng"}
                 </Link>
               </Button>
             </div>
@@ -765,14 +765,14 @@ export default function BookingSuccess() {
         </div>
       </div>
 
-      {/* MÃ€N HÃŒNH QUÃ‰T MÃƒ QR THANH TOÃN (VIETQR / PAYOS - Báº¢N Rá»˜NG RÃƒI SANG TRá»ŒNG) */}
+      {/* MÀN HÌNH QUÉT MÃ QR THANH TOÁN (VIETQR / PAYOS - BẢN RỘNG RÃI SANG TRỌNG) */}
       <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
         <DialogContent className="max-w-[800px] max-h-[92vh] overflow-y-auto rounded-2xl p-0 sm:max-w-[800px] border-none shadow-2xl">
           {/* Header Modal */}
           <div className="flex items-center justify-between border-b border-slate-100 bg-white px-7 py-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Thanh toÃ¡n qua mÃ£ QR</h2>
-              <p className="text-xs text-slate-500 mt-0.5">MÃ£ QR cÃ³ hiá»‡u lá»±c trong 5 phÃºt</p>
+              <h2 className="text-xl font-bold text-slate-900">Thanh toán qua mã QR</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Mã QR có hiệu lực trong 5 phút</p>
             </div>
             <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-sm">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -785,14 +785,14 @@ export default function BookingSuccess() {
             <div className="flex items-center justify-between rounded-xl bg-slate-50/90 px-4 py-3 border border-slate-200/80">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-sm border border-primary/20">
-                  ðŸ¨
+                  🏨
                 </div>
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
-                    QUáº¢N LÃ KHÃCH Sáº N
+                    QUẢN LÝ KHÁCH SẠN
                   </span>
                   <span className="text-[12px] text-muted-foreground">
-                    {booking?.hotelName || "Sen Viá»‡t Hotel"}
+                    {booking?.hotelName || "Sen Việt Hotel"}
                   </span>
                 </div>
               </div>
@@ -805,14 +805,14 @@ export default function BookingSuccess() {
             <div className="flex items-start gap-2.5 rounded-xl bg-amber-50/80 px-4 py-3 text-xs text-amber-900 border border-amber-200/80">
               <Lightbulb className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
               <span className="leading-relaxed">
-                Má»Ÿ <strong>App NgÃ¢n hÃ ng báº¥t ká»³</strong> Ä‘á»ƒ <strong>quÃ©t mÃ£ VietQR</strong> hoáº·c <strong>chuyá»ƒn khoáº£n</strong> chÃ­nh xÃ¡c sá»‘ tiá»n, ná»™i dung bÃªn dÆ°á»›i
+                Mở <strong>App Ngân hàng bất kỳ</strong> để <strong>quét mã VietQR</strong> hoặc <strong>chuyển khoản</strong> chính xác số tiền, nội dung bên dưới
               </span>
             </div>
 
             {/* Main Content: QR Code Left + Bank Info Right */}
             {qrData && (
               <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-stretch">
-                {/* Cá»™t trÃ¡i: QR Code */}
+                {/* Cột trái: QR Code */}
                 <div className="flex flex-col items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
                   <div className="mb-2 flex items-center justify-center gap-1.5">
                     <span className="text-sm font-black tracking-wider text-rose-600">VIET</span>
@@ -830,10 +830,10 @@ export default function BookingSuccess() {
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 p-3 text-center rounded-xl">
                         <AlertCircle className="h-9 w-9 text-rose-500 mb-1" />
                         <span className="text-xs font-bold text-rose-600 uppercase tracking-wide">
-                          MÃ£ QR Ä‘Ã£ háº¿t háº¡n
+                          Mã QR đã hết hạn
                         </span>
                         <span className="text-[11px] text-slate-500 mt-1">
-                          Vui lÃ²ng báº¥m táº¡o mÃ£ má»›i
+                          Vui lòng bấm tạo mã mới
                         </span>
                       </div>
                     )}
@@ -848,19 +848,19 @@ export default function BookingSuccess() {
                   </div>
                 </div>
 
-                {/* Cá»™t pháº£i: ThÃ´ng tin thanh toÃ¡n & chuyá»ƒn khoáº£n */}
+                {/* Cột phải: Thông tin thanh toán & chuyển khoản */}
                 <div className="space-y-3 text-xs">
-                  {/* HÃ ng 1: KhÃ¡ch hÃ ng & MÃ£ hÃ³a Ä‘Æ¡n */}
+                  {/* Hàng 1: Khách hàng & Mã hóa đơn */}
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                      <p className="text-[11px] text-slate-500">KhÃ¡ch hÃ ng</p>
+                      <p className="text-[11px] text-slate-500">Khách hàng</p>
                       <p className="font-bold text-slate-900 text-xs truncate mt-0.5" title={qrData.customerName || booking.guestName}>
-                        {qrData.customerName || booking.guestName || "KhÃ¡ch Ä‘áº·t"}
+                        {qrData.customerName || booking.guestName || "Khách đặt"}
                       </p>
                     </div>
                     <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3">
                       <div className="min-w-0 pr-1">
-                        <p className="text-[11px] text-slate-500">MÃ£ hÃ³a Ä‘Æ¡n</p>
+                        <p className="text-[11px] text-slate-500">Mã hóa đơn</p>
                         <p className="font-mono font-bold text-slate-900 text-xs truncate mt-0.5" title={qrData.orderId}>
                           {qrData.orderId}
                         </p>
@@ -869,61 +869,61 @@ export default function BookingSuccess() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => copyToClipboard(qrData.orderId, "MÃ£ hÃ³a Ä‘Æ¡n")}
+                        onClick={() => copyToClipboard(qrData.orderId, "Mã hóa đơn")}
                         className="h-6 w-6 p-0 shrink-0 text-slate-400 hover:text-primary hover:bg-slate-200/60"
-                        title="Sao chÃ©p mÃ£ hÃ³a Ä‘Æ¡n"
+                        title="Sao chép mã hóa đơn"
                       >
-                        {copiedField === "MÃ£ hÃ³a Ä‘Æ¡n" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedField === "Mã hóa đơn" ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   </div>
 
-                  {/* HÃ ng 2: Sá»‘ tiá»n cáº§n thanh toÃ¡n (KhÃ´ng cÃ³ nÃºt sao chÃ©p) */}
+                  {/* Hàng 2: Số tiền cần thanh toán (Không có nút sao chép) */}
                   <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-3.5 py-2.5">
-                    <p className="text-[11px] font-medium text-emerald-800">Sá»‘ tiá»n thanh toÃ¡n</p>
+                    <p className="text-[11px] font-medium text-emerald-800">Số tiền thanh toán</p>
                     <p className="font-mono font-bold text-emerald-600 text-xl tracking-tight mt-0.5">
                       {formatVnd(qrData.amount)}
                     </p>
                   </div>
 
-                  {/* HÃ ng 3: NgÃ¢n hÃ ng & Chá»§ tÃ i khoáº£n */}
+                  {/* Hàng 3: Ngân hàng & Chủ tài khoản */}
                   <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 space-y-1.5">
                     <div className="flex justify-between items-start gap-2">
-                      <span className="text-[11px] text-slate-500 shrink-0">NgÃ¢n hÃ ng thá»¥ hÆ°á»Ÿng:</span>
+                      <span className="text-[11px] text-slate-500 shrink-0">Ngân hàng thụ hưởng:</span>
                       <span className="font-bold text-slate-900 text-xs text-right leading-tight">
                         {qrData.bankName}
                       </span>
                     </div>
                     <div className="flex justify-between items-center border-t border-slate-200/70 pt-1.5">
-                      <span className="text-[11px] text-slate-500 shrink-0">Chá»§ tÃ i khoáº£n:</span>
+                      <span className="text-[11px] text-slate-500 shrink-0">Chủ tài khoản:</span>
                       <span className="font-bold text-slate-900 text-xs uppercase text-right">
                         {qrData.accountName}
                       </span>
                     </div>
                   </div>
 
-                  {/* HÃ ng 4: Sá»‘ tÃ i khoáº£n */}
+                  {/* Hàng 4: Số tài khoản */}
                   <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
                     <div>
-                      <p className="text-[11px] text-slate-500">Sá»‘ tÃ i khoáº£n</p>
+                      <p className="text-[11px] text-slate-500">Số tài khoản</p>
                       <p className="font-mono font-bold text-slate-900 text-sm tracking-wide">{qrData.accountNo}</p>
                     </div>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => copyToClipboard(qrData.accountNo, "Sá»‘ tÃ i khoáº£n")}
+                      onClick={() => copyToClipboard(qrData.accountNo, "Số tài khoản")}
                       className="h-7 px-2.5 gap-1 rounded-lg text-xs font-medium border-slate-200 hover:bg-slate-100"
                     >
-                      {copiedField === "Sá»‘ tÃ i khoáº£n" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                      <span>Sao chÃ©p</span>
+                      {copiedField === "Số tài khoản" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                      <span>Sao chép</span>
                     </Button>
                   </div>
 
-                  {/* HÃ ng 5: Ná»™i dung chuyá»ƒn khoáº£n */}
+                  {/* Hàng 5: Nội dung chuyển khoản */}
                   <div className="flex items-center justify-between rounded-xl border border-amber-200/90 bg-amber-50/70 px-3 py-2">
                     <div className="min-w-0 pr-2">
-                      <p className="text-[11px] font-semibold text-amber-900">Ná»™i dung chuyá»ƒn khoáº£n</p>
+                      <p className="text-[11px] font-semibold text-amber-900">Nội dung chuyển khoản</p>
                       <p className="font-mono font-bold text-amber-950 text-xs truncate tracking-wide mt-0.5" title={qrData.description}>
                         {qrData.description}
                       </p>
@@ -932,11 +932,11 @@ export default function BookingSuccess() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => copyToClipboard(qrData.description, "Ná»™i dung")}
+                      onClick={() => copyToClipboard(qrData.description, "Nội dung")}
                       className="h-7 px-2.5 gap-1 rounded-lg text-xs font-semibold border-amber-300 text-amber-900 hover:bg-amber-100 shrink-0"
                     >
-                      {copiedField === "Ná»™i dung" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                      <span>Sao chÃ©p</span>
+                      {copiedField === "Nội dung" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                      <span>Sao chép</span>
                     </Button>
                   </div>
                 </div>
@@ -947,12 +947,12 @@ export default function BookingSuccess() {
             <div className="border-t border-slate-100 pt-2.5 text-center space-y-1">
               {countdown > 0 ? (
                 <p className="text-xs font-semibold text-amber-700">
-                  Thá»i gian cÃ²n láº¡i: <span className="font-mono text-sm font-bold">{formatCountdown(countdown)}</span>
+                  Thời gian còn lại: <span className="font-mono text-sm font-bold">{formatCountdown(countdown)}</span>
                 </p>
               ) : (
                 <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-rose-600">
                   <AlertCircle className="h-4 w-4" />
-                  <span>MÃ£ QR Ä‘Ã£ háº¿t thá»i gian hiá»‡u lá»±c (5 phÃºt)</span>
+                  <span>Mã QR đã hết thời gian hiệu lực (5 phút)</span>
                 </div>
               )}
               {qrData?.checkoutUrl && qrData.checkoutUrl.startsWith("http") && countdown > 0 && (
@@ -963,7 +963,7 @@ export default function BookingSuccess() {
                     rel="noreferrer"
                     className="inline-flex items-center gap-1 text-[11px] text-primary underline hover:text-primary/80"
                   >
-                    <span>Má»Ÿ trang thanh toÃ¡n trong tab má»›i</span>
+                    <span>Mở trang thanh toán trong tab mới</span>
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
@@ -978,12 +978,12 @@ export default function BookingSuccess() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                 </span>
                 <span className="font-medium text-[11px] text-center">
-                  Äang tá»± Ä‘á»™ng Ä‘á»“ng bá»™ vá»›i ngÃ¢n hÃ ng... Há»‡ thá»‘ng sáº½ tá»± chuyá»ƒn trang ngay khi báº¡n chuyá»ƒn tiá»n thÃ nh cÃ´ng
+                  Đang tự động đồng bộ với ngân hàng... Hệ thống sẽ tự chuyển trang ngay khi bạn chuyển tiền thành công
                 </span>
               </div>
             ) : (
               <div className="flex items-center justify-center gap-1.5 py-1 text-xs text-rose-600 font-medium">
-                <span>Giao dá»‹ch nÃ y Ä‘Ã£ háº¿t háº¡n. Vui lÃ²ng báº¥m táº¡o mÃ£ má»›i Ä‘á»ƒ thanh toÃ¡n.</span>
+                <span>Giao dịch này đã hết hạn. Vui lòng bấm tạo mã mới để thanh toán.</span>
               </div>
             )}
 
@@ -995,7 +995,7 @@ export default function BookingSuccess() {
                 onClick={() => setQrModalOpen(false)}
                 className="w-1/3 rounded-xl border-slate-300"
               >
-                ÄÃ³ng
+                Đóng
               </Button>
               {countdown > 0 ? (
                 <Button
@@ -1007,12 +1007,12 @@ export default function BookingSuccess() {
                   {isPaying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Äang kiá»ƒm tra tá»« ngÃ¢n hÃ ng...
+                      Đang kiểm tra từ ngân hàng...
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Kiá»ƒm tra thanh toÃ¡n ngay
+                      Kiểm tra thanh toán ngay
                     </>
                   )}
                 </Button>
@@ -1026,12 +1026,12 @@ export default function BookingSuccess() {
                   {isPaying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Äang táº¡o mÃ£ QR má»›i...
+                      Đang tạo mã QR mới...
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Táº¡o láº¡i mÃ£ QR má»›i
+                      Tạo lại mã QR mới
                     </>
                   )}
                 </Button>
