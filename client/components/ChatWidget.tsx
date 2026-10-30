@@ -1197,7 +1197,7 @@ export default function ChatWidget() {
     setIsStaffTyping(true);
 
     const targetHotel = hotels.find((h) => h.name === selectedBranch);
-    const branchHotelId = targetHotel?.id || (selectedBranch.includes("Sài Gòn") ? 1 : selectedBranch.includes("Hà Nội") ? 2 : selectedBranch.includes("Đà Nẵng") ? 3 : 1);
+    const branchHotelId = targetHotel?.id || (selectedBranch.includes("Sài Gòn") ? 1 : selectedBranch.includes("Hà Nội") ? 2 : selectedBranch.includes("Đà Nẵng") ? 3 : null);
 
     // Gửi tin nhắn thực tế qua Socket.IO tới quầy Lễ tân & Quản trị
     sendCustomerChatMessage({
