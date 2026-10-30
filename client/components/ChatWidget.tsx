@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Bot,
   MessageCircle,
@@ -978,14 +978,42 @@ export default function ChatWidget() {
       ];
 
   // ==================== LUỒNG 2: CHAT VỚI NHÂN VIÊN & KẾT NỐI ZALO (KIỂU CELLPHONES) ====================
+  const location = useLocation();
   const staffCacheKey = `senviet_staff_chat_${userKey}`;
   const [menuOpen, setMenuOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [isStaffExpanded, setIsStaffExpanded] = useState(false);
   const [staffMode, setStaffMode] = useState<"web" | "zalo">("web");
-  const [selectedBranch, setSelectedBranch] = useState<string>(
-    "Tổng đài CSKH Toàn hệ thống Sen Việt",
-  );
+
+  // Tự động nhận diện chi nhánh từ URL trang đang xem hoặc đơn đặt phòng gần nhất (Ưu tiên Sen Việt Đà Nẵng)
+  const detectedBranchName = useMemo(() => {
+    try {
+      const pathMatch = location.pathname.match(/\/hotels\/([^/?#]+)/);
+      if (pathMatch) {
+        const h = hotels.find((hotel) => hotel.slug === pathMatch[1]);
+        if (h) return h.name;
+      }
+      const searchParams = new URLSearchParams(location.search);
+      const hotelSlug = searchParams.get("hotel");
+      if (hotelSlug) {
+        const h = hotels.find((hotel) => hotel.slug === hotelSlug || hotel.name.toLowerCase().includes(hotelSlug.toLowerCase()));
+        if (h) return h.name;
+      }
+      const bList = getBookings();
+      if (bList.length > 0 && bList[0].hotelName) {
+        return bList[0].hotelName;
+      }
+    } catch {}
+    return "Sen Việt Đà Nẵng";
+  }, [location.pathname, location.search]);
+
+  const [selectedBranch, setSelectedBranch] = useState<string>(() => detectedBranchName);
+
+  useEffect(() => {
+    if (detectedBranchName && selectedBranch === "Tổng đài CSKH Toàn hệ thống Sen Việt") {
+      setSelectedBranch(detectedBranchName);
+    }
+  }, [detectedBranchName]);
   const [staffInput, setStaffInput] = useState("");
   const [isStaffTyping, setIsStaffTyping] = useState(false);
   const staffScrollRef = useRef<HTMLDivElement>(null);
@@ -1068,6 +1096,10 @@ export default function ChatWidget() {
 
       // 🔔 1. Phát chuông thông báo (Hospitality Chime) cho khách hàng
       playHospitalityChime();
+
+      if (reply.branchName && reply.branchName !== "Tổng đài CSKH Toàn hệ thống Sen Việt") {
+        setSelectedBranch(reply.branchName);
+      }
 
       setStaffMessages((prev) => {
         const isDuplicate = prev.some((m) => {
@@ -1493,6 +1525,11 @@ export default function ChatWidget() {
                       <div className="flex items-center gap-1.5 text-[10px] font-semibold text-primary">
                         <Headset className="h-3 w-3 text-blue-600" />
                         <span>{msg.senderName || "Lễ tân Sen Việt"}</span>
+                        {msg.branchName && (
+                          <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9.5px] font-medium text-blue-800">
+                            {msg.branchName}
+                          </span>
+                        )}
                         <span className="text-muted-foreground font-normal">· {msg.time}</span>
                       </div>
                       <div className="rounded-2xl rounded-tl-sm border border-border bg-secondary/70 px-3.5 py-2.5 text-xs text-foreground shadow-sm">
