@@ -1084,7 +1084,7 @@ export default function ChatWidget() {
 
       setIsStaffTyping(false);
 
-      const rId = String(reply.msgId || `${reply.customerId}_${reply.message}`);
+      const rId = String(reply.msgId || `${reply.customerId}_${Date.now()}_${reply.message}`);
       if (processedStaffReplyIdsRef.current.has(rId)) {
         return;
       }
@@ -1104,7 +1104,7 @@ export default function ChatWidget() {
       setStaffMessages((prev) => {
         const isDuplicate = prev.some((m) => {
           if (reply.msgId && String(m.id) === String(reply.msgId)) return true;
-          return m.from === "staff" && m.text === reply.message;
+          return false;
         });
         if (isDuplicate) return prev;
 
@@ -1153,7 +1153,7 @@ export default function ChatWidget() {
         const serverMsgs = data.result;
         if (Array.isArray(serverMsgs) && serverMsgs.length > 0) {
           const mapped: StaffMessage[] = serverMsgs.map((m: any) => ({
-            id: m.id || m.msgId,
+            id: m.msgId || m.id,
             from: m.senderType === "CUSTOMER" ? "user" : "staff",
             senderName: m.senderName,
             branchName: selectedBranch,
