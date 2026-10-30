@@ -152,7 +152,7 @@ export default function Header() {
     ? `senviet_user_notifications_${user.email.toLowerCase().replace(/[^a-z0-9_]/g, "_")}`
     : "senviet_guest_notifications";
 
-  // Load notifications from local storage and sync with existing bookings
+  // Load actual user notifications from local storage (clean out legacy synthetic booking spam)
   useEffect(() => {
     if (!user) {
       setNotifications([]);
@@ -162,36 +162,16 @@ export default function Header() {
     let loaded: HeaderNotification[] = [];
     try {
       const raw = localStorage.getItem(notifStorageKey);
-      if (raw) loaded = JSON.parse(raw);
-    } catch {}
-
-    const userBookings = getBookings().filter((b) => b.userEmail === user.email);
-    const existingIds = new Set(loaded.map((n) => n.id));
-
-    // Prepopulate active booking alerts if not present
-    for (const b of userBookings) {
-      const notifId = `bkg_init_${b.id}`;
-      if (!existingIds.has(notifId)) {
-        const isPaid = b.status === "confirmed";
-        const isCancel = b.status === "cancelled";
-        loaded.push({
-          id: notifId,
-          title: isCancel
-            ? `Đơn #${b.id} đã yêu cầu hủy`
-            : isPaid
-            ? `Đơn #${b.id} đã xác nhận`
-            : `Đơn #${b.id} đang chờ thanh toán`,
-          description: `${b.hotelName} · ${b.roomName || "Phòng nghỉ"} · ${b.checkIn} đến ${b.checkOut}`,
-          time: new Date(b.createdAt || Date.now()).toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          read: isPaid,
-          type: isCancel ? "CANCEL" : isPaid ? "PAYMENT" : "BOOKING",
-          referenceId: b.id,
-        });
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          // Lọc bỏ triệt để các thông báo rác tổng hợp từ lịch sử đơn hàng cũ
+          loaded = parsed.filter(
+            (n) => !n.id.startsWith("bkg_evt_") && !n.id.startsWith("bkg_init_")
+          );
+        }
       }
-    }
+    } catch {}
 
     setNotifications(loaded);
   }, [user, notifStorageKey]);
@@ -272,40 +252,14 @@ export default function Header() {
       }
     };
 
-    const handleBookingStorage = () => {
-      const userBookings = getBookings().filter((b) => b.userEmail === user.email);
-      setNotifications((prev) => {
-        const existingIds = new Set(prev.map((n) => n.referenceId));
-        const added: HeaderNotification[] = [];
-        for (const b of userBookings) {
-          if (!existingIds.has(b.id)) {
-            added.push({
-              id: `bkg_evt_${b.id}`,
-              title: `Đơn phòng mới #${b.id}`,
-              description: `${b.hotelName} · ${b.roomName} · Trạng thái: ${b.status}`,
-              time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-              read: false,
-              type: "BOOKING",
-              referenceId: b.id,
-            });
-          }
-        }
-        return added.length > 0 ? [...added, ...prev].slice(0, 30) : prev;
-      });
-    };
-
     window.addEventListener("senviet_socket_notification", handleSocketNotif);
     window.addEventListener("senviet_socket_booking_updated", handleSocketBooking);
     window.addEventListener("senviet_socket_new_booking", handleSocketBooking);
-    window.addEventListener("senviet_booking_updated", handleBookingStorage);
-    window.addEventListener("storage", handleBookingStorage);
 
     return () => {
       window.removeEventListener("senviet_socket_notification", handleSocketNotif);
       window.removeEventListener("senviet_socket_booking_updated", handleSocketBooking);
       window.removeEventListener("senviet_socket_new_booking", handleSocketBooking);
-      window.removeEventListener("senviet_booking_updated", handleBookingStorage);
-      window.removeEventListener("storage", handleBookingStorage);
     };
   }, [user, navigate]);
 
@@ -395,13 +349,28 @@ export default function Header() {
                     )}
                   </div>
                   {notifications.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={markAllAsRead}
-                      className="text-[11px] font-semibold text-primary/80 hover:text-primary transition"
-                    >
-                      Đánh dấu đã đọc
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={markAllAsRead}
+                        className="text-[11px] font-semibold text-primary/80 hover:text-primary transition"
+                      >
+                        Đánh dấu đã đọc
+                      </button>
+                      <span className="text-border">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifications([]);
+                          try {
+                            localStorage.removeItem(notifStorageKey);
+                          } catch {}
+                        }}
+                        className="text-[11px] font-semibold text-muted-foreground hover:text-destructive transition"
+                      >
+                        Xóa tất cả
+                      </button>
+                    </div>
                   )}
                 </div>
 
