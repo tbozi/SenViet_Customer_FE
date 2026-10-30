@@ -212,6 +212,7 @@ export default function Header() {
     const handleSocketNotif = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (!detail) return;
+      // Backend chỉ phát notification_created khi đơn đã CONFIRMED / đã nhận tiền, nên không lọc thêm theo type.
       const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
       const newNotif: HeaderNotification = {
         id: detail.id ? String(detail.id) : `notif_${Date.now()}`,
@@ -237,33 +238,38 @@ export default function Header() {
       const detail = (e as CustomEvent).detail;
       if (!detail) return;
       const bId = detail.id || detail.bookingId;
-      const bStatus = detail.bookingStatus || detail.status || "Đã cập nhật";
-      const statusText =
-        bStatus === "CONFIRMED" || bStatus === "confirmed"
-          ? "Đã xác nhận thanh toán thành công"
-          : bStatus === "CANCELLED" || bStatus === "cancelled"
-          ? "Đã hủy đơn"
-          : bStatus;
+      const bStatus = String(detail.bookingStatus || detail.status || "").toUpperCase();
+      const isConfirmed = bStatus === "CONFIRMED";
+      const isCancelled = bStatus.startsWith("CANCEL");
+      // Đơn đang PENDING chờ quét mã QR PayOS: Không hiện popup thông báo thành công trước khi nhận tiền
+      if (!isConfirmed && !isCancelled) {
+        return;
+      }
+      const statusText = isConfirmed
+        ? "Đã xác nhận thanh toán thành công"
+        : "Đã hủy đơn";
       const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 
       const newNotif: HeaderNotification = {
         id: `booking_update_${bId}_${Date.now()}`,
-        title: `Cập nhật đơn #${bId}`,
-        description: `Trạng thái mới: ${statusText}. Quý khách có thể kiểm tra chi tiết trong Lịch sử booking.`,
+        title: isConfirmed ? "Thanh toán thành công" : `Cập nhật đơn #${bId}`,
+        description: `Đơn #${bId}: ${statusText}. Quý khách có thể kiểm tra chi tiết trong Lịch sử booking.`,
         time: nowTime,
         read: false,
-        type: bStatus === "confirmed" || bStatus === "CONFIRMED" ? "PAYMENT" : "BOOKING",
+        type: isConfirmed ? "PAYMENT" : "BOOKING",
         referenceId: String(bId),
       };
 
       setNotifications((prev) => [newNotif, ...prev].slice(0, 30));
-      toast.success(newNotif.title, {
-        description: newNotif.description,
-        action: {
-          label: "Xem ngay",
-          onClick: () => navigate("/bookings"),
-        },
-      });
+      if (isConfirmed) {
+        toast.success(newNotif.title, {
+          description: newNotif.description,
+          action: {
+            label: "Xem ngay",
+            onClick: () => navigate("/bookings"),
+          },
+        });
+      }
     };
 
     const handleBookingStorage = () => {
