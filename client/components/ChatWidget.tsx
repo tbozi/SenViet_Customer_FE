@@ -427,6 +427,7 @@ export default function ChatWidget() {
   const [activePaymentOrderId, setActivePaymentOrderId] = useState<string | null>(null);
   const currentBookingIdRef = useRef<string | null>(null);
   const confirmedOrdersRef = useRef<Set<string>>(new Set());
+  const [confirmedBookingIds, setConfirmedBookingIds] = useState<string[]>([]);
   const cancelledOrdersRef = useRef<Set<string>>(new Set());
   const [cancelledBookingIds, setCancelledBookingIds] = useState<string[]>([]);
   const [botUnreadCount, setBotUnreadCount] = useState(0);
@@ -457,7 +458,7 @@ export default function ChatWidget() {
     }
   }, []);
 
-  // Tự động đồng bộ các đơn đã bị hủy từ bộ nhớ lưu trữ
+  // Tự động đồng bộ các đơn đã xác nhận / đã bị hủy từ bộ nhớ lưu trữ
   useEffect(() => {
     try {
       const stored = getBookings();
@@ -465,6 +466,11 @@ export default function ChatWidget() {
       if (cancelled.length > 0) {
         cancelled.forEach((id) => cancelledOrdersRef.current.add(id));
         setCancelledBookingIds((prev) => Array.from(new Set([...prev, ...cancelled])));
+      }
+      const confirmed = stored.filter((b) => b.status === "confirmed").map((b) => b.id);
+      if (confirmed.length > 0) {
+        confirmed.forEach((id) => confirmedOrdersRef.current.add(id));
+        setConfirmedBookingIds((prev) => Array.from(new Set([...prev, ...confirmed])));
       }
     } catch {}
   }, []);
@@ -482,16 +488,105 @@ export default function ChatWidget() {
     }
   }, [messages, open]);
 
+  // Xử lý xác nhận thanh toán thành công tập trung trong chatbot
+  const handleBookingConfirmation = useCallback(
+    (targetBookingId: string, targetOrderId?: string) => {
+      const cleanBookingId = String(targetBookingId || "").trim();
+      const cleanOrderId = String(targetOrderId || targetBookingId || "").trim();
+      if (!cleanBookingId && !cleanOrderId) return;
+
+      const primaryId = cleanBookingId || cleanOrderId;
+      if (confirmedOrdersRef.current.has(primaryId) && confirmedOrdersRef.current.has(cleanOrderId)) {
+        return;
+      }
+
+      if (cleanBookingId) confirmedOrdersRef.current.add(cleanBookingId);
+      if (cleanOrderId) confirmedOrdersRef.current.add(cleanOrderId);
+
+      setConfirmedBookingIds((prev) =>
+        Array.from(new Set([...prev, ...(cleanBookingId ? [cleanBookingId] : []), ...(cleanOrderId ? [cleanOrderId] : [])]))
+      );
+      setCancelledBookingIds((prev) =>
+        prev.filter((id) => id !== cleanBookingId && id !== cleanOrderId)
+      );
+      setActivePaymentOrderId(null);
+
+      if (cleanBookingId) {
+        updateBooking(cleanBookingId, { status: "confirmed" });
+      }
+
+      toast({ title: "🎉 Thanh toán thành công!", description: `Đã nhận thanh toán thành công cho đơn #${primaryId}!` });
+
+      const savedBooking = getBookings().find(
+        (b) => b.id === cleanBookingId || b.id === cleanOrderId
+      );
+      const hotelName = savedBooking?.hotelName || "Chi nhánh Sen Việt Luxury";
+      const roomName = savedBooking?.roomName || "Phòng nghỉ Sen Việt";
+      const nights = savedBooking?.nights || 1;
+      const rooms = savedBooking?.rooms || 1;
+      const checkIn = savedBooking?.checkIn || "";
+      const checkOut = savedBooking?.checkOut || "";
+      const totalFormatted = formatVnd(savedBooking?.total || 2000);
+
+      setMessages((prev) => {
+        const updatedPrev = prev.map((m) =>
+          m.state &&
+          (m.state.bookingId === cleanBookingId ||
+            m.state.orderId === cleanOrderId ||
+            m.state.bookingId === cleanOrderId)
+            ? {
+                ...m,
+                state: {
+                  ...m.state,
+                  status: "CONFIRMED",
+                  currentStep: "COMPLETED",
+                },
+              }
+            : m
+        );
+
+        const alreadyNotified = updatedPrev.some(
+          (m) =>
+            (m.text.includes("XÁC NHẬN THANH TOÁN THÀNH CÔNG") || m.text.includes("Chúc mừng quý khách")) &&
+            (m.text.includes(primaryId) || (cleanOrderId && m.text.includes(cleanOrderId)))
+        );
+        if (alreadyNotified) return updatedPrev;
+
+        return [
+          ...updatedPrev,
+          {
+            id: Date.now() + 2,
+            from: "bot",
+            text: `🎉 **XÁC NHẬN THANH TOÁN THÀNH CÔNG!**\n\nHệ thống Sen Việt Luxury đã ghi nhận thanh toán thành công qua PayOS VietQR cho đơn đặt phòng **#${primaryId}**!\n\n📋 **Thông tin phòng đã xác nhận:**\n- **Khách sạn:** ${hotelName}\n- **Hạng phòng:** ${roomName} (${rooms} phòng, ${nights} đêm)\n- **Thời gian lưu trú:** ${checkIn} ➔ ${checkOut}\n- **Số tiền đã thanh toán:** **${totalFormatted}** (Đã thanh toán đủ)\n- **Trạng thái đơn:** **Đã xác nhận (Confirmed)** ✅\n\nQuý khách có thể xem đầy đủ chi tiết dịch vụ, phòng và xuất hóa đơn điện tử trong mục **[Lịch sử booking](/history)**. Chúc quý khách có kỳ nghỉ tuyệt vời cùng Sen Việt Luxury!`,
+          },
+        ];
+      });
+    },
+    []
+  );
+
   // Xử lý thông báo hủy phòng tập trung trong chatbot
   const handleBookingCancellation = useCallback(
     (targetBookingId: string, cancelReason?: string) => {
       if (!targetBookingId) return;
       const cleanId = String(targetBookingId).trim();
 
+      // Nếu đơn này đã được xác nhận thanh toán thì tuyệt đối không báo hủy
+      if (confirmedOrdersRef.current.has(cleanId)) return;
+
       cancelledOrdersRef.current.add(cleanId);
       setCancelledBookingIds((prev) => (prev.includes(cleanId) ? prev : [...prev, cleanId]));
       setActivePaymentOrderId((cur) => (cur === cleanId ? null : cur));
       updateBooking(cleanId, { status: "cancelled" });
+
+      // Nếu khách đã đặt sang một đơn mới khác đơn cũ vừa hết hạn, không chèn tin nhắn báo hủy của đơn cũ làm rối cuộc trò chuyện
+      if (
+        currentBookingIdRef.current &&
+        currentBookingIdRef.current !== cleanId &&
+        activePaymentOrderId !== cleanId
+      ) {
+        return;
+      }
 
       const savedBooking = getBookings().find(
         (b) => b.id === cleanId || b.id === cleanId.replace(/^BK_?/, "")
@@ -527,7 +622,7 @@ export default function ChatWidget() {
         setBotUnreadCount((c) => c + 1);
       }
     },
-    [open]
+    [open, activePaymentOrderId]
   );
 
   const toggleListening = () => {
@@ -683,9 +778,9 @@ export default function ChatWidget() {
         const reply = result.result?.reply || t("ai.genericReply");
         const state = result.result?.state;
 
-        // Add bot reply to UI
+        // Add bot reply to UI (clear old state from previous turns so only the latest card is rendered)
         setMessages((prev) => [
-          ...prev,
+          ...prev.map((m) => (state ? { ...m, state: undefined } : m)),
           { id: Date.now() + 1, from: "bot", text: reply, state: state },
         ]);
 
@@ -797,7 +892,9 @@ export default function ChatWidget() {
         if (parsedBotForPolling.payosPayment?.bookingId && !currentBookingIdRef.current) {
           currentBookingIdRef.current = String(parsedBotForPolling.payosPayment.bookingId);
         }
-        if (orderIdToTrack && state?.status !== "CONFIRMED" && !confirmedOrdersRef.current.has(String(orderIdToTrack))) {
+        if (state?.status === "CONFIRMED" && (state?.bookingId || orderIdToTrack)) {
+          handleBookingConfirmation(String(state?.bookingId || orderIdToTrack), String(orderIdToTrack || ""));
+        } else if (orderIdToTrack && state?.status !== "CONFIRMED" && !confirmedOrdersRef.current.has(String(orderIdToTrack))) {
           setActivePaymentOrderId(String(orderIdToTrack));
         }
 
@@ -844,43 +941,14 @@ export default function ChatWidget() {
         }
         const res = await fetch(`/payment/check-order-status/${orderToCheck}`);
         if (!res.ok) return;
-        const data = await res.json();
+        const rawData = await res.json();
+        const data = rawData?.result ?? rawData;
         // 1. Nếu đơn hàng thanh toán thành công
-        if (data.isPaid || data.status === "PAID" || data.status === "CLOSED") {
+        if (data.isPaid || data.status === "PAID" || data.status === "CONFIRMED" || data.status === "CLOSED") {
           clearInterval(interval);
           if (isCancelled) return;
-          confirmedOrdersRef.current.add(orderToCheck);
-          setActivePaymentOrderId(null);
-          const bId = currentBookingIdRef.current || data.bookingId || orderToCheck;
-          toast.success(`🎉 Đã nhận thanh toán thành công cho đơn #${bId}!`);
-          if (bId) {
-            updateBooking(bId, { status: "confirmed" });
-          }
-          const savedBooking = getBookings().find((b) => b.id === bId || b.id === orderToCheck);
-          const hotelName = savedBooking?.hotelName || "Chi nhánh Sen Việt Luxury";
-          const roomName = savedBooking?.roomName || "Phòng nghỉ Sen Việt";
-          const nights = savedBooking?.nights || 1;
-          const rooms = savedBooking?.rooms || 1;
-          const checkIn = savedBooking?.checkIn || "";
-          const checkOut = savedBooking?.checkOut || "";
-          const totalFormatted = formatVnd(savedBooking?.total || 0);
-
-          setMessages((prev) => {
-            const alreadyNotified = prev.some(
-              (m) =>
-                m.text.includes("Chúc mừng quý khách") &&
-                (m.text.includes(String(bId)) || m.text.includes(String(orderToCheck)))
-            );
-            if (alreadyNotified) return prev;
-            return [
-              ...prev,
-              {
-                id: Date.now() + 2,
-                from: "bot",
-                text: `🎉 **XÁC NHẬN THANH TOÁN THÀNH CÔNG!**\n\nHệ thống Sen Việt Luxury đã ghi nhận thanh toán thành công qua PayOS VietQR cho đơn đặt phòng **#${bId || orderToCheck}**!\n\n📋 **Thông tin phòng đã xác nhận:**\n- **Khách sạn:** ${hotelName}\n- **Hạng phòng:** ${roomName} (${rooms} phòng, ${nights} đêm)\n- **Thời gian lưu trú:** ${checkIn} ➔ ${checkOut}\n- **Số tiền đã thanh toán:** **${totalFormatted}** (Đã thanh toán đủ)\n- **Trạng thái đơn:** **Đã xác nhận (Confirmed)** ✅\n\nQuý khách có thể xem đầy đủ chi tiết dịch vụ, phòng và xuất hóa đơn điện tử trong mục **[Lịch sử booking](/history)**. Chúc quý khách có kỳ nghỉ tuyệt vời cùng Sen Việt Luxury!`,
-              },
-            ];
-          });
+          const bId = data.bookingId || currentBookingIdRef.current || orderToCheck;
+          handleBookingConfirmation(String(bId), String(data.orderId || orderToCheck));
           return;
         }
 
@@ -895,9 +963,9 @@ export default function ChatWidget() {
           clearInterval(interval);
           if (isCancelled) return;
           setActivePaymentOrderId(null);
-          const bId = currentBookingIdRef.current || orderToCheck;
+          const bId = data.bookingId || currentBookingIdRef.current || orderToCheck;
           handleBookingCancellation(
-            bId,
+            String(bId),
             data.cancelReason || data.message || "Quá thời gian chờ thanh toán"
           );
           return;
@@ -911,7 +979,7 @@ export default function ChatWidget() {
       isCancelled = true;
       clearInterval(interval);
     };
-  }, [activePaymentOrderId, handleBookingCancellation]);
+  }, [activePaymentOrderId, handleBookingCancellation, handleBookingConfirmation]);
 
   // Lắng nghe sự kiện socket và event hủy booking từ hệ thống
   useEffect(() => {
@@ -920,7 +988,11 @@ export default function ChatWidget() {
       if (!detail) return;
       const bStatus = String(detail.bookingStatus || detail.status || "").toUpperCase();
       const bId = detail.id || detail.bookingId;
-      if (bStatus.startsWith("CANCEL")) {
+      if (bStatus === "CONFIRMED" || bStatus === "PAID") {
+        if (bId && (String(bId) === currentBookingIdRef.current || String(bId) === activePaymentOrderId)) {
+          handleBookingConfirmation(String(bId));
+        }
+      } else if (bStatus.startsWith("CANCEL")) {
         const reason = detail.cancellationReason || detail.reason || "Quá thời gian chờ thanh toán";
         handleBookingCancellation(String(bId), reason);
       }
@@ -1020,7 +1092,6 @@ export default function ChatWidget() {
   const currentBranchHotelId = useMemo(() => {
     const h = hotels.find((hotel) => hotel.name === selectedBranch || hotel.name.toLowerCase().includes(selectedBranch.toLowerCase()));
     if (h?.id) return h.id;
-    if (h?.slug && (hotelSlugToId as Record<string, number>)[h.slug]) return (hotelSlugToId as Record<string, number>)[h.slug];
     if (selectedBranch.includes("Sài Gòn")) return 1;
     if (selectedBranch.includes("Hà Nội")) return 2;
     if (selectedBranch.includes("Đà Nẵng")) return 3;
@@ -1783,7 +1854,9 @@ export default function ChatWidget() {
               isExpanded ? "px-6 py-5 text-[15px]" : "px-4 py-3.5 text-[14.5px]"
             }`}
           >
-            {messages.map((m) => {
+            {(() => {
+              const latestStateMsgId = [...messages].reverse().find((msg) => msg.from === "bot" && msg.state)?.id;
+              return messages.map((m) => {
               if (m.from === "user") {
                 return (
                   <div
@@ -1799,13 +1872,14 @@ export default function ChatWidget() {
 
               // Bot message: parse text & optional booking card / payos payment / hotel reservation
               let { cleanText, bookingCard, payosPayment, hotelReservation } = parseBotMessage(m.text);
+              const isLatestStateMsg = m.id === latestStateMsgId;
 
-              // 1. Ánh xạ thẻ thanh toán PayOS khi AI sinh mã QR thanh toán
-              if (m.state?.qrUrl || m.state?.currentStep === "PAYMENT_PROCESSING") {
+              // 1. Ánh xạ thẻ thanh toán PayOS khi AI sinh mã QR thanh toán (chỉ hiển thị trên tin nhắn trạng thái mới nhất)
+              if (isLatestStateMsg && (m.state?.qrUrl || m.state?.currentStep === "PAYMENT_PROCESSING")) {
                 const qtyPrefix = m.state.roomQty && m.state.roomQty > 1 ? `${m.state.roomQty} x ` : "";
                 payosPayment = {
                   bookingId: m.state.bookingId || "BKG_SENVIET",
-                  orderId: m.state.orderCode || m.state.bookingId || "N/A",
+                  orderId: m.state.orderId || m.state.bookingId || "N/A",
                   hotelName: m.state.branch?.name || "Chi nhánh Sen Việt Luxury",
                   roomName: qtyPrefix + "Phòng " + (m.state.roomType?.id || m.state.roomType || "STANDARD"),
                   checkIn: m.state.checkIn || "",
@@ -1820,8 +1894,8 @@ export default function ChatWidget() {
                 };
               }
 
-              // 2. Ánh xạ thẻ xác nhận đặt phòng khi chưa thanh toán
-              if (m.state?.branch && m.state?.currentStep !== "PAYMENT_PROCESSING") {
+              // 2. Ánh xạ thẻ xác nhận đặt phòng khi chưa thanh toán (chỉ hiển thị trên tin nhắn trạng thái mới nhất)
+              if (isLatestStateMsg && m.state?.branch && m.state?.currentStep !== "PAYMENT_PROCESSING" && !m.state?.qrUrl) {
                 const branchId = Number(m.state.branch?.id || m.state.hotelId || 1);
                 const rawName = m.state.branch?.name;
                 const hotelSlug = getSlugFromHotelName(rawName, branchId);
@@ -1918,25 +1992,48 @@ export default function ChatWidget() {
 
                   {/* THẺ THANH TOÁN PAYOS / VIETQR (AI AGENT CREATED BOOKING) */}
                   {payosPayment && (() => {
-                    const isCardCancelled =
-                      (payosPayment.bookingId && cancelledBookingIds.includes(String(payosPayment.bookingId))) ||
-                      (payosPayment.orderId && cancelledBookingIds.includes(String(payosPayment.orderId))) ||
+                    const displayCode =
+                      payosPayment.bookingId && payosPayment.bookingId !== "BKG_SENVIET"
+                        ? payosPayment.bookingId
+                        : payosPayment.orderId;
+
+                    const isCardConfirmed =
+                      m.state?.status === "CONFIRMED" ||
+                      (payosPayment.bookingId && confirmedBookingIds.includes(String(payosPayment.bookingId))) ||
+                      (payosPayment.orderId && confirmedBookingIds.includes(String(payosPayment.orderId))) ||
                       getBookings().some(
                         (b) =>
                           (b.id === payosPayment.bookingId || b.id === payosPayment.orderId) &&
-                          b.status === "cancelled"
+                          b.status === "confirmed"
                       );
+
+                    const isCardCancelled =
+                      !isCardConfirmed &&
+                      (m.state?.status === "CANCELLED" ||
+                        (payosPayment.bookingId && cancelledBookingIds.includes(String(payosPayment.bookingId))) ||
+                        (payosPayment.orderId && cancelledBookingIds.includes(String(payosPayment.orderId))) ||
+                        getBookings().some(
+                          (b) =>
+                            (b.id === payosPayment.bookingId || b.id === payosPayment.orderId) &&
+                            b.status === "cancelled"
+                        ));
 
                     return (
                       <div
                         className={`mt-3 overflow-hidden rounded-xl border p-4 shadow-lg transition-colors ${
-                          isCardCancelled
+                          isCardConfirmed
+                            ? "border-emerald-500 bg-emerald-500/5 dark:bg-emerald-950/20"
+                            : isCardCancelled
                             ? "border-rose-500/40 bg-rose-500/5 dark:bg-rose-950/20"
                             : "border-emerald-500/50 bg-card"
                         }`}
                       >
                         <div className="flex items-center justify-between border-b border-border/60 pb-2">
-                          {isCardCancelled ? (
+                          {isCardConfirmed ? (
+                            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-4 w-4" /> Đã thanh toán & Xác nhận giữ phòng
+                            </span>
+                          ) : isCardCancelled ? (
                             <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
                               <XCircle className="h-4 w-4" /> Đơn đã bị hủy (Hết hạn giữ chỗ)
                             </span>
@@ -1952,7 +2049,7 @@ export default function ChatWidget() {
                                 : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                             }`}
                           >
-                            Mã #{payosPayment.orderId || payosPayment.bookingId}
+                            Mã #{displayCode}
                           </span>
                         </div>
 
@@ -2012,7 +2109,19 @@ export default function ChatWidget() {
                               </span>
                             </div>
 
-                            {isCardCancelled ? (
+                            {isCardConfirmed ? (
+                              <div className="mt-2.5">
+                                <Button
+                                  asChild
+                                  size="sm"
+                                  className="w-full rounded-xl bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
+                                >
+                                  <Link to={`/booking-success/${displayCode}`} onClick={() => setOpen(false)}>
+                                    Xem phiếu xác nhận đặt phòng <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                                  </Link>
+                                </Button>
+                              </div>
+                            ) : isCardCancelled ? (
                               <div className="mt-2.5">
                                 <Button
                                   onClick={() => {
@@ -2026,19 +2135,46 @@ export default function ChatWidget() {
                                 </Button>
                               </div>
                             ) : (
-                              payosPayment.checkoutUrl && (
-                                <div className="mt-2.5">
+                              <div className="mt-2.5 space-y-1.5">
+                                <Button
+                                  onClick={async () => {
+                                    const checkId = payosPayment.orderId !== "N/A" ? payosPayment.orderId : payosPayment.bookingId;
+                                    try {
+                                      const res = await fetch(`/payment/check-order-status/${checkId}`);
+                                      if (res.ok) {
+                                        const raw = await res.json();
+                                        const d = raw?.result ?? raw;
+                                        if (d.isPaid || d.status === "PAID" || d.status === "CONFIRMED") {
+                                          handleBookingConfirmation(
+                                            String(d.bookingId || payosPayment.bookingId),
+                                            String(d.orderId || payosPayment.orderId)
+                                          );
+                                          return;
+                                        }
+                                      }
+                                      toast({ title: "Đang kiểm tra giao dịch", description: "Hệ thống đang đồng bộ giao dịch từ ngân hàng, vui lòng đợi vài giây sau khi chuyển khoản..." });
+                                    } catch {
+                                      toast({ title: "Lỗi kiểm tra", description: "Không thể kiểm tra trạng thái lúc này, vui lòng thử lại.", variant: "destructive" });
+                                    }
+                                  }}
+                                  size="sm"
+                                  className="w-full rounded-xl bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
+                                >
+                                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Kiểm tra thanh toán ngay
+                                </Button>
+                                {payosPayment.checkoutUrl && (
                                   <Button
                                     asChild
+                                    variant="outline"
                                     size="sm"
-                                    className="w-full rounded-xl bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
+                                    className="w-full rounded-xl border-emerald-500/40 text-xs font-medium text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300"
                                   >
                                     <a href={payosPayment.checkoutUrl} target="_blank" rel="noopener noreferrer">
-                                      Mở cổng thanh toán PayOS <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+                                      Mở cổng thanh toán PayOS <ExternalLink className="ml-1.5 h-3 w-3" />
                                     </a>
                                   </Button>
-                                </div>
-                              )
+                                )}
+                              </div>
                             )}
                           </div>
 
@@ -2047,7 +2183,9 @@ export default function ChatWidget() {
                             <div className="text-center">
                               <div
                                 className={`relative inline-block rounded-xl border-2 border-dashed p-2 shadow-inner overflow-hidden ${
-                                  isCardCancelled
+                                  isCardConfirmed
+                                    ? "border-emerald-500 bg-emerald-500/10"
+                                    : isCardCancelled
                                     ? "border-rose-400/40 bg-muted/40"
                                     : "border-emerald-500/40 bg-white"
                                 }`}
@@ -2060,9 +2198,20 @@ export default function ChatWidget() {
                                   }
                                   alt="Mã QR PayOS"
                                   className={`h-44 w-44 object-contain mx-auto ${
-                                    isCardCancelled ? "opacity-25 grayscale" : ""
+                                    isCardCancelled || isCardConfirmed ? "opacity-20 grayscale" : ""
                                   }`}
                                 />
+                                {isCardConfirmed && (
+                                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/85 backdrop-blur-[1px] p-2 text-center">
+                                    <CheckCircle2 className="h-9 w-9 text-emerald-500 mb-1" />
+                                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                      Đã thanh toán thành công
+                                    </p>
+                                    <p className="text-[10.5px] text-muted-foreground mt-0.5 max-w-[150px] leading-tight">
+                                      Phòng của quý khách đã được xác nhận giữ chỗ trên hệ thống.
+                                    </p>
+                                  </div>
+                                )}
                                 {isCardCancelled && (
                                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-[1px] p-2 text-center">
                                     <AlertTriangle className="h-7 w-7 text-rose-500 mb-1" />
@@ -2077,18 +2226,24 @@ export default function ChatWidget() {
                               </div>
                               <p
                                 className={`mt-1.5 text-[11px] flex items-center justify-center gap-1 ${
-                                  isCardCancelled
+                                  isCardConfirmed
+                                    ? "text-emerald-600 dark:text-emerald-400 font-semibold"
+                                    : isCardCancelled
                                     ? "text-rose-600 dark:text-rose-400 font-medium"
                                     : "text-muted-foreground"
                                 }`}
                               >
-                                {isCardCancelled ? (
+                                {isCardConfirmed ? (
+                                  <>
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Đã xác nhận thanh toán PayOS
+                                  </>
+                                ) : isCardCancelled ? (
                                   <>
                                     <XCircle className="h-3.5 w-3.5" /> Giao dịch giữ chỗ đã đóng
                                   </>
                                 ) : (
                                   <>
-                                    <QrCode className="h-3.5 w-3.5 text-emerald-500" /> Quét mã bằng ứng dụng ngân hàng bất kỳ
+                                    <QrCode className="h-3.5 w-3.5 text-emerald-500" /> Tự động xác nhận ngay sau khi quét mã
                                   </>
                                 )}
                               </p>
@@ -2215,7 +2370,8 @@ export default function ChatWidget() {
                   )}
                 </div>
               );
-            })}
+            });
+            })()}
 
             {/* Typing indicator */}
             {isTyping && (
