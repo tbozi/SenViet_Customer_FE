@@ -40,6 +40,7 @@ export const hotels: Hotel[] = [
     amenities: ["Hồ bơi vô cực tầng thượng", "Rooftop Sky Lounge", "Spa thảo dược độc bản", "Phòng yến tiệc hoàng gia", "Gym 24/7 & Sauna"],
   },
   {
+    id: 2,
     slug: "sen-viet-ha-noi",
     name: "Sen Việt Hà Nội",
     city: "Hoàn Kiếm",
@@ -54,6 +55,7 @@ export const hotels: Hotel[] = [
     amenities: ["Trà thất cung đình", "Nhà hàng ẩm thực Thăng Long", "Ban công view Hồ Gươm", "Dịch vụ quản gia cá nhân", "Đưa đón Limousine"],
   },
   {
+    id: 3,
     slug: "sen-viet-da-nang",
     name: "Sen Việt Đà Nẵng",
     city: "Ngũ Hành Sơn",
@@ -68,6 +70,7 @@ export const hotels: Hotel[] = [
     amenities: ["Bãi biển cát trắng riêng", "Hồ bơi vô cực nước mặn", "Himalaya Wellness Spa", "Câu lạc bộ du thuyền", "Kids Club lâu đài cát"],
   },
   {
+    id: 4,
     slug: "sen-viet-nha-trang",
     name: "Sen Việt Nha Trang",
     city: "TP. Nha Trang",
@@ -82,6 +85,7 @@ export const hotels: Hotel[] = [
     amenities: ["100% phòng view biển", "Sky Bar ngắm toàn cảnh vịnh", "Bể bơi kính vô cực", "Lặn biển san hô tư nhân", "Hải sản tươi sống cao cấp"],
   },
   {
+    id: 5,
     slug: "sen-viet-da-lat",
     name: "Sen Việt Đà Lạt",
     city: "TP. Đà Lạt",
@@ -96,6 +100,7 @@ export const hotels: Hotel[] = [
     amenities: ["Lò sưởi phòng khách", "Trà chiều quý tộc Pháp", "Vườn hoa hồng Pháp & Dâu tây", "Xông hơi tinh dầu thông", "Xe đạp địa hình"],
   },
   {
+    id: 6,
     slug: "sen-viet-go-cong",
     name: "Sen Việt Gò Công",
     city: "TP. Gò Công",
@@ -110,6 +115,7 @@ export const hotels: Hotel[] = [
     amenities: ["Hồ bơi hướng sông Tiền", "Ẩm thực miệt vườn Nam Bộ", "Du thuyền ngắm hoàng hôn", "Đờn ca tài tử Nam Bộ", "Xe đạp khám phá làng nghề"],
   },
   {
+    id: 7,
     slug: "sen-viet-an-nhon",
     name: "Sen Việt An Nhơn",
     city: "Thị xã An Nhơn",

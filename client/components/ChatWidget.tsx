@@ -982,7 +982,6 @@ export default function ChatWidget() {
 
   // ==================== LUỒNG 2: CHAT VỚI NHÂN VIÊN & KẾT NỐI ZALO (KIỂU CELLPHONES) ====================
   const location = useLocation();
-  const staffCacheKey = `senviet_staff_chat_${userKey}`;
   const [menuOpen, setMenuOpen] = useState(false);
   const [staffOpen, setStaffOpen] = useState(false);
   const [isStaffExpanded, setIsStaffExpanded] = useState(false);
@@ -1012,6 +1011,22 @@ export default function ChatWidget() {
 
   const [selectedBranch, setSelectedBranch] = useState<string>(() => detectedBranchName);
 
+  const currentBranchHotelId = useMemo(() => {
+    const h = hotels.find((hotel) => hotel.name === selectedBranch || hotel.name.toLowerCase().includes(selectedBranch.toLowerCase()));
+    if (h?.id) return h.id;
+    if (h?.slug && (hotelSlugToId as Record<string, number>)[h.slug]) return (hotelSlugToId as Record<string, number>)[h.slug];
+    if (selectedBranch.includes("Sài Gòn")) return 1;
+    if (selectedBranch.includes("Hà Nội")) return 2;
+    if (selectedBranch.includes("Đà Nẵng")) return 3;
+    if (selectedBranch.includes("Nha Trang")) return 4;
+    if (selectedBranch.includes("Đà Lạt")) return 5;
+    if (selectedBranch.includes("Gò Công")) return 6;
+    if (selectedBranch.includes("An Nhơn")) return 7;
+    return null;
+  }, [selectedBranch]);
+
+  const staffCacheKey = `senviet_staff_chat_${userKey}_${currentBranchHotelId || "all"}`;
+
   useEffect(() => {
     if (detectedBranchName && selectedBranch === "Tổng đài CSKH Toàn hệ thống Sen Việt") {
       setSelectedBranch(detectedBranchName);
@@ -1022,6 +1037,27 @@ export default function ChatWidget() {
   const staffScrollRef = useRef<HTMLDivElement>(null);
   const processedStaffReplyIdsRef = useRef<Set<string>>(new Set());
 
+  const getBranchInitialMessage = useCallback((branch: string): StaffMessage => {
+    const isGeneral = branch.includes("Tổng đài");
+    return {
+      id: 1,
+      from: "staff",
+      senderName: isGeneral ? "Lễ tân trực tuyến Sen Việt" : `Lễ tân ${branch}`,
+      branchName: branch,
+      time: new Date().toLocaleTimeString("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      text: isGeneral
+        ? (isEn
+            ? "Hello! Sen Viet Online Concierge is at your service 24/7. How may we assist you today?"
+            : "Dạ Sen Việt xin chào quý khách! Em là nhân viên Lễ tân trực tuyến toàn hệ thống Sen Việt. Em có thể hỗ trợ thông tin phòng hoặc dịch vụ gì cho mình ạ?")
+        : (isEn
+            ? `Hello! You are connected directly with the Front Desk & Concierge of ${branch}. How may we assist you today?`
+            : `Dạ Sen Việt xin chào quý khách! Quý khách đang kết nối trực tiếp với Bộ phận Lễ tân & CSKH (${branch}). Em có thể hỗ trợ thông tin gì cho chuyến lưu trú của quý khách ạ?`),
+    };
+  }, [isEn]);
+
   const [staffMessages, setStaffMessages] = useState<StaffMessage[]>(() => {
     try {
       const saved = localStorage.getItem(staffCacheKey);
@@ -1030,20 +1066,23 @@ export default function ChatWidget() {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return [
-      {
-        id: 1,
-        from: "staff",
-        senderName: "Lễ tân trực tuyến Sen Việt",
-        branchName: "Tổng đài CSKH Toàn hệ thống Sen Việt",
-        time: new Date().toLocaleTimeString("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        text: "Dạ chào anh/chị ạ! Em là chuyên viên tư vấn khách hàng của hệ thống Khách sạn Sen Việt Luxury. Anh/chị cần hỗ trợ đặt phòng đoàn, xuất hóa đơn VAT, đổi lịch lưu trú hay kết nối qua Zalo ạ?",
-      },
-    ];
+    return [getBranchInitialMessage(selectedBranch)];
   });
+
+  // Tự động chuyển đổi hộp tin nhắn khi khách đổi chi nhánh
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(staffCacheKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setStaffMessages(parsed);
+          return;
+        }
+      }
+    } catch {}
+    setStaffMessages([getBranchInitialMessage(selectedBranch)]);
+  }, [staffCacheKey, selectedBranch, getBranchInitialMessage]);
 
   useEffect(() => {
     try {
@@ -1147,10 +1186,11 @@ export default function ChatWidget() {
       }
     };
 
-    // Tự động tải lịch sử tin nhắn từ PostgreSQL khi khách truy cập
+    // Tự động tải lịch sử tin nhắn từ PostgreSQL theo đúng chi nhánh đã chọn
     const fetchHistoryFromDb = async () => {
       try {
-        const res = await fetch(`/live-chat/messages?customerId=${customerId}`);
+        const hotelQuery = currentBranchHotelId ? `&hotelId=${currentBranchHotelId}` : "";
+        const res = await fetch(`/live-chat/messages?customerId=${customerId}${hotelQuery}`);
         if (!res.ok) return;
         const data = await res.json();
         const serverMsgs = data.result;
@@ -1176,7 +1216,7 @@ export default function ChatWidget() {
 
     window.addEventListener("senviet_staff_chat_reply", handleStaffReply);
     return () => window.removeEventListener("senviet_staff_chat_reply", handleStaffReply);
-  }, [customerId, user?.accountId, user?.email, selectedBranch, staffOpen]);
+  }, [customerId, user?.accountId, user?.email, selectedBranch, currentBranchHotelId, staffOpen]);
 
   const sendStaffMessage = (text: string) => {
     const trimmed = text.trim();
@@ -1199,16 +1239,13 @@ export default function ChatWidget() {
     setStaffInput("");
     setIsStaffTyping(true);
 
-    const targetHotel = hotels.find((h) => h.name === selectedBranch);
-    const branchHotelId = targetHotel?.id || (selectedBranch.includes("Sài Gòn") ? 1 : selectedBranch.includes("Hà Nội") ? 2 : selectedBranch.includes("Đà Nẵng") ? 3 : null);
-
-    // Gửi tin nhắn thực tế qua Socket.IO tới quầy Lễ tân & Quản trị
+    // Gửi tin nhắn thực tế qua Socket.IO tới quầy Lễ tân & Quản trị của đúng chi nhánh
     sendCustomerChatMessage({
       msgId,
       customerId: String(customerId),
       customerName: user?.name || "Khách hàng (" + (user?.phone || "Trực tuyến") + ")",
       customerPhone: user?.phone || "",
-      hotelId: branchHotelId,
+      hotelId: currentBranchHotelId,
       branchName: selectedBranch,
       message: trimmed,
       timestamp: new Date().toISOString(),
