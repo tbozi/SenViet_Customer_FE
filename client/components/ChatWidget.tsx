@@ -791,9 +791,14 @@ export default function ChatWidget() {
           }
         }
 
-        // Track order ID for payment polling
-        if (state?.orderId && state?.status !== "CONFIRMED" && !confirmedOrdersRef.current.has(String(state.orderId))) {
-          setActivePaymentOrderId(String(state.orderId));
+        // Track order ID for payment polling (from state or parsed payos_payment block)
+        const parsedBotForPolling = parseBotMessage(reply);
+        const orderIdToTrack = state?.orderId || parsedBotForPolling.payosPayment?.orderId || parsedBotForPolling.payosPayment?.bookingId || state?.bookingId;
+        if (parsedBotForPolling.payosPayment?.bookingId && !currentBookingIdRef.current) {
+          currentBookingIdRef.current = String(parsedBotForPolling.payosPayment.bookingId);
+        }
+        if (orderIdToTrack && state?.status !== "CONFIRMED" && !confirmedOrdersRef.current.has(String(orderIdToTrack))) {
+          setActivePaymentOrderId(String(orderIdToTrack));
         }
 
         // Update session ID from server and persist
@@ -846,7 +851,8 @@ export default function ChatWidget() {
           if (isCancelled) return;
           confirmedOrdersRef.current.add(orderToCheck);
           setActivePaymentOrderId(null);
-          const bId = currentBookingIdRef.current;
+          const bId = currentBookingIdRef.current || data.bookingId || orderToCheck;
+          toast.success(`🎉 Đã nhận thanh toán thành công cho đơn #${bId}!`);
           if (bId) {
             updateBooking(bId, { status: "confirmed" });
           }
