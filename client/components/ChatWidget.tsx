@@ -779,9 +779,13 @@ export default function ChatWidget() {
         const state = result.result?.state;
 
         // Add bot reply to UI (clear old state from previous turns so only the latest card is rendered)
+        const validState =
+          state && state.status !== "CANCELLED" && (state.qrUrl || state.currentStep === "PAYMENT_PROCESSING" || state.branch)
+            ? state
+            : undefined;
         setMessages((prev) => [
-          ...prev.map((m) => (state ? { ...m, state: undefined } : m)),
-          { id: Date.now() + 1, from: "bot", text: reply, state: state },
+          ...prev.map((m) => (validState ? { ...m, state: undefined } : m)),
+          { id: Date.now() + 1, from: "bot", text: reply, state: validState },
         ]);
 
         // Synchronize booking to client localStorage for history & success pages
@@ -1887,8 +1891,8 @@ export default function ChatWidget() {
                 hotelReservation = undefined;
               }
 
-              // 1. Ánh xạ thẻ thanh toán PayOS khi AI sinh mã QR thanh toán (chỉ hiển thị trên tin nhắn trạng thái mới nhất)
-              if (isLatestStateMsg && (m.state?.qrUrl || m.state?.currentStep === "PAYMENT_PROCESSING")) {
+              // 1. Ánh xạ thẻ thanh toán PayOS khi AI sinh mã QR thanh toán (chỉ hiển thị khi đang chờ thanh toán và chưa bị hủy)
+              if (isLatestStateMsg && m.state?.qrUrl && m.state?.currentStep === "PAYMENT_PROCESSING" && m.state?.status !== "CANCELLED") {
                 const qtyPrefix = m.state.roomQty && m.state.roomQty > 1 ? `${m.state.roomQty} x ` : "";
                 payosPayment = {
                   bookingId: m.state.bookingId || "BKG_SENVIET",
