@@ -37,6 +37,16 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
       },
+      "/room": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
+      },
+      "/management-rooms": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
+      },
       "/orders": {
         target: "http://127.0.0.1:8081",
         changeOrigin: true,

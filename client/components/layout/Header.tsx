@@ -137,6 +137,25 @@ function getNotificationIcon(n: HeaderNotification) {
   );
 }
 
+
+// Global tracker to throttle duplicate toast popups and prevent spam
+const recentNotificationTracker = new Map<string, number>();
+
+function isRecentDuplicate(key: string, cooldownMs = 8000): boolean {
+  const now = Date.now();
+  const lastTime = recentNotificationTracker.get(key);
+  if (lastTime && now - lastTime < cooldownMs) {
+    return true;
+  }
+  recentNotificationTracker.set(key, now);
+  if (recentNotificationTracker.size > 200) {
+    for (const [k, t] of recentNotificationTracker.entries()) {
+      if (now - t > 30000) recentNotificationTracker.delete(k);
+    }
+  }
+  return false;
+}
+
 export default function Header() {
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
@@ -193,23 +212,39 @@ export default function Header() {
     const handleSocketNotif = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (!detail) return;
-      // Backend chỉ phát notification_created khi đơn đã CONFIRMED / đã nhận tiền, nên không lọc thêm theo type.
+      
+      const bIdMatch = (detail.description || "").match(/#([A-Za-z0-9_]+)/);
+      const bId = detail.referenceId || detail.id || (bIdMatch ? bIdMatch[1] : null);
+      const dedupeKey = bId ? `notif_booking_${bId}` : `notif_${detail.title}_${detail.description?.slice(0, 30)}`;
+      
+      // Chống spam: Nếu cùng 1 sự kiện thông báo vừa hiển thị trong vòng 8s, bỏ qua toast trùng
+      if (isRecentDuplicate(dedupeKey)) return;
+
       const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
       const newNotif: HeaderNotification = {
-        id: detail.id ? String(detail.id) : `notif_${Date.now()}`,
+        id: bId ? `notif_${bId}` : `notif_${Date.now()}`,
         title: detail.title || "Thông báo từ Sen Việt",
         description: detail.description || "",
         time: nowTime,
         read: false,
         type: detail.type || "BOOKING",
-        referenceId: detail.referenceId,
+        referenceId: detail.referenceId || bId,
       };
 
-      setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)].slice(0, 30));
+      setNotifications((prev) => {
+        const isDuplicate = prev.some((n) => 
+          (newNotif.referenceId && n.referenceId && String(n.referenceId) === String(newNotif.referenceId)) ||
+          (n.title === newNotif.title && n.description === newNotif.description)
+        );
+        if (isDuplicate) return prev;
+        return [newNotif, ...prev].slice(0, 30);
+      });
+
       toast.info(newNotif.title, {
+        id: dedupeKey,
         description: newNotif.description,
         action: {
-          label: "Xem",
+          label: isEn ? "View" : "Xem",
           onClick: () => navigate("/bookings"),
         },
       });
@@ -222,17 +257,20 @@ export default function Header() {
       const bStatus = String(detail.bookingStatus || detail.status || "").toUpperCase();
       const isConfirmed = bStatus === "CONFIRMED";
       const isCancelled = bStatus.startsWith("CANCEL");
-      // Đơn đang PENDING chờ quét mã QR PayOS: Không hiện popup thông báo thành công trước khi nhận tiền
       if (!isConfirmed && !isCancelled) {
         return;
       }
+
+      const dedupeKey = `booking_status_${bId}_${isConfirmed ? 'CONFIRMED' : 'CANCELLED'}`;
+      if (isRecentDuplicate(dedupeKey)) return;
+
       const statusText = isConfirmed
         ? (isEn ? "Payment confirmed successfully" : "Đã xác nhận thanh toán thành công")
         : (isEn ? "Booking cancelled" : "Đã hủy đơn");
       const nowTime = new Date().toLocaleTimeString(isEn ? "en-US" : "vi-VN", { hour: "2-digit", minute: "2-digit" });
 
       const newNotif: HeaderNotification = {
-        id: `booking_update_${bId}_${Date.now()}`,
+        id: `booking_update_${bId}`,
         title: isConfirmed
           ? (isEn ? "Payment Successful" : "Thanh toán thành công")
           : (isEn ? `Booking Update #${bId}` : `Cập nhật đơn #${bId}`),
@@ -245,12 +283,21 @@ export default function Header() {
         referenceId: String(bId),
       };
 
-      setNotifications((prev) => [newNotif, ...prev].slice(0, 30));
+      setNotifications((prev) => {
+        const isDuplicate = prev.some((n) => 
+          (newNotif.referenceId && n.referenceId && String(n.referenceId) === String(newNotif.referenceId)) ||
+          (n.title === newNotif.title && n.description === newNotif.description)
+        );
+        if (isDuplicate) return prev;
+        return [newNotif, ...prev].slice(0, 30);
+      });
+
       if (isConfirmed) {
         toast.success(newNotif.title, {
+          id: dedupeKey,
           description: newNotif.description,
           action: {
-            label: "Xem ngay",
+            label: isEn ? "View" : "Xem ngay",
             onClick: () => navigate("/bookings"),
           },
         });
