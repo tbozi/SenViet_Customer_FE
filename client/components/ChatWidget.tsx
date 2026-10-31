@@ -1074,21 +1074,18 @@ export default function ChatWidget() {
     try {
       const pathMatch = location.pathname.match(/\/hotels\/([^/?#]+)/);
       if (pathMatch) {
-        const h = hotels.find((hotel) => hotel.slug === pathMatch[1]);
+        const slug = pathMatch[1];
+        const h = hotels.find((hotel) => hotel.slug === slug || String(hotel.id) === slug);
         if (h) return h.name;
       }
       const searchParams = new URLSearchParams(location.search);
       const hotelSlug = searchParams.get("hotel");
       if (hotelSlug) {
-        const h = hotels.find((hotel) => hotel.slug === hotelSlug || hotel.name.toLowerCase().includes(hotelSlug.toLowerCase()));
+        const h = hotels.find((hotel) => hotel.slug === hotelSlug || hotel.name.toLowerCase().includes(hotelSlug.toLowerCase()) || String(hotel.id) === hotelSlug);
         if (h) return h.name;
       }
-      const bList = getBookings();
-      if (bList.length > 0 && bList[0].hotelName) {
-        return bList[0].hotelName;
-      }
     } catch {}
-    return "Sen Việt Đà Nẵng";
+    return "Tổng đài CSKH Toàn hệ thống Sen Việt";
   }, [location.pathname, location.search]);
 
   const [selectedBranch, setSelectedBranch] = useState<string>(() => detectedBranchName);
@@ -1109,9 +1106,7 @@ export default function ChatWidget() {
   const staffCacheKey = `senviet_staff_chat_${userKey}_${currentBranchHotelId || "all"}`;
 
   useEffect(() => {
-    if (detectedBranchName && selectedBranch === "Tổng đài CSKH Toàn hệ thống Sen Việt") {
-      setSelectedBranch(detectedBranchName);
-    }
+    setSelectedBranch(detectedBranchName);
   }, [detectedBranchName]);
   const [staffInput, setStaffInput] = useState("");
   const [isStaffTyping, setIsStaffTyping] = useState(false);
@@ -1639,8 +1634,12 @@ export default function ChatWidget() {
                       <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2.5 text-xs text-primary-foreground shadow-sm">
                         {msg.text}
                       </div>
-                      <div className="text-right text-[10px] text-muted-foreground">
-                        {msg.time} · {msg.branchName}
+                      <div className="flex items-center justify-end gap-1 text-right text-[10px] text-muted-foreground">
+                        <span>{msg.time}</span>
+                        <span>·</span>
+                        <span className="font-medium text-primary/75">{msg.branchName}</span>
+                        <span>·</span>
+                        <span className="inline-flex items-center text-emerald-600 font-medium" title="Tin nhắn đã gửi tới quầy Lễ tân & CSKH">✓ Đã gửi</span>
                       </div>
                     </div>
                   ) : (
