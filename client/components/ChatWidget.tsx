@@ -785,6 +785,10 @@ export default function ChatWidget() {
         ]);
 
         // Synchronize booking to client localStorage for history & success pages
+        if (state && !state.bookingId) {
+          currentBookingIdRef.current = null;
+          setActivePaymentOrderId(null);
+        }
         if (state?.bookingId) {
           currentBookingIdRef.current = state.bookingId;
           const existing = getBookings().find((b) => b.id === state.bookingId);
@@ -1855,7 +1859,12 @@ export default function ChatWidget() {
             }`}
           >
             {(() => {
-              const latestStateMsgId = [...messages].reverse().find((msg) => msg.from === "bot" && msg.state)?.id;
+              const latestStateMsgId = [...messages].reverse().find((msg) => {
+                if (msg.from !== "bot") return false;
+                if (msg.state) return true;
+                const parsed = parseBotMessage(msg.text);
+                return Boolean(parsed.payosPayment || parsed.bookingCard || parsed.hotelReservation);
+              })?.id;
               return messages.map((m) => {
               if (m.from === "user") {
                 return (
@@ -1873,6 +1882,11 @@ export default function ChatWidget() {
               // Bot message: parse text & optional booking card / payos payment / hotel reservation
               let { cleanText, bookingCard, payosPayment, hotelReservation } = parseBotMessage(m.text);
               const isLatestStateMsg = m.id === latestStateMsgId;
+              if (!isLatestStateMsg) {
+                bookingCard = undefined;
+                payosPayment = undefined;
+                hotelReservation = undefined;
+              }
 
               // 1. Ánh xạ thẻ thanh toán PayOS khi AI sinh mã QR thanh toán (chỉ hiển thị trên tin nhắn trạng thái mới nhất)
               if (isLatestStateMsg && (m.state?.qrUrl || m.state?.currentStep === "PAYMENT_PROCESSING")) {
