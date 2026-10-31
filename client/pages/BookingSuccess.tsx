@@ -173,7 +173,7 @@ export default function BookingSuccess() {
       // 2. Nếu chọn Chuyển khoản / Quét mã QR -> Mở màn hình quét mã VietQR PayOS
       if (paymentMethod === "BANK") {
         let checkoutUrl: string | undefined = undefined;
-        let qrCodeUrl = `https://img.vietqr.io/image/BIDV-V3CAS6811679267-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=NGUYEN+LE+ANH+PHONG`;
+        let qrCodeUrl = `https://img.vietqr.io/image/MB-6172155164659-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=HUYNH+VAN+HIEU`;
 
         try {
           const qrRes = await fetch(`${API_BASE_URL}/payment/create-qr`, {
@@ -198,7 +198,7 @@ export default function BookingSuccess() {
               } else if (qrJson.qrCode && qrJson.qrCode.startsWith("http")) {
                 qrCodeUrl = qrJson.qrCode;
               } else {
-                qrCodeUrl = `https://img.vietqr.io/image/BIDV-V3CAS6811679267-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=NGUYEN+LE+ANH+PHONG`;
+                qrCodeUrl = `https://img.vietqr.io/image/MB-6172155164659-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=HUYNH+VAN+HIEU`;
               }
             }
           }
@@ -210,9 +210,9 @@ export default function BookingSuccess() {
           orderId: activeOrderId,
           amount: payAmount,
           customerName: booking.guestName || "Khách đặt phòng",
-          bankName: "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam (BIDV)",
-          accountNo: "V3CAS6811679267",
-          accountName: "NGUYEN LE ANH PHONG",
+          bankName: "Ngân hàng TMCP Quân Đội (MB Bank)",
+          accountNo: "6172155164659",
+          accountName: "HUYNH VAN HIEU",
           description: paymentDescription,
           qrUrl: qrCodeUrl,
           checkoutUrl,
@@ -851,7 +851,7 @@ export default function BookingSuccess() {
                     <span className="text-blue-600 font-bold">napas 247</span>
                     <span className="text-slate-300">|</span>
                     <span className="text-slate-700 font-bold truncate max-w-[180px]" title={qrData.bankName}>
-                      {qrData.bankName || "BIDV"}
+                      {qrData.bankName || "MB Bank"}
                     </span>
                   </div>
                 </div>
