@@ -67,6 +67,7 @@ interface StaffMessage {
 
 const SENVIET_ZALO_HOTLINE = "0989809036";
 const SENVIET_ZALO_URL = `https://zalo.me/${SENVIET_ZALO_HOTLINE}`;
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8081";
 
 /**
  * Phát chuông thông báo (Hospitality Chime) bằng Web Audio API
@@ -947,7 +948,7 @@ export default function ChatWidget() {
           clearInterval(interval);
           return;
         }
-        const res = await fetch(`/payment/check-order-status/${orderToCheck}`);
+        const res = await fetch(`${API_BASE_URL}/payment/check-order-status/${orderToCheck}`);
         if (!res.ok) return;
         const rawData = await res.json();
         const data = rawData?.result ?? rawData;
@@ -1270,7 +1271,7 @@ export default function ChatWidget() {
     const fetchHistoryFromDb = async () => {
       try {
         const hotelQuery = currentBranchHotelId ? `&hotelId=${currentBranchHotelId}` : "";
-        const res = await fetch(`/live-chat/messages?customerId=${customerId}${hotelQuery}`);
+        const res = await fetch(`${API_BASE_URL}/live-chat/messages?customerId=${customerId}${hotelQuery}`);
         if (!res.ok) return;
         const data = await res.json();
         const serverMsgs = data.result;
@@ -2157,7 +2158,7 @@ export default function ChatWidget() {
                                   onClick={async () => {
                                     const checkId = payosPayment.orderId !== "N/A" ? payosPayment.orderId : payosPayment.bookingId;
                                     try {
-                                      const res = await fetch(`/payment/check-order-status/${checkId}`);
+                                      const res = await fetch(`${API_BASE_URL}/payment/check-order-status/${checkId}`);
                                       if (res.ok) {
                                         const raw = await res.json();
                                         const d = raw?.result ?? raw;

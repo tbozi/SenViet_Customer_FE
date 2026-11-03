@@ -1,85 +1,39 @@
-import { defineConfig } from "vite";
+import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
+import { createServer } from "./server";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    proxy: {
-      "/auth": {
-        // Use IPv4 explicitly: the Spring Boot process listens on IPv4 and
-        // `localhost` can resolve to IPv6 first on Windows, causing proxy timeouts.
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-      },
-      "/users": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-      },
-      "/promotions": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-      },
-      "/bookings": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/services": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/rooms": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/room": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/management-rooms": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/orders": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/customer": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/reviews": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-        bypass: (req) => (req.headers.accept?.includes("text/html") ? "/index.html" : null),
-      },
-      "/payment": {
-        target: "http://127.0.0.1:8081",
-        changeOrigin: true,
-      },
-      "/ai": {
-        target: "http://127.0.0.1:8000",
-        changeOrigin: true,
-      },
-    },
     fs: {
       allow: ["./client", "./shared", "index.html"],
       deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "server/**"],
     },
+    proxy: {
+      "/ai": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+      "/api/admin-ai": {
+        target: "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+      "/live-chat": {
+        target: "http://127.0.0.1:8081",
+        changeOrigin: true,
+      },
+    },
+    allowedHosts: true
   },
+
+  allowedHosts: [".loca.lt", "all"],
   build: {
     outDir: "dist/spa",
   },
-  plugins: [react()],
+  plugins: [react(), expressPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./client"),
@@ -87,3 +41,16 @@ export default defineConfig(({ mode }) => ({
     },
   },
 }));
+
+function expressPlugin(): Plugin {
+  return {
+    name: "express-plugin",
+    apply: "serve", // Only apply during development (serve mode)
+    configureServer(server) {
+      const app = createServer();
+
+      // Add Express app as middleware to Vite dev server
+      server.middlewares.use(app);
+    },
+  };
+}

@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? "" : "http://localhost:8081");
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8081";
 
 function dateTime(date: string, time: string, isEn = false) {
   return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString(isEn ? "en-US" : "vi-VN")}`;
