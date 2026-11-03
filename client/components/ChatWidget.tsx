@@ -779,13 +779,23 @@ export default function ChatWidget() {
         const reply = result.result?.reply || t("ai.genericReply");
         const state = result.result?.state;
 
-        // Add bot reply to UI (clear old state from previous turns so only the latest card is rendered)
-        const validState =
-          state && state.status !== "CANCELLED" && (state.qrUrl || state.currentStep === "PAYMENT_PROCESSING" || state.branch)
-            ? state
-            : undefined;
+        // Chỉ gán state hiển thị thẻ cho tin nhắn này nếu lượt phản hồi thực sự yêu cầu render thẻ (tìm phòng hoặc tạo QR thanh toán)
+        const isBookingAction =
+          Boolean(state && state.status !== "CANCELLED" && (
+            state.cardAction === "SHOW_ROOM_OPTIONS" ||
+            state.cardAction === "SHOW_PAYOS_PAYMENT" ||
+            state.cardAction === "SHOW_HOTEL_RESERVATION" ||
+            (state.qrUrl && state.currentStep === "PAYMENT_PROCESSING") ||
+            (state.currentStep === "SELECT_ROOM" &&
+              state.availableRooms &&
+              state.availableRooms.length > 0 &&
+              /(phòng|phong|trống|trong|giá|gia|lựa chọn|lua chon|đặt|dat)/i.test(reply))
+          ));
+
+        const validState = isBookingAction ? state : undefined;
+        // Giữ nguyên state của các tin nhắn trước đó, KHÔNG xóa để thẻ không bị biến mất khi chat câu tiếp theo!
         setMessages((prev) => [
-          ...prev.map((m) => (validState ? { ...m, state: undefined } : m)),
+          ...prev,
           { id: Date.now() + 1, from: "bot", text: reply, state: validState },
         ]);
 
@@ -1862,14 +1872,7 @@ export default function ChatWidget() {
               isExpanded ? "px-6 py-5 text-[15px]" : "px-4 py-3.5 text-[14.5px]"
             }`}
           >
-            {(() => {
-              const latestStateMsgId = [...messages].reverse().find((msg) => {
-                if (msg.from !== "bot") return false;
-                if (msg.state) return true;
-                const parsed = parseBotMessage(msg.text);
-                return Boolean(parsed.payosPayment || parsed.bookingCard || parsed.hotelReservation);
-              })?.id;
-              return messages.map((m) => {
+            {messages.map((m) => {
               if (m.from === "user") {
                 return (
                   <div
@@ -1885,15 +1888,9 @@ export default function ChatWidget() {
 
               // Bot message: parse text & optional booking card / payos payment / hotel reservation
               let { cleanText, bookingCard, payosPayment, hotelReservation } = parseBotMessage(m.text);
-              const isLatestStateMsg = m.id === latestStateMsgId;
-              if (!isLatestStateMsg) {
-                bookingCard = undefined;
-                payosPayment = undefined;
-                hotelReservation = undefined;
-              }
 
-              // 1. Ánh xạ thẻ thanh toán PayOS khi AI sinh mã QR thanh toán (chỉ hiển thị khi đang chờ thanh toán và chưa bị hủy)
-              if (isLatestStateMsg && m.state?.qrUrl && m.state?.currentStep === "PAYMENT_PROCESSING" && m.state?.status !== "CANCELLED") {
+              // 1. Ánh xạ thẻ thanh toán PayOS nếu tin nhắn này có lưu thông tin thanh toán
+              if (m.state?.qrUrl && m.state?.currentStep === "PAYMENT_PROCESSING" && m.state?.status !== "CANCELLED") {
                 const qtyPrefix = m.state.roomQty && m.state.roomQty > 1 ? `${m.state.roomQty} x ` : "";
                 payosPayment = {
                   bookingId: m.state.bookingId || "BKG_SENVIET",
@@ -1912,8 +1909,20 @@ export default function ChatWidget() {
                 };
               }
 
-              // 2. Ánh xạ thẻ xác nhận đặt phòng khi chưa thanh toán (chỉ hiển thị trên tin nhắn trạng thái mới nhất)
-              if (isLatestStateMsg && m.state?.branch && m.state?.currentStep !== "PAYMENT_PROCESSING" && !m.state?.qrUrl) {
+              // 2. Ánh xạ thẻ đặt phòng nhanh nếu tin nhắn này có kết quả tra cứu phòng
+              const shouldShowBookingCard =
+                Boolean(m.state?.cardAction === "SHOW_ROOM_OPTIONS") ||
+                Boolean(
+                  m.state?.branch &&
+                  m.state?.availableRooms &&
+                  m.state.availableRooms.length > 0 &&
+                  m.state?.currentStep !== "PAYMENT_PROCESSING" &&
+                  !m.state?.qrUrl &&
+                  m.text &&
+                  /(phòng|phong|trống|trong|giá|gia|lựa chọn|lua chon|đặt|dat)/i.test(m.text)
+                );
+
+              if (shouldShowBookingCard && m.state?.branch && !bookingCard) {
                 const branchId = Number(m.state.branch?.id || m.state.hotelId || 1);
                 const rawName = m.state.branch?.name;
                 const hotelSlug = getSlugFromHotelName(rawName, branchId);
@@ -1932,7 +1941,7 @@ export default function ChatWidget() {
                   pricePerNight: m.state.availableRooms?.find((r: any) => r.roomType === (m.state.roomType?.id || m.state.roomType))?.pricePerNight || m.state.amountToPay || 0,
                   customerName: m.state.guestInfo?.name,
                   customerPhone: m.state.guestInfo?.phone,
-                  roomOptions: (m.state.currentStep === "SELECT_ROOM" && m.state.availableRooms) ? m.state.availableRooms.map((r: any) => ({
+                  roomOptions: (m.state.availableRooms && m.state.availableRooms.length > 0) ? m.state.availableRooms.map((r: any) => ({
                     type: r.roomType || "",
                     typeName: r.roomTypeName || r.roomType,
                     price: r.pricePerNight || 0
@@ -2388,8 +2397,7 @@ export default function ChatWidget() {
                   )}
                 </div>
               );
-            });
-            })()}
+            })}
 
             {/* Typing indicator */}
             {isTyping && (
