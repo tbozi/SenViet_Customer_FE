@@ -31,7 +31,7 @@ export interface RoomType {
   offers: RoomOffer[];
   image: string;
   images?: string[];
-  building: "A" | "B" | "C";
+  building: "A" | "B" | "C" | string;
   floor: number;
   buildingName?: string;
   roomCodes: string[];
