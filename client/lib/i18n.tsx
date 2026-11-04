@@ -76,9 +76,11 @@ const dictionaries = {
       subtitle:
         "Từ gợi ý phòng phù hợp đến hỗ trợ sau khi đặt phòng, trợ lý AI của Sen Việt đồng hành cùng bạn mọi lúc.",
       point1Title: "Tư vấn đặt phòng thông minh",
-      point1Desc: "Gợi ý khách sạn và loại phòng phù hợp với nhu cầu, ngân sách.",
+      point1Desc:
+        "Gợi ý khách sạn và loại phòng phù hợp với nhu cầu, ngân sách.",
       point2Title: "Hỗ trợ 24/7",
-      point2Desc: "Trả lời mọi thắc mắc về đặt phòng, chính sách, ưu đãi bất kỳ lúc nào.",
+      point2Desc:
+        "Trả lời mọi thắc mắc về đặt phòng, chính sách, ưu đãi bất kỳ lúc nào.",
       point3Title: "Chăm sóc sau đặt phòng",
       point3Desc: "Nhắc lịch, hỗ trợ đổi/huỷ và giải đáp khi lưu trú.",
       cta: "Trò chuyện với trợ lý AI",
@@ -95,7 +97,8 @@ const dictionaries = {
     },
     cta: {
       title: "Chủ động đăng ký để nhận ưu đãi riêng",
-      subtitle: "Thành viên Sen Việt nhận ưu đãi giá phòng và tích điểm mỗi lần lưu trú.",
+      subtitle:
+        "Thành viên Sen Việt nhận ưu đãi giá phòng và tích điểm mỗi lần lưu trú.",
       button: "Đăng ký ngay",
     },
     testimonials: {
@@ -113,19 +116,83 @@ const dictionaries = {
       loginSubtitle: "Chào mừng quay lại Sen Việt Hotels.",
       registerTitle: "Tạo tài khoản mới",
       registerSubtitle: "Đăng ký để đặt phòng và nhận ưu đãi thành viên.",
+      accountInfoTitle: "Thông tin tài khoản",
+      accountInfoSubtitle: "Tạo thông tin đăng nhập cho tài khoản khách hàng.",
+      registrationProgress: "Tiến trình đăng ký",
+      stepCustomerInfo: "Thông tin khách hàng",
+      stepAccountInfo: "Thông tin tài khoản",
+      stepVerifyOtp: "Xác thực mã OTP",
       name: "Họ và tên",
+      phone: "Số điện thoại",
+      phoneLength: "Số điện thoại phải gồm đúng 10 chữ số.",
       cccd: "Số CCCD",
       email: "Email",
       password: "Mật khẩu",
       confirmPassword: "Xác nhận mật khẩu",
+      showPassword: "Hiện mật khẩu",
+      hidePassword: "Ẩn mật khẩu",
+      showConfirmPassword: "Hiện mật khẩu xác nhận",
+      hideConfirmPassword: "Ẩn mật khẩu xác nhận",
       loginButton: "Đăng nhập",
       registerButton: "Đăng ký",
+      continueButton: "Tiếp tục",
+      checkingCustomer: "Đang kiểm tra hồ sơ...",
+      creatingAccount: "Đang tạo hồ sơ...",
+      registerLink: "Đăng ký",
+      loginLink: "Đăng nhập",
+      forgotPassword: "Quên mật khẩu?",
+      forgotPasswordPrompt: "Bạn không nhớ mật khẩu?",
+      resetPasswordLink: "Bấm vào đây để lấy lại mật khẩu qua mã OTP",
+      backToCustomerInfo: "Quay lại thông tin khách hàng",
+      otpTitle: "Xác thực tài khoản",
+      otpSentTo: "Nhập mã OTP đã gửi đến",
+      otpExpired: "Mã OTP đã hết hạn",
+      otpValidFor: "Mã có hiệu lực trong",
+      otpLabel: "Mã OTP",
+      otpAriaLabel: "Mã OTP gồm 6 chữ số",
+      verifying: "Đang xác thực...",
+      verifyContinue: "Xác thực và tiếp tục",
+      resendingOtp: "Đang gửi lại mã...",
+      resendOtp: "Gửi lại mã",
+      resendSuccess: "Mã OTP mới đã được gửi. Vui lòng kiểm tra email.",
+      backToRegister: "Quay lại đăng ký",
+      registeredSuccess:
+        "Đăng ký tài khoản thành công! Vui lòng nhập mật khẩu để đăng nhập.",
+      customerAlreadyRegistered: "Khách hàng này đã đăng ký tài khoản.",
+      customerRegisteredWithEmail: "Khách hàng đã đăng ký bằng email",
+      identityMismatch:
+        "Số điện thoại và CCCD không khớp với cùng một hồ sơ khách hàng. Vui lòng kiểm tra lại thông tin.",
+      profileCheckFailed:
+        "Không thể xác nhận thông tin khách hàng. Vui lòng kiểm tra lại.",
+      profileCheckSuccess: "Kiểm tra hồ sơ thành công.",
+      walkInFound:
+        "Hồ sơ khách hàng đã tồn tại. Vui lòng bổ sung email và mật khẩu.",
+      newCustomer: "Có thể tiếp tục nhập email và mật khẩu.",
+      invalidCredentials: "Sai tài khoản hoặc mật khẩu. Vui lòng kiểm tra lại.",
+      emailExists: "Email này đã được đăng ký.",
+      phoneExists: "Số điện thoại này đã được đăng ký.",
+      verificationPending:
+        "Số điện thoại này đang chờ xác thực bởi một yêu cầu khác.",
+      accountAlreadyRegistered: "Tài khoản này đã được đăng ký.",
+      invalidOtp: "Mã OTP không đúng.",
+      expiredOtp: "Mã OTP đã hết hạn. Vui lòng đăng ký lại.",
+      otpLocked: "Bạn đã nhập sai OTP quá 3 lần. Vui lòng gửi lại mã mới.",
+      otpNotFound: "Không tìm thấy yêu cầu xác thực. Vui lòng đăng ký lại.",
+      otpIncorrectOneAttempt: "Mã OTP không đúng. Bạn còn 1 lần thử.",
+      otpIncorrectTwoAttempts: "Mã OTP không đúng. Bạn còn 2 lần thử.",
+      verifyFailed: "Không thể xác thực tài khoản.",
+      cccdRequired: "Vui lòng nhập CCCD.",
+      cccdLength: "CCCD phải gồm 12 chữ số.",
+      emailRequired: "Vui lòng nhập email.",
+      passwordLength: "Mật khẩu cần có ít nhất 6 ký tự.",
+      passwordMismatch: "Mật khẩu xác nhận không khớp.",
+      profileCheckError: "Không thể kiểm tra hồ sơ khách hàng.",
+      registerError: "Không thể tạo tài khoản.",
       noAccount: "Chưa có tài khoản?",
       hasAccount: "Đã có tài khoản?",
-      registerLink: "Đăng ký ngay",
-      loginLink: "Đăng nhập",
       requireLoginTitle: "Vui lòng đăng nhập để đặt phòng",
-      requireLoginDesc: "Bạn cần đăng nhập hoặc tạo tài khoản trước khi hoàn tất đặt phòng.",
+      requireLoginDesc:
+        "Bạn cần đăng nhập hoặc tạo tài khoản trước khi hoàn tất đặt phòng.",
     },
     profile: {
       title: "Hồ sơ cá nhân",
@@ -209,11 +276,14 @@ const dictionaries = {
       subtitle:
         "From bespoke room recommendations to post-booking care, Sen Việt's AI companion is with you at every step.",
       point1Title: "Smart booking advice",
-      point1Desc: "Find hotels and rooms tailored to your preferences and budget.",
+      point1Desc:
+        "Find hotels and rooms tailored to your preferences and budget.",
       point2Title: "24/7 instant support",
-      point2Desc: "Instant answers for room details, policies, and offers whenever you need.",
+      point2Desc:
+        "Instant answers for room details, policies, and offers whenever you need.",
       point3Title: "Post-booking care",
-      point3Desc: "Stay reminders, modification assistance, and in-stay support.",
+      point3Desc:
+        "Stay reminders, modification assistance, and in-stay support.",
       cta: "Chat with AI Assistant",
       widgetTitle: "Sen Việt AI Concierge",
       widgetGreeting:
@@ -228,14 +298,16 @@ const dictionaries = {
     },
     cta: {
       title: "Sign up for exclusive member perks",
-      subtitle: "Sen Việt members unlock preferential rates and points with every stay.",
+      subtitle:
+        "Sen Việt members unlock preferential rates and points with every stay.",
       button: "Sign up now",
     },
     testimonials: {
       title: "What our guests say",
     },
     footer: {
-      tagline: "Authentic Vietnamese hospitality, powered by AI concierge technology.",
+      tagline:
+        "Authentic Vietnamese hospitality, powered by AI concierge technology.",
       explore: "Explore",
       company: "Company",
       contact: "Contact",
@@ -246,19 +318,86 @@ const dictionaries = {
       loginSubtitle: "Welcome back to Sen Việt Hotels.",
       registerTitle: "Create your account",
       registerSubtitle: "Join to book rooms and enjoy member privileges.",
+      accountInfoTitle: "Account information",
+      accountInfoSubtitle: "Create login details for your customer account.",
+      registrationProgress: "Registration progress",
+      stepCustomerInfo: "Customer information",
+      stepAccountInfo: "Account information",
+      stepVerifyOtp: "Verify OTP",
       name: "Full name",
+      phone: "Phone number",
+      phoneLength: "The phone number must contain exactly 10 digits.",
       cccd: "Citizen ID",
       email: "Email address",
       password: "Password",
       confirmPassword: "Confirm password",
+      showPassword: "Show password",
+      hidePassword: "Hide password",
+      showConfirmPassword: "Show confirmation password",
+      hideConfirmPassword: "Hide confirmation password",
       loginButton: "Log in",
       registerButton: "Create account",
+      continueButton: "Continue",
+      checkingCustomer: "Checking customer information...",
+      creatingAccount: "Creating account...",
       noAccount: "Don't have an account?",
       hasAccount: "Already have an account?",
       registerLink: "Sign up",
       loginLink: "Log in",
+      forgotPassword: "Forgot password?",
+      forgotPasswordPrompt: "Can't remember your password?",
+      resetPasswordLink: "Click here to reset it with an OTP code",
+      backToCustomerInfo: "Back to customer information",
+      otpTitle: "Verify your account",
+      otpSentTo: "Enter the OTP sent to",
+      otpExpired: "OTP has expired",
+      otpValidFor: "Code valid for",
+      otpLabel: "OTP code",
+      otpAriaLabel: "6-digit OTP code",
+      verifying: "Verifying...",
+      verifyContinue: "Verify and continue",
+      resendingOtp: "Sending a new code...",
+      resendOtp: "Resend code",
+      resendSuccess: "A new OTP has been sent. Please check your email.",
+      backToRegister: "Back to sign up",
+      registeredSuccess:
+        "Your account was created successfully. Enter your password to log in.",
+      customerAlreadyRegistered: "This customer already has an account.",
+      customerRegisteredWithEmail:
+        "This customer has already registered with email",
+      identityMismatch:
+        "The phone number and Citizen ID do not match the same customer record. Please check the information.",
+      profileCheckFailed:
+        "We couldn't verify the customer information. Please check and try again.",
+      profileCheckSuccess: "Customer information verified.",
+      walkInFound:
+        "Customer record found. Enter an email address and password to continue.",
+      newCustomer:
+        "You can continue by entering an email address and password.",
+      invalidCredentials: "Incorrect email or password. Please try again.",
+      emailExists: "This email address is already registered.",
+      phoneExists: "This phone number is already registered.",
+      verificationPending:
+        "This phone number is pending verification by another request.",
+      accountAlreadyRegistered: "This account has already been registered.",
+      invalidOtp: "The OTP code is incorrect.",
+      expiredOtp: "The OTP code has expired. Please sign up again.",
+      otpLocked: "Too many incorrect OTP attempts. Please request a new code.",
+      otpNotFound: "Verification request not found. Please sign up again.",
+      otpIncorrectOneAttempt: "The OTP code is incorrect. 1 attempt remaining.",
+      otpIncorrectTwoAttempts:
+        "The OTP code is incorrect. 2 attempts remaining.",
+      verifyFailed: "Unable to verify the account.",
+      cccdRequired: "Please enter your Citizen ID.",
+      cccdLength: "The Citizen ID must contain exactly 12 digits.",
+      emailRequired: "Please enter an email address.",
+      passwordLength: "Password must be at least 6 characters.",
+      passwordMismatch: "The passwords do not match.",
+      profileCheckError: "Unable to verify customer information.",
+      registerError: "Unable to create the account.",
       requireLoginTitle: "Please log in to book",
-      requireLoginDesc: "You need to log in or create an account before completing your booking.",
+      requireLoginDesc:
+        "You need to log in or create an account before completing your booking.",
     },
     profile: {
       title: "Profile",
@@ -324,8 +463,7 @@ const dictionaries = {
       filterCentral: "中部",
       filterSouth: "南部",
       pageTitle: "我们的酒店",
-      pageSubtitle:
-        "遍布越南各地的6处尊贵落脚点，随时恭候您的光临。",
+      pageSubtitle: "遍布越南各地的6处尊贵落脚点，随时恭候您的光临。",
       regionsTitle: "按区域探索",
       searchLocation: "目的地",
       searchCheckIn: "入住日期",
@@ -339,8 +477,7 @@ const dictionaries = {
     ai: {
       badge: "智能AI助手",
       title: "AI智能顾问时刻为您服务",
-      subtitle:
-        "从房型推荐到入住后的贴心支持，莲越AI助手随时伴您左右。",
+      subtitle: "从房型推荐到入住后的贴心支持，莲越AI助手随时伴您左右。",
       point1Title: "智能客房咨询",
       point1Desc: "根据您的需求和预算推荐最合适的酒店和房型。",
       point2Title: "24/7全天候响应",
@@ -457,8 +594,7 @@ const dictionaries = {
       filterCentral: "중부",
       filterSouth: "남부",
       pageTitle: "호텔 목록",
-      pageSubtitle:
-        "베트남 전역의 6개 럭셔리 휴양지가 여러분을 기다립니다.",
+      pageSubtitle: "베트남 전역의 6개 럭셔리 휴양지가 여러분을 기다립니다.",
       regionsTitle: "지역별 탐색",
       searchLocation: "여행지",
       searchCheckIn: "체크인",
@@ -494,7 +630,8 @@ const dictionaries = {
     },
     cta: {
       title: "회원 가입하고 전용 혜택을 누리세요",
-      subtitle: "센비엣 회원은 투숙 시마다 전용 할인율과 포인트 적립 혜택을 받습니다.",
+      subtitle:
+        "센비엣 회원은 투숙 시마다 전용 할인율과 포인트 적립 혜택을 받습니다.",
       button: "지금 가입하기",
     },
     testimonials: {
@@ -524,7 +661,8 @@ const dictionaries = {
       registerLink: "회원가입하기",
       loginLink: "로그인하기",
       requireLoginTitle: "예약을 위해 로그인이 필요합니다",
-      requireLoginDesc: "객실 예약 완료 전 로그인 또는 회원가입을 진행해 주세요.",
+      requireLoginDesc:
+        "객실 예약 완료 전 로그인 또는 회원가입을 진행해 주세요.",
     },
     profile: {
       title: "내 프로필",
@@ -610,9 +748,11 @@ const dictionaries = {
       point1Title: "スマート宿泊相談",
       point1Desc: "ご予算や旅のスタイルに最適なホテルとお部屋をご案内します。",
       point2Title: "24時間いつでも即答",
-      point2Desc: "客室設備、限定プラン、宿泊規定についていつでもお尋ねください。",
+      point2Desc:
+        "客室設備、限定プラン、宿泊規定についていつでもお尋ねください。",
       point3Title: "安心のアフターサポート",
-      point3Desc: "日程リマインド、変更キャンセル、滞在中のご相談をサポートします。",
+      point3Desc:
+        "日程リマインド、変更キャンセル、滞在中のご相談をサポートします。",
       cta: "AIコンシェルジュと話す",
       widgetTitle: "セン・ヴィエットAIコンシェルジュ",
       widgetGreeting:
@@ -627,7 +767,8 @@ const dictionaries = {
     },
     cta: {
       title: "会員登録で特別優待をお届け",
-      subtitle: "会員限定の特別レートや宿泊ごとのポイント獲得をご利用いただけます。",
+      subtitle:
+        "会員限定の特別レートや宿泊ごとのポイント獲得をご利用いただけます。",
       button: "今すぐ無料会員登録",
     },
     testimonials: {
@@ -642,7 +783,8 @@ const dictionaries = {
     },
     auth: {
       loginTitle: "アカウントログイン",
-      loginSubtitle: "セン・ヴィエット・ホテルズへのお帰りをお待ちしておりました。",
+      loginSubtitle:
+        "セン・ヴィエット・ホテルズへのお帰りをお待ちしておりました。",
       registerTitle: "新規アカウント作成",
       registerSubtitle: "会員登録をして限定優待でスマートにご予約ください。",
       name: "氏名",
@@ -657,7 +799,8 @@ const dictionaries = {
       registerLink: "今すぐ登録",
       loginLink: "ログイン",
       requireLoginTitle: "ご予約にはログインが必要です",
-      requireLoginDesc: "客室のご予約を完了するには、ログインまたは新規登録を行ってください。",
+      requireLoginDesc:
+        "客室のご予約を完了するには、ログインまたは新規登録を行ってください。",
     },
     profile: {
       title: "プロフィール",
@@ -684,7 +827,9 @@ const dictionaries = {
 
 function getValue(obj: any, path: string) {
   if (!obj) return undefined;
-  return path.split(".").reduce((acc, key) => (acc ? acc[key] : undefined), obj);
+  return path
+    .split(".")
+    .reduce((acc, key) => (acc ? acc[key] : undefined), obj);
 }
 
 interface LanguageContextValue {
@@ -693,7 +838,9 @@ interface LanguageContextValue {
   t: (path: string) => string;
 }
 
-const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
+const LanguageContext = createContext<LanguageContextValue | undefined>(
+  undefined,
+);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<Language>(() => {
@@ -734,7 +881,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [language],
   );
 
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={value}>
+      {children}
+    </LanguageContext.Provider>
+  );
 }
 
 export function useLanguage() {

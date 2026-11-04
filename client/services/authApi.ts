@@ -43,7 +43,11 @@ export interface CustomerCheckRequest {
 }
 
 export interface CustomerCheckResponse {
-  status: "NEW_CUSTOMER" | "WALK_IN_CUSTOMER_NEEDS_ACCOUNT" | "ALREADY_REGISTERED";
+  status:
+    | "NEW_CUSTOMER"
+    | "WALK_IN_CUSTOMER_NEEDS_ACCOUNT"
+    | "ALREADY_REGISTERED"
+    | "IDENTITY_MISMATCH";
   email?: string;
   message?: string;
 }
@@ -55,7 +59,10 @@ export const authApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<AuthenticationResult>) =>
         response.result,
     }),
-    checkCustomerRegistration: builder.mutation<ApiResponse<CustomerCheckResponse>, CustomerCheckRequest>({
+    checkCustomerRegistration: builder.mutation<
+      ApiResponse<CustomerCheckResponse>,
+      CustomerCheckRequest
+    >({
       query: (body) => ({
         url: "/customer/check-registration",
         method: "POST",
@@ -70,10 +77,18 @@ export const authApi = baseApi.injectEndpoints({
       }),
     }),
     verifyOtp: builder.mutation<void, VerifyOtpRequest>({
-      query: (body) => ({ url: "/customer/verify-register", method: "POST", data: body }),
+      query: (body) => ({
+        url: "/customer/verify-register",
+        method: "POST",
+        data: body,
+      }),
     }),
     resendOtp: builder.mutation<void, ResendOtpRequest>({
-      query: (body) => ({ url: "/auth/resend-otp", method: "POST", data: body }),
+      query: (body) => ({
+        url: "/auth/resend-otp",
+        method: "POST",
+        data: body,
+      }),
     }),
     getMyProfile: builder.query<Record<string, unknown>, void>({
       query: () => ({ url: "/customer/me/profile", method: "GET" }),
@@ -82,7 +97,11 @@ export const authApi = baseApi.injectEndpoints({
       providesTags: ["User"],
     }),
     changePassword: builder.mutation<void, ChangePasswordRequest>({
-      query: (body) => ({ url: "/customer/me/change-password", method: "PATCH", data: body }),
+      query: (body) => ({
+        url: "/customer/me/change-password",
+        method: "PATCH",
+        data: body,
+      }),
     }),
   }),
 });
