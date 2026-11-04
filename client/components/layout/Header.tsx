@@ -137,9 +137,29 @@ function getNotificationIcon(n: HeaderNotification) {
   );
 }
 
+
+// Global tracker to throttle duplicate toast popups and prevent spam
+const recentNotificationTracker = new Map<string, number>();
+
+function isRecentDuplicate(key: string, cooldownMs = 8000): boolean {
+  const now = Date.now();
+  const lastTime = recentNotificationTracker.get(key);
+  if (lastTime && now - lastTime < cooldownMs) {
+    return true;
+  }
+  recentNotificationTracker.set(key, now);
+  if (recentNotificationTracker.size > 200) {
+    for (const [k, t] of recentNotificationTracker.entries()) {
+      if (now - t > 30000) recentNotificationTracker.delete(k);
+    }
+  }
+  return false;
+}
+
 export default function Header() {
   const navigate = useNavigate();
   const { t, language, setLanguage } = useLanguage();
+  const isEn = language === "en";
   const currentLang = SUPPORTED_LANGUAGES.find((l) => l.code === language) || SUPPORTED_LANGUAGES[0];
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -152,7 +172,7 @@ export default function Header() {
     ? `senviet_user_notifications_${user.email.toLowerCase().replace(/[^a-z0-9_]/g, "_")}`
     : "senviet_guest_notifications";
 
-  // Load notifications from local storage and sync with existing bookings
+  // Load actual user notifications from local storage (clean out legacy synthetic booking spam)
   useEffect(() => {
     if (!user) {
       setNotifications([]);
@@ -162,36 +182,16 @@ export default function Header() {
     let loaded: HeaderNotification[] = [];
     try {
       const raw = localStorage.getItem(notifStorageKey);
-      if (raw) loaded = JSON.parse(raw);
-    } catch {}
-
-    const userBookings = getBookings().filter((b) => b.userEmail === user.email);
-    const existingIds = new Set(loaded.map((n) => n.id));
-
-    // Prepopulate active booking alerts if not present
-    for (const b of userBookings) {
-      const notifId = `bkg_init_${b.id}`;
-      if (!existingIds.has(notifId)) {
-        const isPaid = b.status === "confirmed";
-        const isCancel = b.status === "cancelled";
-        loaded.push({
-          id: notifId,
-          title: isCancel
-            ? `Đơn #${b.id} đã yêu cầu hủy`
-            : isPaid
-            ? `Đơn #${b.id} đã xác nhận`
-            : `Đơn #${b.id} đang chờ thanh toán`,
-          description: `${b.hotelName} · ${b.roomName || "Phòng nghỉ"} · ${b.checkIn} đến ${b.checkOut}`,
-          time: new Date(b.createdAt || Date.now()).toLocaleTimeString("vi-VN", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          read: isPaid,
-          type: isCancel ? "CANCEL" : isPaid ? "PAYMENT" : "BOOKING",
-          referenceId: b.id,
-        });
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          // Lọc bỏ triệt để các thông báo rác tổng hợp từ lịch sử đơn hàng cũ
+          loaded = parsed.filter(
+            (n) => !n.id.startsWith("bkg_evt_") && !n.id.startsWith("bkg_init_")
+          );
+        }
       }
-    }
+    } catch {}
 
     setNotifications(loaded);
   }, [user, notifStorageKey]);
@@ -212,22 +212,39 @@ export default function Header() {
     const handleSocketNotif = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (!detail) return;
+      
+      const bIdMatch = (detail.description || "").match(/#([A-Za-z0-9_]+)/);
+      const bId = detail.referenceId || detail.id || (bIdMatch ? bIdMatch[1] : null);
+      const dedupeKey = bId ? `notif_booking_${bId}` : `notif_${detail.title}_${detail.description?.slice(0, 30)}`;
+      
+      // Chống spam: Nếu cùng 1 sự kiện thông báo vừa hiển thị trong vòng 8s, bỏ qua toast trùng
+      if (isRecentDuplicate(dedupeKey)) return;
+
       const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
       const newNotif: HeaderNotification = {
-        id: detail.id ? String(detail.id) : `notif_${Date.now()}`,
+        id: bId ? `notif_${bId}` : `notif_${Date.now()}`,
         title: detail.title || "Thông báo từ Sen Việt",
         description: detail.description || "",
         time: nowTime,
         read: false,
         type: detail.type || "BOOKING",
-        referenceId: detail.referenceId,
+        referenceId: detail.referenceId || bId,
       };
 
-      setNotifications((prev) => [newNotif, ...prev.filter((n) => n.id !== newNotif.id)].slice(0, 30));
+      setNotifications((prev) => {
+        const isDuplicate = prev.some((n) => 
+          (newNotif.referenceId && n.referenceId && String(n.referenceId) === String(newNotif.referenceId)) ||
+          (n.title === newNotif.title && n.description === newNotif.description)
+        );
+        if (isDuplicate) return prev;
+        return [newNotif, ...prev].slice(0, 30);
+      });
+
       toast.info(newNotif.title, {
+        id: dedupeKey,
         description: newNotif.description,
         action: {
-          label: "Xem",
+          label: isEn ? "View" : "Xem",
           onClick: () => navigate("/bookings"),
         },
       });
@@ -237,69 +254,64 @@ export default function Header() {
       const detail = (e as CustomEvent).detail;
       if (!detail) return;
       const bId = detail.id || detail.bookingId;
-      const bStatus = detail.bookingStatus || detail.status || "Đã cập nhật";
-      const statusText =
-        bStatus === "CONFIRMED" || bStatus === "confirmed"
-          ? "Đã xác nhận thanh toán thành công"
-          : bStatus === "CANCELLED" || bStatus === "cancelled"
-          ? "Đã hủy đơn"
-          : bStatus;
-      const nowTime = new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+      const bStatus = String(detail.bookingStatus || detail.status || "").toUpperCase();
+      const isConfirmed = bStatus === "CONFIRMED";
+      const isCancelled = bStatus.startsWith("CANCEL");
+      if (!isConfirmed && !isCancelled) {
+        return;
+      }
+
+      const dedupeKey = `booking_status_${bId}_${isConfirmed ? 'CONFIRMED' : 'CANCELLED'}`;
+      if (isRecentDuplicate(dedupeKey)) return;
+
+      const statusText = isConfirmed
+        ? (isEn ? "Payment confirmed successfully" : "Đã xác nhận thanh toán thành công")
+        : (isEn ? "Booking cancelled" : "Đã hủy đơn");
+      const nowTime = new Date().toLocaleTimeString(isEn ? "en-US" : "vi-VN", { hour: "2-digit", minute: "2-digit" });
 
       const newNotif: HeaderNotification = {
-        id: `booking_update_${bId}_${Date.now()}`,
-        title: `Cập nhật đơn #${bId}`,
-        description: `Trạng thái mới: ${statusText}. Quý khách có thể kiểm tra chi tiết trong Lịch sử booking.`,
+        id: `booking_update_${bId}`,
+        title: isConfirmed
+          ? (isEn ? "Payment Successful" : "Thanh toán thành công")
+          : (isEn ? `Booking Update #${bId}` : `Cập nhật đơn #${bId}`),
+        description: isEn
+          ? `Booking #${bId}: ${statusText}. You can check the full details in your booking history.`
+          : `Đơn #${bId}: ${statusText}. Quý khách có thể kiểm tra chi tiết trong Lịch sử booking.`,
         time: nowTime,
         read: false,
-        type: bStatus === "confirmed" || bStatus === "CONFIRMED" ? "PAYMENT" : "BOOKING",
+        type: isConfirmed ? "PAYMENT" : "BOOKING",
         referenceId: String(bId),
       };
 
-      setNotifications((prev) => [newNotif, ...prev].slice(0, 30));
-      toast.success(newNotif.title, {
-        description: newNotif.description,
-        action: {
-          label: "Xem ngay",
-          onClick: () => navigate("/bookings"),
-        },
-      });
-    };
-
-    const handleBookingStorage = () => {
-      const userBookings = getBookings().filter((b) => b.userEmail === user.email);
       setNotifications((prev) => {
-        const existingIds = new Set(prev.map((n) => n.referenceId));
-        const added: HeaderNotification[] = [];
-        for (const b of userBookings) {
-          if (!existingIds.has(b.id)) {
-            added.push({
-              id: `bkg_evt_${b.id}`,
-              title: `Đơn phòng mới #${b.id}`,
-              description: `${b.hotelName} · ${b.roomName} · Trạng thái: ${b.status}`,
-              time: new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
-              read: false,
-              type: "BOOKING",
-              referenceId: b.id,
-            });
-          }
-        }
-        return added.length > 0 ? [...added, ...prev].slice(0, 30) : prev;
+        const isDuplicate = prev.some((n) => 
+          (newNotif.referenceId && n.referenceId && String(n.referenceId) === String(newNotif.referenceId)) ||
+          (n.title === newNotif.title && n.description === newNotif.description)
+        );
+        if (isDuplicate) return prev;
+        return [newNotif, ...prev].slice(0, 30);
       });
+
+      if (isConfirmed) {
+        toast.success(newNotif.title, {
+          id: dedupeKey,
+          description: newNotif.description,
+          action: {
+            label: isEn ? "View" : "Xem ngay",
+            onClick: () => navigate("/bookings"),
+          },
+        });
+      }
     };
 
     window.addEventListener("senviet_socket_notification", handleSocketNotif);
     window.addEventListener("senviet_socket_booking_updated", handleSocketBooking);
     window.addEventListener("senviet_socket_new_booking", handleSocketBooking);
-    window.addEventListener("senviet_booking_updated", handleBookingStorage);
-    window.addEventListener("storage", handleBookingStorage);
 
     return () => {
       window.removeEventListener("senviet_socket_notification", handleSocketNotif);
       window.removeEventListener("senviet_socket_booking_updated", handleSocketBooking);
       window.removeEventListener("senviet_socket_new_booking", handleSocketBooking);
-      window.removeEventListener("senviet_booking_updated", handleBookingStorage);
-      window.removeEventListener("storage", handleBookingStorage);
     };
   }, [user, navigate]);
 
@@ -381,21 +393,36 @@ export default function Header() {
               >
                 <div className="flex items-center justify-between border-b border-border/70 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm text-foreground">Thông báo</h3>
+                    <h3 className="font-bold text-sm text-foreground">{isEn ? "Notifications" : "Thông báo"}</h3>
                     {unreadCount > 0 && (
                       <span className="rounded-full bg-gold/20 px-2 py-0.5 text-[11px] font-bold text-primary">
-                        {unreadCount} mới
+                        {unreadCount} {isEn ? "new" : "mới"}
                       </span>
                     )}
                   </div>
                   {notifications.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={markAllAsRead}
-                      className="text-[11px] font-semibold text-primary/80 hover:text-primary transition"
-                    >
-                      Đánh dấu đã đọc
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={markAllAsRead}
+                        className="text-[11px] font-semibold text-primary/80 hover:text-primary transition"
+                      >
+                        {isEn ? "Mark all as read" : "Đánh dấu đã đọc"}
+                      </button>
+                      <span className="text-border">|</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotifications([]);
+                          try {
+                            localStorage.removeItem(notifStorageKey);
+                          } catch {}
+                        }}
+                        className="text-[11px] font-semibold text-muted-foreground hover:text-destructive transition"
+                      >
+                        {isEn ? "Clear all" : "Xóa tất cả"}
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -403,7 +430,7 @@ export default function Header() {
                   {notifications.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground space-y-2">
                       <Bell className="h-8 w-8 mx-auto text-muted-foreground/40" />
-                      <p className="text-xs">Chưa có thông báo mới nào</p>
+                      <p className="text-xs">{isEn ? "No new notifications yet" : "Chưa có thông báo mới nào"}</p>
                     </div>
                   ) : (
                     notifications.map((n) => (
@@ -442,7 +469,7 @@ export default function Header() {
                       navigate("/bookings");
                     }}
                   >
-                    <span>Xem tất cả lịch sử đặt phòng</span>
+                    <span>{isEn ? "View all booking history" : "Xem tất cả lịch sử đặt phòng"}</span>
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
@@ -492,7 +519,7 @@ export default function Header() {
                 <div className="px-3 py-2">
                   <p className="font-semibold text-primary">{user.name}</p>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
-                  <p className="text-xs text-muted-foreground">{user.phone || "Chưa cập nhật số điện thoại"}</p>
+                  <p className="text-xs text-muted-foreground">{user.phone || (isEn ? "Phone not updated" : "Chưa cập nhật số điện thoại")}</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
@@ -502,7 +529,7 @@ export default function Header() {
                   <Link to="/loyalty">{t("nav.loyalty")}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/crm">CRM cá nhân</Link>
+                  <Link to="/crm">{isEn ? "Personal CRM" : "CRM cá nhân"}</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/profile">{t("nav.profile")}</Link>

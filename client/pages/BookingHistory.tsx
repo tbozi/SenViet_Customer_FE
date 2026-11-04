@@ -38,7 +38,7 @@ import {
 } from "@/lib/bookings";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
-import { useCancelCustomerBookingMutation } from "@/services/bookingApi";
+import { useCancelCustomerBookingMutation, useGetMyBookingsQuery, BookingResponseDto } from "@/services/bookingApi";
 
 const VIETNAMESE_BANKS = [
   { code: "VCB", name: "Vietcombank - Ngân hàng TMCP Ngoại thương Việt Nam" },
@@ -130,10 +130,90 @@ export default function BookingHistory() {
   const [success, setSuccess] = useState("");
   const [cancelCustomerBooking, { isLoading: isCancelling }] =
     useCancelCustomerBookingMutation();
+  const { data: serverBookings } = useGetMyBookingsQuery(undefined, {
+    skip: !user,
+  });
 
   useEffect(() => {
-    setBookings(getBookings().filter((item) => item.userEmail === user?.email));
-  }, [user?.email]);
+    const local = getBookings().filter((item) => !user || item.userEmail === user.email);
+    if (!serverBookings || !Array.isArray(serverBookings) || serverBookings.length === 0) {
+      setBookings(local);
+      return;
+    }
+
+    const serverMapped: Booking[] = serverBookings.map((sb) => {
+      let status: Booking["status"] = "confirmed";
+      const rawStatus = (sb.bookingStatus || "").toUpperCase();
+      if (rawStatus === "PENDING") {
+        status = "pending_payment";
+      } else if (rawStatus === "CANCELLED" || rawStatus === "REFUNDED") {
+        status = "cancelled";
+      } else if (rawStatus === "COMPLETED" || rawStatus === "CHECKED_OUT" || rawStatus === "CHECKED_IN") {
+        status = "completed";
+      } else {
+        status = "confirmed";
+      }
+
+      const firstDetail = sb.bookingDetails?.[0];
+      const hotelName = firstDetail?.room?.hotel?.hotelName || "Sen Việt Hotel & Resort";
+      const hotelSlug = firstDetail?.room?.hotel?.hotelSlug || "sen-viet-sai-gon";
+      const roomName = sb.bookingDetails?.map((d: any) => d.room?.roomName || d.roomTypeName || "Phòng nghỉ").join(", ") || "Phòng nghỉ tiêu chuẩn";
+
+      const checkIn = firstDetail?.checkInTime ? String(firstDetail.checkInTime).slice(0, 10) : "";
+      const checkOut = firstDetail?.checkOutTime ? String(firstDetail.checkOutTime).slice(0, 10) : "";
+      const nights = checkIn && checkOut ? Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 3600 * 24))) : 1;
+
+      return {
+        id: String(sb.bookingId),
+        userEmail: user?.email || "",
+        hotelSlug,
+        hotelName,
+        roomName,
+        checkIn,
+        checkOut,
+        nights,
+        rooms: sb.bookingDetails?.length || 1,
+        roomPrice: sb.roomTotal || 0,
+        roomTotal: sb.roomTotal || 0,
+        vat: 0,
+        serviceFee: sb.serviceTotal || 0,
+        discount: sb.discountTotal || 0,
+        total: sb.finalAmount || 0,
+        paymentMethod: "qr",
+        status,
+        createdAt: sb.createdAt || new Date().toISOString(),
+        guestName: sb.customerName || user?.name || "Khách hàng",
+        phone: "",
+        email: user?.email || "",
+        specialRequest: "",
+        cancellationDeadline: checkIn ? `${checkIn}T14:00:00` : "",
+        holdUntil: new Date(Date.now() + 5 * 60000).toISOString(),
+      };
+    });
+
+    const map = new Map<string, Booking>();
+    for (const b of local) {
+      map.set(String(b.id), b);
+    }
+    for (const sb of serverMapped) {
+      const existing = map.get(String(sb.id));
+      if (existing) {
+        map.set(String(sb.id), {
+          ...existing,
+          status: sb.status,
+          total: sb.total || existing.total,
+          roomTotal: sb.roomTotal || existing.roomTotal,
+        });
+      } else {
+        map.set(String(sb.id), sb);
+      }
+    }
+
+    const merged = Array.from(map.values()).sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+    );
+    setBookings(merged);
+  }, [user?.email, user?.name, serverBookings]);
 
   useEffect(() => {
     const createdId = params.get("created");
@@ -330,6 +410,18 @@ export default function BookingHistory() {
       refundEmail: trimmedEmail,
     };
     updateBooking(cancelTarget.id, { status: "cancelled", cancellation });
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("senviet_booking_cancelled", {
+          detail: {
+            id: cancelTarget.id,
+            bookingId: cancelTarget.id,
+            reason: trimmedReason,
+            refundAmount,
+          },
+        })
+      );
+    }
     setBookings((current) =>
       current.map((item) =>
         item.id === cancelTarget.id
@@ -521,14 +613,14 @@ export default function BookingHistory() {
                                   </p>
                             )}
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Nhận phòng:{" "}
+                              {isVi ? "Nhận phòng: " : "Check-in: "}{" "}
                               {dateTime(
                                 stay.checkIn,
                                 booking.arrivalTime || "14:00",
                               )}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              Trả phòng:{" "}
+                              {isVi ? "Trả phòng: " : "Check-out: "}{" "}
                               {dateTime(
                                 stay.checkOut,
                                 booking.departureTime || "12:00",
@@ -536,18 +628,18 @@ export default function BookingHistory() {
                             </p>
                             <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
                               <p className="font-semibold text-primary">
-                                Tiền phòng: {formatVnd(roomPrice)}
+                                {isVi ? "Tiền phòng: " : "Room rate: "}{formatVnd(roomPrice)}
                               </p>
                               {extraGuestSurcharge > 0 && (
                                 <p>
-                                  Khách thêm: {formatVnd(extraGuestSurcharge)}
+                                  {isVi ? "Khách thêm: " : "Extra guest: "}{formatVnd(extraGuestSurcharge)}
                                 </p>
                               )}
                             </div>
                             {stay.services?.length ? (
                               <div className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
                                 <p className="font-semibold text-primary">
-                                  Dịch vụ
+                                  {isVi ? "Dịch vụ" : "Services"}
                                 </p>
                                 {stay.services.map((service) => (
                                   <p key={service.id}>
@@ -598,11 +690,11 @@ export default function BookingHistory() {
                 </div>
                 <div className="mt-5 rounded-xl border border-border bg-slate-50 p-4 text-sm">
                   <p className="font-semibold text-primary">
-                    Chi tiết thanh toán
+                    {isVi ? "Chi tiết thanh toán" : "Payment Details"}
                   </p>
                   <div className="mt-3 space-y-2">
                     <div className="flex justify-between gap-3">
-                      <span>Tạm tính các phòng</span>
+                      <span>{isVi ? "Tạm tính các phòng" : "Room Subtotal"}</span>
                       <strong>
                         {formatVnd(
                           booking.total -
@@ -633,19 +725,19 @@ export default function BookingHistory() {
                         </div>
                       ))}
                     <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
-                      <span>Thuế VAT (8%)</span>
+                      <span>{isVi ? "Thuế VAT (8%)" : "VAT (8%)"}</span>
                       <strong>
                         {formatVnd(booking.vat)}
                       </strong>
                     </div>
                     {booking.discount > 0 && (
                       <div className="flex justify-between gap-3 text-emerald-700">
-                        <span>Giảm giá</span>
+                        <span>{isVi ? "Giảm giá" : "Discount"}</span>
                         <strong>-{formatVnd(booking.discount)}</strong>
                       </div>
                     )}
                     <div className="flex justify-between gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
-                      <span>Tổng thanh toán</span>
+                      <span>{isVi ? "Tổng thanh toán" : "Total Payment"}</span>
                       <span>{formatVnd(booking.total)}</span>
                     </div>
                   </div>
@@ -688,7 +780,7 @@ export default function BookingHistory() {
                 )}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                   <p className="text-lg font-bold text-primary">
-                    Tổng: {formatVnd(booking.total)}
+                    {isVi ? "Tổng: " : "Total: "}{formatVnd(booking.total)}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Button
@@ -698,7 +790,7 @@ export default function BookingHistory() {
                       className="rounded-full border-primary/40 text-primary hover:bg-primary/10 shadow-sm font-semibold"
                     >
                       <Receipt className="mr-1.5 h-4 w-4 text-primary" />
-                      Xem chi tiết hóa đơn
+                      {isVi ? "Xem chi tiết hóa đơn" : "View Invoice Details"}
                     </Button>
                     {booking.status !== "pending_payment" && (
                       <Button
@@ -708,7 +800,7 @@ export default function BookingHistory() {
                       >
                         <Link to={`/invoices/${booking.id}`}>
                           <FileText className="mr-2 h-4 w-4" />
-                          In hóa đơn
+                          {isVi ? "In hóa đơn" : "Print Invoice"}
                         </Link>
                       </Button>
                     )}
@@ -719,7 +811,7 @@ export default function BookingHistory() {
                       >
                         <Link to={`/reviews/${booking.id}`}>
                           <Star className="mr-1.5 h-4 w-4 fill-primary text-primary" />
-                          Đánh giá kỳ nghỉ
+                          {isVi ? "Đánh giá kỳ nghỉ" : "Review Stay"}
                         </Link>
                       </Button>
                     )}
@@ -729,7 +821,7 @@ export default function BookingHistory() {
                         onClick={() => completePayment(booking)}
                         className="rounded-full"
                       >
-                        Thanh toán
+                        {isVi ? "Thanh toán" : "Pay Now"}
                       </Button>
                     )}
                     {booking.status !== "cancelled" &&
@@ -741,7 +833,7 @@ export default function BookingHistory() {
                           className="rounded-full text-red-600 hover:bg-red-50 hover:text-red-700"
                         >
                           <XCircle className="mr-1.5 h-4 w-4" />
-                          Hủy phòng
+                          {isVi ? "Hủy phòng" : "Cancel Booking"}
                         </Button>
                       )}
                   </div>

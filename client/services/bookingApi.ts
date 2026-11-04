@@ -102,6 +102,13 @@ export const bookingApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: ["Booking"],
     }),
+    getMyBookings: builder.query<BookingResponseDto[], void>({
+      query: () => ({
+        url: "/bookings/my",
+        method: "GET",
+      }),
+      providesTags: ["Booking"],
+    }),
     updateCancellationBankDetails: builder.mutation<
       BookingCancellationResponseDto,
       { bookingId: string | number; body: BookingCancelRequestDto }
@@ -120,5 +127,6 @@ export const {
   useCreateCustomerBookingMutation,
   useCancelCustomerBookingMutation,
   useUpdateCancellationBankDetailsMutation,
+  useGetMyBookingsQuery,
 } = bookingApi;
 

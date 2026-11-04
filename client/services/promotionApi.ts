@@ -53,6 +53,7 @@ export const promotionApi = baseApi.injectEndpoints({
       transformResponse: (response: ApiResponse<any[]>) => {
         const list = response.result || [];
         return list.map((item) => ({
+          id: item.id,
           savedId: item.id,
           promotionId: item.promotionId || item.id,
           promotionCode: item.promotionCode || (item.code ? String(item.code).split("-")[0] : ""),
@@ -60,10 +61,14 @@ export const promotionApi = baseApi.injectEndpoints({
           name: item.name || item.code,
           description: item.description,
           type: item.type,
-          discountType: item.discountType || item.type,
+          discountType: item.discountType || "PERCENTAGE",
           discountValue: item.discountValue,
           maxDiscountAmount: item.maxDiscountAmount,
           minBookingValue: item.minBookingValue,
+          minRoomValue: item.minRoomValue,
+          minServiceValue: item.minServiceValue,
+          hotelId: item.hotelId,
+          hotelName: item.hotelName,
           startDate: item.startDate,
           endDate: item.endDate,
           status: item.isUsed ? "USED" : "ACTIVE",

@@ -13,6 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toLocalDateStr } from "@/lib/utils";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 import { formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
 import {
@@ -146,6 +147,7 @@ const cancellationDeadlineFor = (checkIn: string) => {
 export default function Checkout() {
   const { user } = useAuth();
   const { language } = useLanguage();
+  const isEn = language === "en";
   const location = useLocation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -525,9 +527,14 @@ export default function Checkout() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!name || !phone || !email)
-      return setError("Vui lòng điền đủ thông tin người đại diện nhận phòng.");
+      return setError(isEn ? "Please fill in all guest representative information." : "Vui lòng điền đủ thông tin người đại diện nhận phòng.");
     if (!cccd)
-      return setError("Vui lòng nhập số CCCD / CMND của người đại diện nhận phòng.");
+      return setError(isEn ? "Please enter the Citizen ID / Passport of the guest representative." : "Vui lòng nhập số CCCD / CMND của người đại diện nhận phòng.");
+    const todayStr = toLocalDateStr();
+    const pastSelection = selections.find((s) => s.checkIn && s.checkIn < todayStr);
+    if (pastSelection) {
+      return setError(isEn ? `Check-in date (${pastSelection.checkIn}) is in the past compared to today (${todayStr}). Please choose valid stay dates.` : `Ngày nhận phòng (${pastSelection.checkIn}) đã ở trong quá khứ so với ngày hiện tại (${todayStr}). Vui lòng chọn lại ngày lưu trú.`);
+    }
     setError("");
     setPaymentState("processing");
 
@@ -692,7 +699,7 @@ export default function Checkout() {
       specialRequest: request,
       cancellationDeadline: cancellationDeadlineFor(firstCheckIn),
       cancellationPolicy: getCancellationPolicy(firstCheckIn).policy,
-      holdUntil: new Date(Date.now() + 15 * 60000).toISOString(),
+      holdUntil: new Date(Date.now() + 5 * 60000).toISOString(),
       arrivalTime,
       departureTime,
       extraGuestCharge,
@@ -711,8 +718,9 @@ export default function Checkout() {
           {language === "vi" ? "Xác nhận đặt phòng" : "Confirm your booking"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Thông tin người đại diện chỉ cần nhập một lần. Từng phòng cụ thể,
-          khoảng ngày, dịch vụ và phụ phí được liệt kê riêng bên dưới.
+          {isEn
+            ? "Guest representative information only needs to be entered once. Specific rooms, stay dates, services, and fees are itemized below."
+            : "Thông tin người đại diện chỉ cần nhập một lần. Từng phòng cụ thể, khoảng ngày, dịch vụ và phụ phí được liệt kê riêng bên dưới."}
         </p>
         <form
           onSubmit={submit}
@@ -723,16 +731,15 @@ export default function Checkout() {
               <div className="flex items-center gap-2">
                 <UserRound className="h-5 w-5 text-primary" />
                 <h2 className="font-display text-2xl font-bold text-primary">
-                  Thông tin người đại diện nhận phòng
+                  {isEn ? "Guest Representative Information" : "Thông tin người đại diện nhận phòng"}
                 </h2>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Thông tin này áp dụng cho tất cả các phòng trong cùng một lượt
-                đặt.
+                {isEn ? "This information applies to all rooms within this reservation." : "Thông tin này áp dụng cho tất cả các phòng trong cùng một lượt đặt."}
               </p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <label className="text-sm font-medium text-primary">
-                  Họ tên
+                  {isEn ? "Full Name" : "Họ tên"}
                   <input
                     required
                     value={name}
@@ -741,7 +748,7 @@ export default function Checkout() {
                   />
                 </label>
                 <label className="text-sm font-medium text-primary">
-                  Số điện thoại
+                  {isEn ? "Phone Number" : "Số điện thoại"}
                   <input
                     required
                     value={phone}
@@ -760,22 +767,22 @@ export default function Checkout() {
                   />
                 </label>
                 <label className="text-sm font-medium text-primary">
-                  Số CCCD / CMND
+                  {isEn ? "Citizen ID / Passport" : "Số CCCD / CMND"}
                   <input
                     required
                     value={cccd}
                     onChange={(event) => setCccd(event.target.value)}
-                    placeholder="Nhập số CCCD (12 số)"
+                    placeholder={isEn ? "Enter Citizen ID / Passport number" : "Nhập số CCCD (12 số)"}
                     className="mt-1 w-full rounded-xl border border-input p-3"
                   />
                 </label>
                 <label className="text-sm font-medium text-primary sm:col-span-2">
-                  Yêu cầu đặc biệt
+                  {isEn ? "Special Requests" : "Yêu cầu đặc biệt"}
                   <textarea
                     value={request}
                     onChange={(event) => setRequest(event.target.value)}
                     rows={3}
-                    placeholder="Ví dụ: đến sau 22:00, cần baby cot..."
+                    placeholder={isEn ? "e.g. arrival after 22:00, need baby cot..." : "Ví dụ: đến sau 22:00, cần baby cot..."}
                     className="mt-1 w-full rounded-xl border border-input p-3"
                   />
                 </label>
@@ -783,14 +790,14 @@ export default function Checkout() {
             </div>
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="font-display text-2xl font-bold text-primary">
-                Phương thức thanh toán
+                {isEn ? "Payment Method" : "Phương thức thanh toán"}
               </h2>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 {(
                   [
-                    ["qr", "Quét mã ngân hàng", QrCode],
-                    ["cash", "Tiền mặt tại lễ tân", Banknote],
-                    ["vnpay", "VNPay / ví điện tử", CreditCard],
+                    ["qr", isEn ? "Bank QR Code" : "Quét mã ngân hàng", QrCode],
+                    ["cash", isEn ? "Pay at Front Desk" : "Tiền mặt tại lễ tân", Banknote],
+                    ["vnpay", isEn ? "VNPay / E-wallet" : "VNPay / ví điện tử", CreditCard],
                   ] as const
                 ).map(([value, label, Icon]) => (
                   <button
@@ -804,6 +811,15 @@ export default function Checkout() {
                   </button>
                 ))}
               </div>
+              {payment === "cash" && (
+                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
+                  <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                  <div>
+                    <span className="font-semibold text-amber-950">{isEn ? "Demo Mode:" : "Chế độ Thử nghiệm (Demo):"}</span>{" "}
+                    {isEn ? "Reservation will be held in 'Pending payment at front desk' status." : 'Đơn đặt phòng sẽ được giữ chỗ ở trạng thái "Chờ thanh toán tại quầy".'}
+                  </div>
+                </div>
+              )}
             </div>
             {error && (
               <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -832,14 +848,14 @@ export default function Checkout() {
             promo={
               <div className="mt-5 space-y-2">
                 <label className="block text-sm font-medium text-primary">
-                  Mã khuyến mãi
+                  {isEn ? "Promo code" : "Mã khuyến mãi"}
                   <div className="mt-1 flex gap-2">
                     <input
                       value={promo}
                       onChange={(event) =>
                         setPromo(event.target.value.toUpperCase().trim())
                       }
-                      placeholder="Nhập hoặc chọn mã ưu đãi"
+                      placeholder={isEn ? "Enter or select promo code" : "Nhập hoặc chọn mã ưu đãi"}
                       className="w-full rounded-xl border border-input p-3 font-mono font-bold uppercase tracking-wider text-primary"
                     />
                     {promo && (
@@ -848,7 +864,7 @@ export default function Checkout() {
                         onClick={() => setPromo("")}
                         className="shrink-0 whitespace-nowrap rounded-xl border border-input px-4 text-xs font-medium text-muted-foreground transition hover:bg-secondary hover:text-primary"
                       >
-                        Xóa
+                        {isEn ? "Remove" : "Xóa"}
                       </button>
                     )}
                   </div>
@@ -887,10 +903,10 @@ export default function Checkout() {
                   >
                     <span className="flex items-center gap-1.5">
                       <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white font-bold">⚡</span>
-                      <span>Chế độ Demo (Thanh toán 2.000đ)</span>
+                      <span>{isEn ? "Demo Mode (Pay 2,000 VND)" : "Chế độ Demo (Thanh toán 2.000đ)"}</span>
                     </span>
                     <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {promo === "DEMO" ? "Đang áp dụng" : "Bật mã DEMO"}
+                      {promo === "DEMO" ? (isEn ? "Applied" : "Đang áp dụng") : (isEn ? "Enable DEMO" : "Bật mã DEMO")}
                     </span>
                   </button>
                 </div>
@@ -907,12 +923,11 @@ export default function Checkout() {
                   className="w-full rounded-xl"
                 >
                   {paymentState === "processing"
-                    ? "Đang tạo đơn..."
-                    : "Xác nhận đặt phòng"}
+                    ? (isEn ? "Processing..." : "Đang tạo đơn...")
+                    : (isEn ? "Confirm Booking" : "Xác nhận đặt phòng")}
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Nhận phòng từ 14:00 · Trả phòng trước 12:00 · Giữ phòng 15
-                  phút.
+                  {isEn ? "Check-in 14:00 · Check-out 12:00 · Room held for 5 minutes." : "Nhận phòng từ 14:00 · Trả phòng trước 12:00 · Giữ phòng 15 phút."}
                 </p>
               </>
             }
