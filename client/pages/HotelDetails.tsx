@@ -501,7 +501,7 @@ export default function HotelDetails() {
   const { slug } = useParams();
   const { language } = useLanguage();
   const isEn = language === "en";
-  const hotel = hotels.find((item) => item.slug === slug);
+  const hotel = hotels.find((item) => item.slug === slug || String(item.id) === String(slug));
 
   // States
   const [selectedGalleryCategory, setSelectedGalleryCategory] = useState<string>("all");

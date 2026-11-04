@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowRight,
   Bookmark,
   BookmarkCheck,
+  Building2,
   CalendarDays,
   Check,
   Copy,
@@ -11,6 +12,8 @@ import {
   HeartHandshake,
   MapPin,
   Percent,
+  Search,
+  SlidersHorizontal,
   Sparkles,
   Ticket,
   Users,
@@ -18,6 +21,7 @@ import {
   Utensils,
   Waves,
   Wifi,
+  X,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import {
@@ -40,7 +44,7 @@ import {
   useUnsavePromotionMutation,
 } from "@/services/promotionApi";
 import { useGetServicesQuery } from "@/services/hotelServiceApi";
-import { formatVnd } from "@/data/hotels";
+import { formatVnd, hotels } from "@/data/hotels";
 
 const offers = [
   {
@@ -201,6 +205,9 @@ export function Offers() {
         ];
         return {
           id: p.id,
+          hotelId: (p as any).hotelId,
+          hotelName: (p as any).hotelName || "Toàn hệ thống",
+          rawType: p.type,
           tag: p.type === "ROOM" ? "PHÒNG" : p.type === "SERVICE" ? "DỊCH VỤ" : "TOÀN BỘ",
           icon: isPercent ? Percent : Gift,
           title: p.name,
@@ -230,6 +237,47 @@ export function Offers() {
         };
       })
     : offers;
+
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedHotel, setSelectedHotel] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
+
+  const filteredOffers = useMemo(() => {
+    return displayOffers.filter((offer: any) => {
+      // Search term (by name, code, or description)
+      if (searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase();
+        const matchTitle = (offer.title || "").toLowerCase().includes(term) || (offer.titleEn || "").toLowerCase().includes(term);
+        const matchCode = (offer.code || "").toLowerCase().includes(term);
+        const matchDesc = (offer.description || "").toLowerCase().includes(term) || (offer.descriptionEn || "").toLowerCase().includes(term);
+        if (!matchTitle && !matchCode && !matchDesc) return false;
+      }
+      // Hotel filter
+      if (selectedHotel !== "all") {
+        if (selectedHotel === "system") {
+          if (offer.hotelId && offer.hotelName && !offer.hotelName.toLowerCase().includes("toàn")) {
+            return false;
+          }
+        } else {
+          const offerHotelId = offer.hotelId ? String(offer.hotelId) : "";
+          const offerHotelName = (offer.hotelName || "").toLowerCase();
+          const target = selectedHotel.toLowerCase();
+          const isSystemWide = !offer.hotelId || offerHotelName.includes("toàn");
+          const isExactHotel = offerHotelId === selectedHotel || offerHotelName.includes(target);
+          if (!isSystemWide && !isExactHotel) {
+            return false;
+          }
+        }
+      }
+      // Type filter (ROOM, SERVICE, TOTAL)
+      if (selectedType !== "all") {
+        const rawType = offer.rawType || offer.type || (offer.tag === "PHÒNG" ? "ROOM" : offer.tag === "DỊCH VỤ" ? "SERVICE" : "TOTAL");
+        if (rawType !== selectedType) return false;
+      }
+      return true;
+    });
+  }, [displayOffers, searchTerm, selectedHotel, selectedType]);
 
   const [savedCodes, setSavedCodes] = useState<string[]>(() =>
     getSavedPromotionCodes(user?.email),
@@ -362,8 +410,125 @@ export function Offers() {
             </p>
           </div>
 
-          <div className="mx-auto mt-10 grid max-w-6xl gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {displayOffers.map((offer) => {
+          {/* Search and Filters Bar */}
+          <div className="mx-auto mt-8 max-w-6xl space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              {/* Search Input */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={isVietnamese ? "Tìm kiếm theo tên ưu đãi, mã voucher..." : "Search by promotion name, promo code..."}
+                  className="w-full rounded-full border border-border bg-white pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Hotel Filter Dropdown */}
+              <div className="sm:w-72">
+                <select
+                  value={selectedHotel}
+                  onChange={(e) => setSelectedHotel(e.target.value)}
+                  className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                >
+                  <option value="all">{isVietnamese ? "🏨 Tất cả chi nhánh & khách sạn" : "🏨 All hotels & branches"}</option>
+                  <option value="system">{isVietnamese ? "⭐ Toàn hệ thống Sen Việt" : "⭐ Entire Sen Việt system"}</option>
+                  {hotels.map((h) => (
+                    <option key={h.slug} value={String(h.id || h.slug)}>
+                      {h.name} ({h.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Filter Chips (Scope / Type) */}
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+                {isVietnamese ? "Loại ưu đãi:" : "Category:"}
+              </span>
+              {[
+                { key: "all", labelVi: "Tất cả", labelEn: "All" },
+                { key: "ROOM", labelVi: "Giảm giá phòng", labelEn: "Room discount" },
+                { key: "SERVICE", labelVi: "Giảm giá dịch vụ", labelEn: "Service discount" },
+                { key: "TOTAL", labelVi: "Toàn bộ hóa đơn", labelEn: "Total bill" },
+              ].map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setSelectedType(f.key)}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                    selectedType === f.key
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-white/80 text-muted-foreground border border-border hover:text-primary hover:bg-white"
+                  }`}
+                >
+                  {isVietnamese ? f.labelVi : f.labelEn}
+                </button>
+              ))}
+
+              {(searchTerm || selectedHotel !== "all" || selectedType !== "all") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedHotel("all");
+                    setSelectedType("all");
+                  }}
+                  className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary underline hover:text-gold"
+                >
+                  <X className="h-3 w-3" />
+                  {isVietnamese ? "Đặt lại bộ lọc" : "Reset filters"}
+                </button>
+              )}
+            </div>
+
+            {/* Results Count Banner */}
+            <div className="flex items-center justify-between text-xs font-medium text-muted-foreground pt-1">
+              <span>
+                {isVietnamese
+                  ? `Tìm thấy ${filteredOffers.length} chương trình khuyến mãi phù hợp`
+                  : `Found ${filteredOffers.length} matching promotions`}
+              </span>
+            </div>
+          </div>
+
+          {filteredOffers.length === 0 ? (
+            <div className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed border-border bg-white/70 p-8 text-center">
+              <Ticket className="mx-auto h-10 w-10 text-muted-foreground/60" />
+              <h3 className="mt-3 font-bold text-primary">
+                {isVietnamese ? "Không tìm thấy ưu đãi phù hợp" : "No promotions found"}
+              </h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {isVietnamese
+                  ? "Hãy thử thay đổi từ khóa tìm kiếm hoặc chọn lại chi nhánh khách sạn."
+                  : "Try adjusting your search query or select another hotel branch."}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedHotel("all");
+                  setSelectedType("all");
+                }}
+                className="mt-4 rounded-full bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                {isVietnamese ? "Xem tất cả ưu đãi" : "View all offers"}
+              </button>
+            </div>
+          ) : (
+            <div className="mx-auto mt-8 grid max-w-6xl gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {filteredOffers.map((offer) => {
               const Icon = offer.icon;
               const copied = copiedCode === offer.code;
               const offerId = (offer as any).id;
@@ -378,9 +543,15 @@ export function Offers() {
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
                       <Icon className="h-5 w-5" />
                     </div>
-                    <span className="rounded-full bg-gold px-3 py-1 text-[10px] font-bold tracking-wide text-gold-foreground">
-                      {offer.tag}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary/80 px-2.5 py-1 text-[10px] font-medium text-primary">
+                        <Building2 className="h-3 w-3 text-gold" />
+                        {(offer as any).hotelName || "Toàn hệ thống"}
+                      </span>
+                      <span className="rounded-full bg-gold px-2.5 py-1 text-[10px] font-bold tracking-wide text-gold-foreground">
+                        {offer.tag}
+                      </span>
+                    </div>
                   </div>
                   <h2 className="mt-6 font-display text-2xl font-bold leading-tight text-primary">
                     {isVietnamese ? offer.title : offer.titleEn}
@@ -456,6 +627,7 @@ export function Offers() {
               );
             })}
           </div>
+        )}
         </div>
       </section>
 
@@ -615,6 +787,60 @@ export function Services() {
   const isVietnamese = language === "vi";
   const { data: backendServices } = useGetServicesQuery({ activeOnly: true });
 
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedHotel, setSelectedHotel] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  // Dynamic categories
+  const categories = useMemo(() => {
+    if (!backendServices || backendServices.length === 0) return ["all"];
+    const set = new Set<string>();
+    backendServices.forEach((s) => {
+      if (s.category && s.category.trim()) {
+        set.add(s.category.trim());
+      }
+    });
+    return ["all", ...Array.from(set)];
+  }, [backendServices]);
+
+  // Filtered services
+  const filteredServices = useMemo(() => {
+    if (!backendServices || backendServices.length === 0) return [];
+    return backendServices.filter((srv) => {
+      // 1. Search term (by name, description, category)
+      if (searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase();
+        const matchName = (srv.name || "").toLowerCase().includes(term);
+        const matchDesc = (srv.description || "").toLowerCase().includes(term);
+        const matchCat = (srv.category || "").toLowerCase().includes(term);
+        if (!matchName && !matchDesc && !matchCat) return false;
+      }
+      // 2. Hotel filter
+      if (selectedHotel !== "all") {
+        if (selectedHotel === "system") {
+          if (srv.hotelId && srv.hotelName && !srv.hotelName.toLowerCase().includes("toàn")) {
+            return false;
+          }
+        } else {
+          const srvHotelId = srv.hotelId ? String(srv.hotelId) : "";
+          const srvHotelName = (srv.hotelName || "").toLowerCase();
+          const target = selectedHotel.toLowerCase();
+          const isChainWide = !srv.hotelId || srvHotelName.includes("toàn chuỗi") || srvHotelName.includes("toàn");
+          const isExactHotel = srvHotelId === selectedHotel || srvHotelName.includes(target);
+          if (!isChainWide && !isExactHotel) {
+            return false;
+          }
+        }
+      }
+      // 3. Category filter
+      if (selectedCategory !== "all") {
+        if ((srv.category || "").trim() !== selectedCategory) return false;
+      }
+      return true;
+    });
+  }, [backendServices, searchTerm, selectedHotel, selectedCategory]);
+
   const staticServices =
     language === "vi"
       ? [
@@ -644,47 +870,165 @@ export function Services() {
         </p>
       </div>
 
-      {backendServices && backendServices.length > 0 ? (
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {backendServices.map((srv) => (
-            <article
-              key={srv.id}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-            >
-              {srv.imageUrl && (
-                <div className="h-48 overflow-hidden bg-secondary">
-                  <img loading="lazy" decoding="async"
-                    src={srv.imageUrl}
-                    alt={srv.name}
-                    className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                  />
-                </div>
+      {backendServices && backendServices.length > 0 && (
+        <div className="mx-auto mt-8 max-w-6xl space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={isVietnamese ? "Tìm theo tên dịch vụ, món ăn, spa, đưa đón..." : "Search services, dining, spa, transfer..."}
+                className="w-full rounded-full border border-border bg-white pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               )}
-              <div className="flex flex-1 flex-col p-6">
-                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-gold">
-                  <span>{srv.category || "Dịch vụ"}</span>
-                  <span>{srv.hotelName || "Toàn chuỗi"}</span>
-                </div>
-                <h2 className="mt-2 font-display text-xl font-bold text-primary">{srv.name}</h2>
-                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-                  {srv.description || "Dịch vụ tiêu chuẩn 5 sao phục vụ quý khách."}
-                </p>
-                <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-                  <span className="text-sm font-bold text-primary">
-                    {formatVnd(srv.price)}
-                    {srv.unit && <span className="text-xs font-normal text-muted-foreground"> / {srv.unit}</span>}
-                  </span>
-                  <Link
-                    to="/hotels"
-                    className="text-xs font-semibold text-primary underline hover:text-gold"
-                  >
-                    {isVietnamese ? "Đặt phòng & dịch vụ" : "Book with room"}
-                  </Link>
-                </div>
-              </div>
-            </article>
-          ))}
+            </div>
+
+            {/* Hotel Filter Dropdown */}
+            <div className="sm:w-72">
+              <select
+                value={selectedHotel}
+                onChange={(e) => setSelectedHotel(e.target.value)}
+                className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+              >
+                <option value="all">{isVietnamese ? "🏨 Tất cả khách sạn / chi nhánh" : "🏨 All hotels & branches"}</option>
+                <option value="system">{isVietnamese ? "⭐ Toàn chuỗi Sen Việt" : "⭐ Chain-wide services"}</option>
+                {hotels.map((h) => (
+                  <option key={h.slug} value={String(h.id || h.slug)}>
+                    {h.name} ({h.city})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Category Filter Chips */}
+          {categories.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mr-1">
+                {isVietnamese ? "Danh mục:" : "Category:"}
+              </span>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                    selectedCategory === cat
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-white/80 text-muted-foreground border border-border hover:text-primary hover:bg-white"
+                  }`}
+                >
+                  {cat === "all" ? (isVietnamese ? "Tất cả" : "All") : cat}
+                </button>
+              ))}
+
+              {(searchTerm || selectedHotel !== "all" || selectedCategory !== "all") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedHotel("all");
+                    setSelectedCategory("all");
+                  }}
+                  className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary underline hover:text-gold"
+                >
+                  <X className="h-3 w-3" />
+                  {isVietnamese ? "Đặt lại bộ lọc" : "Reset filters"}
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground pt-1">
+            <span>
+              {isVietnamese
+                ? `Tìm thấy ${filteredServices.length} dịch vụ đáp ứng yêu cầu`
+                : `Found ${filteredServices.length} matching services`}
+            </span>
+          </div>
         </div>
+      )}
+
+      {backendServices && backendServices.length > 0 ? (
+        filteredServices.length === 0 ? (
+          <div className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed border-border bg-white/70 p-8 text-center">
+            <Search className="mx-auto h-10 w-10 text-muted-foreground/60" />
+            <h3 className="mt-3 font-bold text-primary">
+              {isVietnamese ? "Không tìm thấy dịch vụ phù hợp" : "No services found"}
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {isVietnamese
+                ? "Vui lòng thử lại với từ khóa khác hoặc bỏ chọn bộ lọc chi nhánh."
+                : "Please try another keyword or clear hotel branch filters."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("");
+                setSelectedHotel("all");
+                setSelectedCategory("all");
+              }}
+              className="mt-4 rounded-full bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              {isVietnamese ? "Xem tất cả dịch vụ" : "View all services"}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredServices.map((srv) => (
+              <article
+                key={srv.id}
+                className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+              >
+                {srv.imageUrl && (
+                  <div className="h-48 overflow-hidden bg-secondary">
+                    <img loading="lazy" decoding="async"
+                      src={srv.imageUrl}
+                      alt={srv.name}
+                      className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-1 flex-col p-6">
+                  <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-gold">
+                    <span className="rounded-md bg-secondary/80 px-2 py-0.5">{srv.category || "Dịch vụ"}</span>
+                    <span className="inline-flex items-center gap-1 text-muted-foreground">
+                      <Building2 className="h-3 w-3 text-gold" />
+                      {srv.hotelName || "Toàn chuỗi"}
+                    </span>
+                  </div>
+                  <h2 className="mt-2 font-display text-xl font-bold text-primary">{srv.name}</h2>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                    {srv.description || "Dịch vụ tiêu chuẩn 5 sao phục vụ quý khách."}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+                    <span className="text-sm font-bold text-primary">
+                      {formatVnd(srv.price)}
+                      {srv.unit && <span className="text-xs font-normal text-muted-foreground"> / {srv.unit}</span>}
+                    </span>
+                    <Link
+                      to="/hotels"
+                      className="text-xs font-semibold text-primary underline hover:text-gold"
+                    >
+                      {isVietnamese ? "Đặt phòng & dịch vụ" : "Book with room"}
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )
       ) : (
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
           {staticServices.map(([Icon, title, desc]) => (

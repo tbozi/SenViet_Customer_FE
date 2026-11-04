@@ -139,6 +139,7 @@ function App() {
                             }
                           />
                           <Route path="/offers" element={<ExplorePages />} />
+                          <Route path="/promotions" element={<ExplorePages />} />
                           <Route path="/services" element={<ServicesRoute />} />
                           <Route path="/login" element={<AuthPage mode="login" />} />
                           <Route path="/register" element={<AuthPage mode="register" />} />
