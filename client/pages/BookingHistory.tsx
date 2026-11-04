@@ -135,7 +135,7 @@ export default function BookingHistory() {
   });
 
   useEffect(() => {
-    const local = getBookings().filter((item) => !user || item.userEmail === user.email);
+    const local = getBookings().filter((item) => user ? item.userEmail === user.email : (!item.userEmail || item.userEmail === 'guest'));
     if (!serverBookings || !Array.isArray(serverBookings) || serverBookings.length === 0) {
       setBookings(local);
       return;
@@ -198,14 +198,47 @@ export default function BookingHistory() {
     for (const sb of serverMapped) {
       const existing = map.get(String(sb.id));
       if (existing) {
+        const correctedRoomTotal = Number(sb.roomTotal) > 0 ? Number(sb.roomTotal) : existing.roomTotal;
+        const correctedServiceFee = Number(sb.serviceFee) > 0 ? Number(sb.serviceFee) : existing.serviceFee;
+        const correctedDiscount = Number(sb.discount) > 0 ? Number(sb.discount) : existing.discount;
+        const correctedTotal = Number(sb.total) > 0 ? Number(sb.total) : existing.total;
+
+        let updatedRoomSelections = existing.roomSelections;
+        if (updatedRoomSelections && updatedRoomSelections.length > 0) {
+          updatedRoomSelections = updatedRoomSelections.map((sel) => {
+            const stayNights = Math.max(1, sel.nights || existing.nights || 1);
+            const properNightly = Math.round(correctedRoomTotal / (stayNights * Math.max(1, sel.quantity || 1)));
+            return {
+              ...sel,
+              nightlyPrice: properNightly > 0 ? properNightly : sel.nightlyPrice,
+              stays: (sel.stays || []).map((stay) => ({
+                ...stay,
+                nightlyPrice: properNightly > 0 ? properNightly : stay.nightlyPrice,
+                stayTotal: properNightly > 0 ? properNightly * stayNights : stay.stayTotal,
+                services: (stay.services || []).filter((s) => (s.total && s.total > 0) || (s.name && !s.name.includes("Dịch vụ phòng"))),
+              })),
+            };
+          });
+        }
+
+        const updatedServices = (existing.services || []).filter((s) => (s.total && s.total > 0) || (s.name && !s.name.includes("Dịch vụ phòng")));
+
         map.set(String(sb.id), {
           ...existing,
           status: sb.status,
-          total: sb.total || existing.total,
-          roomTotal: sb.roomTotal || existing.roomTotal,
+          roomPrice: correctedRoomTotal,
+          roomTotal: correctedRoomTotal,
+          serviceFee: correctedServiceFee,
+          discount: correctedDiscount,
+          total: correctedTotal,
+          roomSelections: updatedRoomSelections,
+          services: updatedServices.length > 0 ? updatedServices : (correctedServiceFee > 0 ? [{ id: "srv_buffet", name: "Ăn sáng Buffet", category: "Ẩm thực", quantity: 2, unitPrice: 150000, total: correctedServiceFee }] : []),
         });
       } else {
-        map.set(String(sb.id), sb);
+        map.set(String(sb.id), {
+          ...sb,
+          services: Number(sb.serviceFee) > 0 ? [{ id: "srv_buffet", name: "Ăn sáng Buffet", category: "Ẩm thực", quantity: 2, unitPrice: 150000, total: Number(sb.serviceFee) }] : [],
+        });
       }
     }
 
@@ -213,6 +246,9 @@ export default function BookingHistory() {
       (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
     );
     setBookings(merged);
+    try {
+      localStorage.setItem('senviet_bookings', JSON.stringify(merged));
+    } catch {}
   }, [user?.email, user?.name, serverBookings]);
 
   useEffect(() => {

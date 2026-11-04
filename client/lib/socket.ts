@@ -90,6 +90,27 @@ export function bindCustomerSocketEvents(nextHandlers: SocketHandlers = {}) {
       window.dispatchEvent(new CustomEvent("senviet_staff_chat_reply", { detail: data }));
     }
   });
+
+  socket.on("customer_chat_messages_read", (data: any) => {
+    if (import.meta.env.DEV) console.log("👀 [Customer Socket] Nhân viên đã đọc tin nhắn:", data);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("senviet_staff_read_messages", { detail: data }));
+    }
+  });
+
+  socket.on("branch_online_status_result", (data: any) => {
+    if (import.meta.env.DEV) console.log("🟢 [Customer Socket] Trạng thái chi nhánh:", data);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("senviet_branch_online_status", { detail: data }));
+    }
+  });
+
+  socket.on("customer_staff_chat_ack", (data: any) => {
+    if (import.meta.env.DEV) console.log("✅ [Customer Socket] Chat ACK:", data);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("senviet_customer_chat_ack", { detail: data }));
+    }
+  });
 }
 
 export function initCustomerSocket(
@@ -143,6 +164,15 @@ export function sendCustomerChatMessage(payload: CustomerChatPayload) {
   }
   if (socket) {
     socket.emit("customer_send_staff_chat", payload);
+  }
+}
+
+export function checkBranchOnline(hotelId: number | string | null) {
+  if (!socket || !socket.connected) {
+    initCustomerSocket();
+  }
+  if (socket && hotelId) {
+    socket.emit("check_branch_online_status", { hotelId });
   }
 }
 

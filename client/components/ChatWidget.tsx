@@ -39,7 +39,7 @@ import { useSendChatMessageMutation, useLazyGetChatHistoryQuery } from "@/servic
 import type { ChatMessage as ChatMessageType } from "@/services/chatApi";
 import { formatVnd, hotels } from "@/data/hotels";
 import { toLocalDateStr } from "@/lib/utils";
-import { sendCustomerChatMessage, initCustomerSocket, type StaffReplyPayload } from "@/lib/socket";
+import { sendCustomerChatMessage, initCustomerSocket, checkBranchOnline, type StaffReplyPayload } from "@/lib/socket";
 import {
   saveBooking,
   getBookings,
@@ -63,6 +63,7 @@ interface StaffMessage {
   branchName?: string;
   time: string;
   text: string;
+  isRead?: boolean;
 }
 
 const SENVIET_ZALO_HOTLINE = "0989809036";
@@ -432,6 +433,8 @@ export default function ChatWidget() {
   const cancelledOrdersRef = useRef<Set<string>>(new Set());
   const [cancelledBookingIds, setCancelledBookingIds] = useState<string[]>([]);
   const [botUnreadCount, setBotUnreadCount] = useState(0);
+  const [staffUnreadCount, setStaffUnreadCount] = useState(0);
+  const [isBranchOnline, setIsBranchOnline] = useState(true);
 
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -718,7 +721,7 @@ export default function ChatWidget() {
         // No server history found, show default greeting if no cached messages
       }
       if (isMounted) {
-        setMessages((prev) => (prev.length > 0 ? prev : [{ id: 1, from: "bot", text: t("ai.widgetGreeting") }]));
+        setMessages((prev) => (initialMsgs.length > 0 ? initialMsgs : [{ id: 1, from: "bot", text: t("ai.widgetGreeting") }]));
       }
     };
     fetchHistory();
@@ -820,21 +823,32 @@ export default function ChatWidget() {
             }
             const nights = Math.max(1, Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
             const payAmount = Number(state.amountToPay || 2000);
+            const roomQty = Math.max(1, state.roomQty || 1);
+            const matchingRoom = (state.availableRooms || []).find((r: any) => r.roomType === (state.roomType?.id || state.roomType));
+            const baseNightly = Number(matchingRoom?.pricePerNight || (state.roomType as any)?.price || 850000);
+            const totalRoomAmount = baseNightly * nights * roomQty;
 
             // Construct services list if any
             const rawServices = state.services || [];
-            const bookingServices: BookingService[] = rawServices.map((s: any, idx: number) => ({
-              id: String(s.id || s.serviceId || `svc_${idx}`),
-              name: s.name || s.serviceName || "Dịch vụ phòng",
-              category: s.category || "Dịch vụ",
-              quantity: Number(s.quantity || 1),
-              unitPrice: Number(s.price || s.unitPrice || 0),
-              total: Number(s.total || (Number(s.price || s.unitPrice || 0) * Number(s.quantity || 1))),
-            }));
+            const bookingServices: BookingService[] = rawServices.map((s: any, idx: number) => {
+              const sInfo = (state.availableServices || []).find((as: any) => as.id === (s.id || s.serviceId));
+              const sName = s.name || sInfo?.name || "Ăn sáng Buffet";
+              const sPrice = Number(s.price || sInfo?.price || 150000);
+              const sQty = Number(s.quantity || state.guests?.adults || 2);
+              return {
+                id: String(s.id || s.serviceId || `svc_${idx}`),
+                name: sName,
+                category: s.category || "Ẩm thực",
+                quantity: sQty,
+                unitPrice: sPrice,
+                total: sPrice * sQty,
+              };
+            });
             const servicesTotal = bookingServices.reduce((sum, s) => sum + s.total, 0);
-            const roomQty = Math.max(1, state.roomQty || 1);
-            const roomTotal = Math.max(0, payAmount - servicesTotal);
-            const nightlyPrice = Math.round(roomTotal / (nights * roomQty));
+            const computedSubtotal = totalRoomAmount + servicesTotal;
+            const discountAmount = Math.max(0, computedSubtotal - payAmount);
+            const nightlyPrice = baseNightly;
+            const roomTotal = totalRoomAmount;
             const roomTypeName = state.roomType?.name || (state.roomType?.id ? `Phòng ${state.roomType.id}` : "Phòng tiêu chuẩn");
 
             const roomStays: RoomStay[] = Array.from({ length: roomQty }, (_, i) => ({
@@ -890,7 +904,7 @@ export default function ChatWidget() {
               roomTotal: roomTotal > 0 ? roomTotal : payAmount,
               vat: 0,
               serviceFee: 0,
-              discount: 0,
+              discount: discountAmount,
               total: payAmount,
               paymentMethod: "qr",
               status: state.status === "CONFIRMED" ? "confirmed" : "pending_payment",
@@ -1123,6 +1137,19 @@ export default function ChatWidget() {
   useEffect(() => {
     setSelectedBranch(detectedBranchName);
   }, [detectedBranchName]);
+
+  // Kiem tra trang thai truc tuyen cua chi nhanh
+  useEffect(() => {
+    if (currentBranchHotelId) {
+      checkBranchOnline(currentBranchHotelId);
+    }
+  }, [selectedBranch, currentBranchHotelId, staffOpen]);
+
+  useEffect(() => {
+    if (staffOpen) {
+      setStaffUnreadCount(0);
+    }
+  }, [staffOpen]);
   const [staffInput, setStaffInput] = useState("");
   const [isStaffTyping, setIsStaffTyping] = useState(false);
   const staffScrollRef = useRef<HTMLDivElement>(null);
@@ -1148,6 +1175,33 @@ export default function ChatWidget() {
             : `Dạ Sen Việt xin chào quý khách! Quý khách đang kết nối trực tiếp với Bộ phận Lễ tân & CSKH (${branch}). Em có thể hỗ trợ thông tin gì cho chuyến lưu trú của quý khách ạ?`),
     };
   }, [isEn]);
+
+  // Listen for logout event to completely reset chat state & protect privacy
+  useEffect(() => {
+    const handleLogout = () => {
+      setOpen(false);
+      setStaffOpen(false);
+      setMenuOpen(false);
+      const newId = crypto.randomUUID();
+      sessionIdRef.current = newId;
+      try {
+        localStorage.setItem("senviet_chat_session_guest", newId);
+        localStorage.removeItem("senviet_cached_chat_messages_guest");
+      } catch {}
+      setMessages([{ id: Date.now(), from: "bot", text: t("ai.widgetGreeting") }]);
+      historyRef.current = [];
+      confirmedOrdersRef.current.clear();
+      setActivePaymentOrderId(null);
+      currentBookingIdRef.current = null;
+      setIsTyping(false);
+      setStaffMessages([getBranchInitialMessage(selectedBranch)]);
+      setStaffInput("");
+      setIsStaffTyping(false);
+    };
+
+    window.addEventListener("senviet_auth_logout", handleLogout);
+    return () => window.removeEventListener("senviet_auth_logout", handleLogout);
+  }, [t, selectedBranch, getBranchInitialMessage]);
 
   const [staffMessages, setStaffMessages] = useState<StaffMessage[]>(() => {
     try {
@@ -1257,8 +1311,13 @@ export default function ChatWidget() {
         ];
       });
 
-      // 🔔 2. Hiển thị Toast thông báo nổi nếu khách chưa mở chat
+      setIsBranchOnline(true);
+      setStaffMessages((prev) => prev.map((m) => (m.from === "user" ? { ...m, isRead: true } : m)));
+
+      // 🔔 2. Hien thi Toast thong bao noi neu khach chua mo chat
       if (!staffOpen) {
+        setStaffUnreadCount((u) => u + 1);
+        playHospitalityChime();
         toast({
           title: `🛎️ Nhân viên (${reply.staffName || "Lễ tân"}) phản hồi:`,
           description: reply.message.length > 70 ? reply.message.substring(0, 70) + "..." : reply.message,
@@ -1296,6 +1355,7 @@ export default function ChatWidget() {
               minute: "2-digit",
             }),
             text: m.message,
+            isRead: Boolean(m.isRead),
           }));
           setStaffMessages(mapped);
         }
@@ -1305,8 +1365,27 @@ export default function ChatWidget() {
     };
     fetchHistoryFromDb();
 
+    const handleStaffRead = () => {
+      setStaffMessages((prev) =>
+        prev.map((m) => (m.from === "user" ? { ...m, isRead: true } : m))
+      );
+    };
+
+    const handleBranchOnline = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && (detail.hotelId == null || String(detail.hotelId) === String(currentBranchHotelId))) {
+        setIsBranchOnline(Boolean(detail.online));
+      }
+    };
+
     window.addEventListener("senviet_staff_chat_reply", handleStaffReply);
-    return () => window.removeEventListener("senviet_staff_chat_reply", handleStaffReply);
+    window.addEventListener("senviet_staff_read_messages", handleStaffRead);
+    window.addEventListener("senviet_branch_online_status", handleBranchOnline);
+    return () => {
+      window.removeEventListener("senviet_staff_chat_reply", handleStaffReply);
+      window.removeEventListener("senviet_staff_read_messages", handleStaffRead);
+      window.removeEventListener("senviet_branch_online_status", handleBranchOnline);
+    };
   }, [customerId, user?.accountId, user?.email, selectedBranch, currentBranchHotelId, staffOpen]);
 
   const sendStaffMessage = (text: string) => {
@@ -1325,6 +1404,7 @@ export default function ChatWidget() {
       branchName: selectedBranch,
       time: nowTime,
       text: trimmed,
+      isRead: false,
     };
     setStaffMessages((prev) => [...prev, userMsg]);
     setStaffInput("");
@@ -1358,7 +1438,9 @@ export default function ChatWidget() {
               hour: "2-digit",
               minute: "2-digit",
             }),
-            text: `Dạ Bộ phận Lễ tân & Chăm sóc khách hàng (${selectedBranch}) đã tiếp nhận và kết nối với anh/chị qua Socket.IO thời gian thực. Nhân viên trực ca đang xử lý và sẽ phản hồi trực tiếp ngay tại đây ạ!`,
+            text: isBranchOnline
+              ? `Dạ Bộ phận Lễ tân & Chăm sóc khách hàng (${selectedBranch}) đã tiếp nhận và kết nối với anh/chị qua Socket.IO thời gian thực. Nhân viên trực ca đang xử lý và sẽ phản hồi trực tiếp ngay tại đây ạ!`
+              : `Dạ hiện tại chi nhánh ${selectedBranch} đang ngoài giờ trực tuyến / nhân viên vắng mặt. Tin nhắn của anh/chị đã được ghi nhận vào hệ thống (Chưa đọc) và nhân viên trực ca sẽ phản hồi ngay khi online ạ!`,
           },
         ]);
       }, 600);
@@ -1408,9 +1490,9 @@ export default function ChatWidget() {
           <>
             <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-gold text-gold-foreground">
               <Headset className="h-4 w-4" />
-              {botUnreadCount > 0 ? (
+              {(botUnreadCount + staffUnreadCount) > 0 ? (
                 <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-md animate-bounce">
-                  {botUnreadCount}
+                  {botUnreadCount + staffUnreadCount}
                 </span>
               ) : (
                 <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5">
@@ -1491,9 +1573,15 @@ export default function ChatWidget() {
                   <span className="text-sm font-bold text-primary">
                     {isEn ? "Front Desk & Zalo Chat" : "Chat với Nhân viên & Zalo"}
                   </span>
-                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-                    Zalo OA
-                  </span>
+                  {staffUnreadCount > 0 ? (
+                    <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 animate-pulse">
+                      {staffUnreadCount} mới
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                      Zalo OA
+                    </span>
+                  )}
                 </div>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
                   {isEn ? "Talk directly to hotel receptionists on Web or connect via Zalo" : "Trao đổi trực tiếp với Lễ tân trên Web hoặc chuyển sang ứng dụng Zalo"}
@@ -1614,6 +1702,12 @@ export default function ChatWidget() {
                     </option>
                   ))}
                 </select>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${
+                  isBranchOnline ? "bg-emerald-100 text-emerald-800 border border-emerald-200" : "bg-slate-100 text-slate-600 border border-slate-300"
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${isBranchOnline ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  {isBranchOnline ? "Online" : "Offline"}
+                </span>
               </div>
 
               {/* Nội dung tin nhắn với Nhân viên */}
@@ -1654,7 +1748,15 @@ export default function ChatWidget() {
                         <span>·</span>
                         <span className="font-medium text-primary/75">{msg.branchName}</span>
                         <span>·</span>
-                        <span className="inline-flex items-center text-emerald-600 font-medium" title="Tin nhắn đã gửi tới quầy Lễ tân & CSKH">✓ Đã gửi</span>
+                        {msg.isRead ? (
+                          <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold" title="Nhân viên đã đọc tin nhắn">
+                            ✓✓ Đã xem
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 text-amber-600 font-medium" title={isBranchOnline ? "Đã gửi tới quầy Lễ tân (Chưa đọc)" : "Chi nhánh hiện ngoại tuyến, tin nhắn đang chờ đọc"}>
+                            ✓ Đã gửi (Chưa đọc)
+                          </span>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -1909,17 +2011,15 @@ export default function ChatWidget() {
                 };
               }
 
-              // 2. Ánh xạ thẻ đặt phòng nhanh nếu tin nhắn này có kết quả tra cứu phòng
+              // 2. Ánh xạ thẻ đặt phòng nhanh CHỈ KHI có chỉ định rõ ràng từ AI (cardAction === "SHOW_ROOM_OPTIONS")
               const shouldShowBookingCard =
-                Boolean(m.state?.cardAction === "SHOW_ROOM_OPTIONS") ||
                 Boolean(
+                  m.state?.cardAction === "SHOW_ROOM_OPTIONS" &&
                   m.state?.branch &&
                   m.state?.availableRooms &&
                   m.state.availableRooms.length > 0 &&
                   m.state?.currentStep !== "PAYMENT_PROCESSING" &&
-                  !m.state?.qrUrl &&
-                  m.text &&
-                  /(phòng|phong|trống|trong|giá|gia|lựa chọn|lua chon|đặt|dat)/i.test(m.text)
+                  !m.state?.qrUrl
                 );
 
               if (shouldShowBookingCard && m.state?.branch && !bookingCard) {

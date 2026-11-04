@@ -206,7 +206,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ============================================================
   // Logout
   // ============================================================
-  const logout = () => persistSession(null, null);
+  const logout = () => {
+    persistSession(null, null);
+    try {
+      const keysToRemove = Object.keys(localStorage).filter(
+        (k) =>
+          k.startsWith('senviet_chat_session_') ||
+          k.startsWith('senviet_cached_chat_messages_') ||
+          k.startsWith('senviet_staff_chat_')
+      );
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('senviet_auth_logout'));
+    }
+  };
 
   // ============================================================
   // Update Profile — gọi PUT /users/me/profile

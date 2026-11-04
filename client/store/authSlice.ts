@@ -51,6 +51,18 @@ const authSlice = createSlice({
       state.user = null;
       localStorage.removeItem("senviet_token");
       localStorage.removeItem("senviet_session");
+      try {
+        const keysToRemove = Object.keys(localStorage).filter(
+          (k) =>
+            k.startsWith("senviet_chat_session_") ||
+            k.startsWith("senviet_cached_chat_messages_") ||
+            k.startsWith("senviet_staff_chat_")
+        );
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {}
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("senviet_auth_logout"));
+      }
     },
   },
 });
