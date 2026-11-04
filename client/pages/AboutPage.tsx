@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { 
   Award, 
+  Building2,
   CheckCircle2, 
   HeartHandshake, 
   MapPin, 
@@ -9,13 +10,15 @@ import {
   Star 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { hotels } from "@/data/hotels";
+import { formatVnd } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { openChatWidget } from "@/components/ChatWidget";
 
 export default function AboutPage() {
   const { language } = useLanguage();
   const isEn = language === "en";
+  const { data: hotels = [], isLoading, isError } = useGetPublicHotelsQuery();
 
   const coreValues = [
     {
@@ -261,7 +264,13 @@ export default function AboutPage() {
               {isEn ? "Nationwide Presence" : "Mạng lưới lưu trú"}
             </span>
             <h2 className="mt-2 font-display text-3xl sm:text-4xl font-bold text-primary">
-              {isEn ? "System of 7 Flagship Hotels" : "Hệ Thống 7 Khách Sạn & Resort"}
+              {isEn
+                ? (isLoading
+                    ? "Hotels & Resorts"
+                    : `System of ${hotels.length} Hotels & Resorts`)
+                : (isLoading
+                    ? "Khách sạn & resort"
+                    : `Hệ thống ${hotels.length} khách sạn & resort`)}
             </h2>
           </div>
           <Button asChild variant="outline" className="rounded-full">
@@ -271,24 +280,27 @@ export default function AboutPage() {
           </Button>
         </div>
 
+        {isLoading && (
+          <p className="text-muted-foreground">
+            {isEn ? "Loading hotels..." : "Đang tải khách sạn..."}
+          </p>
+        )}
+        {isError && (
+          <p role="alert" className="text-sm text-red-700">
+            {isEn ? "Unable to load hotels." : "Không thể tải khách sạn."}
+          </p>
+        )}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {hotels.map((hotel) => (
             <div 
-              key={hotel.slug}
+              key={hotel.id}
               className="group overflow-hidden rounded-2xl border border-border bg-card shadow-xs hover:shadow-lg transition"
             >
-              <div className="relative h-48 overflow-hidden">
-                <img loading="lazy" decoding="async" 
-                  src={hotel.image} 
-                  alt={hotel.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
-                />
-                <div className="absolute top-3 left-3 rounded-full bg-black/60 backdrop-blur px-2.5 py-1 text-[11px] font-semibold text-white flex items-center gap-1">
+              <div className="relative flex h-32 items-center justify-center bg-secondary/60 text-primary">
+                <Building2 className="h-10 w-10" />
+                <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-primary flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-gold" />
-                  {hotel.province}
-                </div>
-                <div className="absolute bottom-3 right-3 rounded-lg bg-primary/90 text-primary-foreground px-2 py-0.5 text-xs font-bold font-mono">
-                  {isEn ? `Rating ${hotel.rating}` : `Đánh giá ${hotel.rating} ★`}
+                  {hotel.provinceName || hotel.address}
                 </div>
               </div>
 
@@ -296,22 +308,24 @@ export default function AboutPage() {
                 <h3 className="font-display text-lg font-bold text-primary group-hover:text-gold transition">
                   {hotel.name}
                 </h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {hotel.city}
+                <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                  {hotel.address}
                 </p>
-                <p className="mt-3 text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                  {isEn ? hotel.descriptionEn : hotel.description}
+                <p className="mt-3 text-sm font-semibold text-primary">
+                  {hotel.startingPrice == null
+                    ? (isEn ? "Price unavailable" : "Chưa có giá phòng")
+                    : `${isEn ? "From" : "Giá từ"} ${formatVnd(hotel.startingPrice)} / ${isEn ? "night" : "đêm"}`}
                 </p>
 
                 <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
                   <Link 
-                    to={`/hotels/${hotel.slug}`}
+                    to={`/hotels/${hotel.id}`}
                     className="text-xs font-bold text-primary hover:underline"
                   >
                     {isEn ? "View Rooms & Book →" : "Chọn phòng & Đặt ngay →"}
                   </Link>
                   <Link 
-                    to={`/hotels/${hotel.slug}/details`}
+                    to={`/hotels/${hotel.id}`}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
                     {isEn ? "Details" : "Chi tiết"}

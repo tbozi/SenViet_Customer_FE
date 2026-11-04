@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { Flower2, Globe, Mail, Phone } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
-import { hotels } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 
 export default function Footer() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { data: hotels = [], isError } = useGetPublicHotelsQuery();
 
   return (
     <footer className="border-t border-border/60 bg-primary text-primary-foreground">
@@ -35,13 +36,20 @@ export default function Footer() {
             {t("footer.explore")}
           </h4>
           <ul className="mt-4 space-y-2 text-sm text-primary-foreground/70">
-            {hotels.slice(0, 4).map((h) => (
-              <li key={h.slug}>
-                <Link to={`/hotels/${h.slug}`} className="hover:text-primary-foreground">
-                  {h.name}
+            {hotels.slice(0, 4).map((hotel) => (
+              <li key={hotel.id}>
+                <Link to={`/hotels/${hotel.id}`} className="hover:text-primary-foreground">
+                  {hotel.name}
                 </Link>
               </li>
             ))}
+            {isError && (
+              <li className="text-xs text-primary-foreground/60">
+                {language === "en"
+                  ? "Unable to load hotels."
+                  : "Không thể tải khách sạn."}
+              </li>
+            )}
           </ul>
         </div>
 

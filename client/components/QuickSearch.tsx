@@ -2,7 +2,7 @@ import { FormEvent, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, MapPin, Search, Ticket, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { hotels } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { toLocalDateStr } from "@/lib/utils";
 
@@ -11,6 +11,7 @@ export default function QuickSearch() {
   const isEn = language === "en";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { data: hotels = [], isLoading: hotelsLoading, isError: hotelsError } = useGetPublicHotelsQuery();
   const [location, setLocation] = useState(() => searchParams.get("location") || "");
   const [checkIn, setCheckIn] = useState(() => searchParams.get("checkIn") || "");
   const [checkOut, setCheckOut] = useState(() => searchParams.get("checkOut") || "");
@@ -31,6 +32,7 @@ export default function QuickSearch() {
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!location) return setError(isEn ? "Please select a destination." : "Vui lòng chọn địa điểm.");
+    if (hotelsError) return setError(isEn ? "Unable to load hotels. Please try again later." : "Không thể tải danh sách khách sạn. Vui lòng thử lại sau.");
     if (!checkIn || !checkOut) return setError(isEn ? "Please select check-in and check-out dates." : "Vui lòng chọn ngày nhận phòng và ngày trả phòng.");
     if (checkIn < today) return setError(isEn ? "Check-in date cannot be in the past." : "Ngày nhận phòng không thể ở trong quá khứ (trước ngày hôm nay).");
     if (checkOut <= checkIn) return setError(isEn ? "Check-out date must be after check-in date." : "Ngày trả phòng phải sau ngày nhận phòng.");
@@ -45,7 +47,7 @@ export default function QuickSearch() {
       childAges: JSON.stringify(childAges),
       promo,
     });
-    navigate(`/search?${query.toString()}`);
+    navigate(`/hotels/${location}?${query.toString()}`);
   };
 
   const changeChildren = (value: string) => {
@@ -71,20 +73,14 @@ export default function QuickSearch() {
           }}
           aria-label={t("hotels.searchLocation")}
           className="w-full bg-transparent text-sm outline-none"
+          disabled={hotelsLoading || hotelsError}
         >
           <option value="">{t("hotels.searchLocation")}</option>
           {hotels.map((hotel) => (
-            <option value={hotel.slug} key={hotel.slug}>
-              {hotel.name} — {hotel.province}
+            <option value={hotel.id} key={hotel.id}>
+              {hotel.name} — {hotel.provinceName || hotel.address}
             </option>
           ))}
-          {["Tiền Giang", "Bình Định", "TP. Hồ Chí Minh", "Đà Nẵng", "Hà Nội", "Khánh Hòa"].map(
-            (province) => (
-              <option value={province} key={province}>
-                {province}
-              </option>
-            )
-          )}
         </select>
       </label>
 

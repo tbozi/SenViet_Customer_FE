@@ -3,7 +3,8 @@ import { Check, ChevronLeft, Copy, Hotel, Minus, Plus } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
-import { formatVnd, hotels } from "@/data/hotels";
+import { formatVnd } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
   services,
   serviceTabs,
@@ -114,8 +115,9 @@ function serviceTotal(stay: RoomStay) {
 export default function BookingServices() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const hotel =
-    hotels.find((item) => item.slug === params.get("hotel")) || hotels[0];
+  const { data: hotels = [], isLoading: hotelsLoading, isError: hotelsError } = useGetPublicHotelsQuery();
+  const requestedHotelId = Number(params.get("hotel"));
+  const hotel = hotels.find((item) => item.id === requestedHotelId);
   const arrivalTime = params.get("arrivalTime") || "14:00";
   const departureTime = params.get("departureTime") || "12:00";
   const [selections, setSelections] = useState<RoomSelection[]>(() =>
@@ -132,9 +134,9 @@ export default function BookingServices() {
   >(serviceTabs[0][0]);
 
   const { data: backendServices } = useGetServicesQuery({
-    hotelId: hotel?.id,
+    hotelId: hotel?.id ?? 0,
     activeOnly: true,
-  });
+  }, { skip: !hotel });
 
   const availableServices: ServiceCatalogItem[] = useMemo(() => {
     if (backendServices && backendServices.length > 0) {
@@ -352,10 +354,10 @@ export default function BookingServices() {
   };
 
   const continueToCheckout = () => {
-    if (!roomBreakdowns.length) return;
+    if (!hotel || !roomBreakdowns.length) return;
     const first = roomBreakdowns[0];
     const query = new URLSearchParams({
-      hotel: hotel.slug,
+      hotel: String(hotel.id),
       room: first.selection.roomNameVi,
       checkIn: first.stay.checkIn,
       checkOut: first.stay.checkOut,
@@ -373,11 +375,28 @@ export default function BookingServices() {
     navigate(`/checkout?${query.toString()}`);
   };
 
+  if (!hotel) {
+    return (
+      <main className="container py-16">
+        <p role={hotelsError ? "alert" : undefined} className={hotelsError ? "text-red-700" : "text-muted-foreground"}>
+          {hotelsLoading
+            ? "Đang tải thông tin khách sạn..."
+            : hotelsError
+              ? "Không thể tải thông tin khách sạn."
+              : "Không tìm thấy khách sạn."}
+        </p>
+        <Link to="/hotels" className="mt-4 inline-block text-primary underline">
+          Xem danh sách khách sạn
+        </Link>
+      </main>
+    );
+  }
+
   return (
     <main className="container py-8 sm:py-10">
       <div className="mx-auto max-w-7xl">
         <Link
-          to={`/hotels/${hotel.slug}?${params.toString()}`}
+          to={`/hotels/${hotel.id}?${params.toString()}`}
           className="inline-flex items-center gap-2 text-sm font-semibold text-primary"
         >
           <ChevronLeft className="h-4 w-4" />

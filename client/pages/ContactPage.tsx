@@ -11,13 +11,14 @@ import {
   Sparkles 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { hotels } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { openChatWidget } from "@/components/ChatWidget";
 
 export default function ContactPage() {
   const { language } = useLanguage();
   const isEn = language === "en";
+  const { data: hotels = [], isLoading: hotelsLoading, isError: hotelsError } = useGetPublicHotelsQuery();
 
   const [form, setForm] = useState({
     name: "",
@@ -311,17 +312,23 @@ export default function ContactPage() {
                       <select
                         value={form.branch}
                         onChange={(e) => setForm({ ...form, branch: e.target.value })}
+                        disabled={hotelsLoading || hotelsError}
                         className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                       >
                         <option value="all">
                           {isEn ? "All Branches / General Inquiry" : "Tất cả chi nhánh / Yêu cầu chung"}
                         </option>
-                        {hotels.map((h) => (
-                          <option key={h.slug} value={h.name}>
-                            {h.name} ({h.city})
+                        {hotels.map((hotel) => (
+                          <option key={hotel.id} value={hotel.id}>
+                            {hotel.name} ({hotel.provinceName || hotel.address})
                           </option>
                         ))}
                       </select>
+                      {hotelsError && (
+                        <p role="alert" className="text-xs text-red-700">
+                          {isEn ? "Unable to load hotel branches." : "Không thể tải danh sách chi nhánh."}
+                        </p>
+                      )}
                     </div>
                   </div>
 
