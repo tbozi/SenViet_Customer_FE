@@ -68,10 +68,10 @@ export default function AboutPage() {
     },
     {
       year: "2024 - Nay",
-      title: isEn ? "Digital Transformation & AI Concierge" : "Số hóa toàn diện & Chuỗi 7 khách sạn",
+      title: isEn ? "Digital Transformation & AI Concierge" : "Số hóa toàn diện & Chuỗi khách sạn thông minh",
       desc: isEn
-        ? "Complete nationwide network of 7 flagship hotels, powered by 24/7 AI-driven guest experiences."
-        : "Hoàn thiện chuỗi 7 khách sạn đẳng cấp cùng nền tảng quản trị thông minh và Trợ lý AI 24/7.",
+        ? "Complete nationwide network of flagship hotels, powered by 24/7 AI-driven guest experiences."
+        : "Hoàn thiện chuỗi khách sạn đẳng cấp cùng nền tảng quản trị thông minh và Trợ lý AI 24/7.",
     },
   ];
 
@@ -105,7 +105,7 @@ export default function AboutPage() {
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Button asChild size="lg" className="rounded-full bg-gold px-8 font-semibold text-gold-foreground hover:bg-gold/90">
               <Link to="/hotels">
-                {isEn ? "Explore 7 Hotels" : "Khám phá 7 Khách sạn"}
+                {isEn ? "Explore Hotels" : "Khám phá Khách sạn"}
               </Link>
             </Button>
             <Button 

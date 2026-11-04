@@ -36,7 +36,7 @@ const dictionaries = {
       badge: "Chuỗi khách sạn hàng đầu Việt Nam",
       title: "Sen Việt Hotels & Resorts",
       subtitle:
-        "7 khách sạn trải dài từ Bắc chí Nam, cùng trợ lý AI tư vấn đặt phòng và chăm sóc khách hàng 24/7.",
+        "Hệ thống khách sạn & khu nghỉ dưỡng trải dài từ Bắc chí Nam, cùng trợ lý AI tư vấn đặt phòng và chăm sóc khách hàng 24/7.",
       ctaPrimary: "Khám phá khách sạn",
       ctaSecondary: "Đặt phòng ngay",
       statHotels: "khách sạn",
@@ -59,7 +59,7 @@ const dictionaries = {
       filterSouth: "Miền Nam",
       pageTitle: "Khách sạn của chúng tôi",
       pageSubtitle:
-        "7 điểm dừng chân sang trọng, rải khắp Việt Nam, sẵn sàng đón bạn.",
+        "Các điểm dừng chân sang trọng rải khắp Việt Nam, sẵn sàng chào đón bạn.",
       regionsTitle: "Khám phá theo khu vực",
       searchLocation: "Địa điểm",
       searchCheckIn: "Ngày nhận",
@@ -236,7 +236,7 @@ const dictionaries = {
       badge: "Vietnam's leading luxury hotel chain",
       title: "Sen Việt Hotels & Resorts",
       subtitle:
-        "7 boutique hotels spanning the country, backed by an AI agent for booking advice and 24/7 customer care.",
+        "Premier luxury hotels and resorts spanning across Vietnam, backed by an AI Concierge for booking advice and 24/7 customer care.",
       ctaPrimary: "Explore hotels",
       ctaSecondary: "Book now",
       statHotels: "hotels",
@@ -259,7 +259,7 @@ const dictionaries = {
       filterSouth: "Southern",
       pageTitle: "Our Hotels",
       pageSubtitle:
-        "7 luxury destinations across Vietnam, ready to welcome you.",
+        "Premier luxury destinations across Vietnam, ready to welcome you.",
       regionsTitle: "Explore by region",
       searchLocation: "Destination",
       searchCheckIn: "Check-in",
