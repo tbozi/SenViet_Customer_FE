@@ -30,8 +30,10 @@ export interface RoomType {
   price: number;
   offers: RoomOffer[];
   image: string;
+  images?: string[];
   building: "A" | "B" | "C";
-  floor: 1 | 2 | 3;
+  floor: number;
+  buildingName?: string;
   roomCodes: string[];
   capacity: RoomCapacity;
   targetGuests: string;

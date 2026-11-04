@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toLocalDateStr } from "@/lib/utils";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
-import { formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
+import { formatVnd } from "@/data/hotels";
 import {
   getCancellationPolicy,
   isRoomSpecificFee,
@@ -38,6 +38,7 @@ import {
 import { useLanguage } from "@/lib/i18n";
 import { useGetActivePromotionsQuery, useGetMySavedPromotionsQuery } from "@/services/promotionApi";
 import { useCreateCustomerBookingMutation } from "@/services/bookingApi";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 
 const fallbackGuestForms = (params: URLSearchParams): GuestForm[] => {
   try {
@@ -151,8 +152,9 @@ export default function Checkout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const hotel =
-    hotels.find((item) => item.slug === params.get("hotel")) || hotels[0];
+  const { data: publicHotels = [], isLoading: hotelsLoading, isError: hotelsError } = useGetPublicHotelsQuery();
+  const hotelId = Number(params.get("hotel"));
+  const hotel = publicHotels.find((item) => item.id === hotelId);
   const [name, setName] = useState(
     user?.name || params.get("fullName") || params.get("name") || "",
   );
@@ -255,7 +257,7 @@ export default function Checkout() {
     };
   }, [user?.email, savedPromosBackend]);
 
-  const hotelTarget = hotel.slug || hotel.name;
+  const hotelTarget = hotel?.name || String(hotelId);
 
   const savedPromotionItems = useMemo(() => {
     return savedPromotionCodes.map((code) => {
@@ -526,6 +528,13 @@ export default function Checkout() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (!hotel || !Number.isSafeInteger(hotelId) || hotelId <= 0) {
+      return setError(
+        hotelsError
+          ? (isEn ? "Unable to load hotel information." : "Không thể tải thông tin khách sạn.")
+          : (isEn ? "Hotel information is still loading." : "Thông tin khách sạn đang được tải."),
+      );
+    }
     if (!name || !phone || !email)
       return setError(isEn ? "Please fill in all guest representative information." : "Vui lòng điền đủ thông tin người đại diện nhận phòng.");
     if (!cccd)
@@ -537,8 +546,6 @@ export default function Checkout() {
     }
     setError("");
     setPaymentState("processing");
-
-    const hotelId = hotel.id || (hotel.slug ? hotelSlugToId[hotel.slug] : 1) || 1;
 
     // Chuẩn bị danh sách chi tiết đặt phòng (BookingDetails) khớp với Backend DTO
     const bookingDetailsPayload = selections.flatMap((selection) => {
@@ -613,7 +620,6 @@ export default function Checkout() {
         else if (user?.email === "customer@senviet.vn") customerId = "CUS_201";
         else customerId = user?.email || "CUS_201";
       }
-      const hotelId = hotel.id || (hotel.slug ? hotelSlugToId[hotel.slug] : 1) || 1;
       const cleanPromo = promo.trim().toUpperCase();
       const matchedSavedPromo =
         cleanPromo && !promoMinBookingFailed
@@ -658,7 +664,7 @@ export default function Checkout() {
     const booking: Booking = {
       id: generatedId,
       userEmail: user.email,
-      hotelSlug: hotel.slug,
+      hotelSlug: String(hotel.id),
       hotelName: hotel.name,
       roomName: selections
         .map((selection) => `${selection.roomNameVi} × ${selection.quantity}`)
@@ -828,7 +834,12 @@ export default function Checkout() {
             )}
           </section>
           <BookingSummaryPanel
-            hotelName={hotel.name}
+            hotelName={
+              hotel?.name ||
+              (hotelsLoading
+                ? (isEn ? "Loading hotel…" : "Đang tải khách sạn…")
+                : (isEn ? "Hotel" : "Khách sạn"))
+            }
             selections={selections}
             arrivalTime={arrivalTime}
             departureTime={departureTime}

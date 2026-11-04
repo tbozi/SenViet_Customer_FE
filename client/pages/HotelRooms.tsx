@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -14,8 +14,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Clock,
-  Info,
   MapPin,
   ShieldAlert,
   Sparkles,
@@ -27,17 +25,15 @@ import { Button } from "@/components/ui/button";
 import QuickSearch from "@/components/QuickSearch";
 import RoomAvailabilityCalendar from "@/components/RoomAvailabilityCalendar";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
-import { rooms as defaultRooms, type RoomType } from "@/data/rooms";
-import { fetchRoomsByHotel, useGetBranchRoomDailyPricesQuery } from "@/services/roomApi";
-import { formatHotelLocation, formatVnd, hotels, hotelSlugToId } from "@/data/hotels";
+import { type RoomType } from "@/data/rooms";
+import { fetchRoomsByHotel, hotelSlugToIdMap, useGetBranchRoomDailyPricesQuery } from "@/services/roomApi";
+import { formatVnd } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
-  calculateEarlyCheckInSurcharge,
-  calculateLateCheckOutSurcharge,
-  calculateNights,
-  getCancellationNotice,
-  getCancellationSchedule,
-  getMockRoomAvailability,
-  type GuestForm,
+  calculateEarlyCheckInSurcharge,
+  calculateLateCheckOutSurcharge,
+  calculateNights,
+  type GuestForm,
   type RoomSelection,
   type RoomStay,
 } from "@/lib/bookings";
@@ -80,7 +76,15 @@ function nextDate(date: string) {
 }
 
 function extraGuests(room: RoomType, guest: GuestForm) {
-  const standardCapacity = room.standardCapacity || room.capacity?.adults || 2;
+  const standardCapacity = room.standardCapacity ?? room.capacity?.adults ?? 0;
+  if (standardCapacity <= 0) {
+    return {
+      extraAdults: 0,
+      extraChildren: 0,
+      extraGuestCount: 0,
+      extraGuestCharge: 0,
+    };
+  }
   const actualAdults = guest.adults || 0;
   const actualChildren = guest.children || 0;
   const totalActualGuests = actualAdults + actualChildren;
@@ -102,8 +106,8 @@ function extraGuests(room: RoomType, guest: GuestForm) {
   const extraAdults = Math.max(0, actualAdults - actualAdultsCoveredByStandard);
   const extraChildren = Math.max(0, actualChildren - remainingStandardSlots);
 
-  const adultFee = room.extraAdultFee ?? 200000;
-  const childFee = room.extraChildFee ?? 100000;
+  const adultFee = room.extraAdultFee ?? 0;
+  const childFee = room.extraChildFee ?? 0;
   const extraGuestCharge = extraAdults * adultFee + extraChildren * childFee;
 
   return {
@@ -146,30 +150,26 @@ function getStayPrice(
   return { total, avgNightly: Math.round(total / nights) };
 }
 
-function RoomDetailsModal({
-  room,
-  remainingRooms,
-  checkInDate,
-  onClose,
-}: {
-  room: RoomType;
-  remainingRooms?: number;
-  checkInDate?: string;
-  onClose: () => void;
-}) {
+function RoomDetailsModal({
+  room,
+  remainingRooms,
+  onClose,
+}: {
+  room: RoomType;
+  remainingRooms?: number;
+  onClose: () => void;
+}) {
   const [imageIndex, setImageIndex] = useState(0);
-  const images = [
-    room.image,
-    ...defaultRooms.filter((item) => item.id !== room.id).map((item) => item.image),
-  ].slice(0, 3);
+  const images = room.images?.length
+    ? room.images
+    : [room.image || "/placeholder.svg"];
 
   const moveImage = (amount: number) =>
     setImageIndex(
       (current) => (current + amount + images.length) % images.length,
     );
 
-  const notice = checkInDate ? getCancellationNotice(checkInDate) : null;
-  const availableCount =
+  const availableCount =
     remainingRooms !== undefined ? remainingRooms : room.inventory;
 
   return (
@@ -301,8 +301,10 @@ function RoomDetailsModal({
                   <Users className="h-4 w-4 text-gold" /> Sức chứa
                 </span>
                 <p className="mt-1 text-xs font-bold text-slate-800">
-                  Chuẩn {room.standardCapacity || room.capacity.adults} người
-                  {room.maxExtraGuests ? ` (thêm tối đa ${room.maxExtraGuests})` : ""}
+                  {room.standardCapacity > 0 || room.capacity.adults > 0
+                    ? `Chuẩn ${room.standardCapacity || room.capacity.adults} người`
+                    : "Chưa có thông tin sức chứa"}
+                  {room.maxExtraGuests ? ` (thêm tối đa ${room.maxExtraGuests})` : ""}
                 </p>
               </div>
 
@@ -320,7 +322,8 @@ function RoomDetailsModal({
                   <MapPin className="h-4 w-4 text-gold" /> Vị trí
                 </span>
                 <p className="mt-1 text-xs font-bold text-slate-800">
-                  Tòa {room.building} · Tầng {room.floor}
+                  {room.buildingName && `Tòa ${room.buildingName} · `}
+                  {room.floor > 0 && `Tầng ${room.floor}`}
                 </p>
               </div>
             </div>
@@ -339,7 +342,9 @@ function RoomDetailsModal({
                   : "Hết phòng"}
               </span>
               <span className="text-muted-foreground">
-                Tòa {room.building} · Tầng {room.floor} · Giá cố định
+                {room.buildingName && `Tòa ${room.buildingName} · `}
+                {room.floor > 0 && `Tầng ${room.floor} · `}
+                Giá cố định
               </span>
             </div>
 
@@ -347,115 +352,25 @@ function RoomDetailsModal({
               {room.description}
             </p>
 
-            {/* CHÍNH SÁCH HỦY PHÒNG */}
-            <div className="mt-5 rounded-xl border border-amber-200/90 bg-gradient-to-br from-amber-50/80 via-amber-50/40 to-white p-4 text-xs">
-              <div className="flex items-center gap-2 font-bold text-amber-900">
-                <Clock className="h-4 w-4 text-amber-600" />
-                <span>Chính sách hủy phòng & hoàn tiền:</span>
-              </div>
-
-              <div className="mt-2.5 grid gap-2 sm:grid-cols-3">
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50/80 p-2.5">
-                  <span className="font-extrabold text-emerald-700">100% Hoàn tiền</span>
-                  <p className="mt-0.5 text-[11px] text-emerald-900/80">
-                    Hủy trước từ 7 ngày trở lên
-                  </p>
-                </div>
-                <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-2.5">
-                  <span className="font-extrabold text-amber-700">50% Hoàn tiền</span>
-                  <p className="mt-0.5 text-[11px] text-amber-900/80">
-                    Hủy từ 3 đến dưới 7 ngày
-                  </p>
-                </div>
-                <div className="rounded-lg border border-rose-200 bg-rose-50/80 p-2.5">
-                  <span className="font-extrabold text-rose-700">0% Không hoàn tiền</span>
-                  <p className="mt-0.5 text-[11px] text-rose-900/80">
-                    Hủy dưới 3 ngày nhận phòng
-                  </p>
-                </div>
-              </div>
-
-              {notice && (
-                <div
-                  className={`mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${notice.badgeClass}`}
-                >
-                  {notice.type === "free" ? (
-                    <Check className="h-3.5 w-3.5 shrink-0" />
-                  ) : notice.type === "partial" ? (
-                    <span className="text-xs">⚠️</span>
-                  ) : (
-                    <span className="text-xs font-bold">✕</span>
-                  )}
-                  <span>{notice.text}</span>
-                </div>
-              )}
-            </div>
-
-            {/* CHÍNH SÁCH PHỤ THU CHO KHÁCH HÀNG */}
-            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50/40 p-4 text-xs">
-              <div className="flex items-center gap-2 font-bold text-blue-950">
-                <Info className="h-4 w-4 text-blue-600" />
-                <span className="text-sm">Chính sách phụ thu cho khách hàng:</span>
-              </div>
-
-              <div className="mt-3 space-y-2.5 text-slate-700">
-                <div className="flex items-start justify-between gap-3 border-b border-blue-100 pb-2">
-                  <div>
-                    <span className="font-bold text-slate-900">
-                      • Phụ thu người lớn thêm (vượt sức chứa chuẩn):
-                    </span>
-                    <p className="text-[11px] text-slate-500">
-                      Đã bao gồm tiện ích phòng & bữa sáng (nếu gói có kèm ăn sáng)
-                    </p>
-                  </div>
-                  <span className="shrink-0 font-bold text-primary">
-                    {(room.extraAdultFee ?? 200000).toLocaleString("vi-VN")}₫ / người / đêm
-                  </span>
-                </div>
-
-                <div className="flex items-start justify-between gap-3 border-b border-blue-100 pb-2">
-                  <div>
-                    <span className="font-bold text-slate-900">
-                      • Trẻ em từ 2 đến dưới 12 tuổi:
-                    </span>
-                    <p className="text-[11px] text-slate-500">
-                      Em bé dưới 2 tuổi: Miễn phí lưu trú (ngủ cùng giường với bố mẹ)
-                    </p>
-                  </div>
-                  <span className="shrink-0 font-bold text-primary">
-                    {(room.extraChildFee ?? 100000).toLocaleString("vi-VN")}₫ / trẻ / đêm
-                  </span>
-                </div>
-
-                <div className="flex items-start justify-between gap-3 border-b border-blue-100 pb-2">
-                  <div>
-                    <span className="font-bold text-slate-900">
-                      • Nhận phòng sớm (Check-in sớm):
-                    </span>
-                    <p className="text-[11px] text-slate-500">
-                      Trước 06:00: 100% giá 1 đêm · Từ 06:00 – 09:00: 50% · Từ 09:00 – 14:00: 30%
-                    </p>
-                  </div>
-                  <span className="shrink-0 font-bold text-slate-800">
-                    30% – 100% giá 1 đêm
-                  </span>
-                </div>
-
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="font-bold text-slate-900">
-                      • Trả phòng trễ (Check-out trễ):
-                    </span>
-                    <p className="text-[11px] text-slate-500">
-                      Từ 12:00 – 15:00: 30% · Từ 15:00 – 18:00: 50% · Sau 18:00: 100% giá 1 đêm
-                    </p>
-                  </div>
-                  <span className="shrink-0 font-bold text-slate-800">
-                    30% – 100% giá 1 đêm
-                  </span>
-                </div>
-              </div>
-            </div>
+            {(room.extraAdultFee != null || room.extraChildFee != null) && (
+              <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50/40 p-4 text-xs">
+                <h3 className="text-sm font-bold text-blue-950">
+                  Phụ thu khách thêm
+                </h3>
+                <div className="mt-3 space-y-2 text-slate-700">
+                  {room.extraAdultFee != null && (
+                    <p>
+                      Người lớn thêm: {formatVnd(room.extraAdultFee)} / người / đêm
+                    </p>
+                  )}
+                  {room.extraChildFee != null && (
+                    <p>
+                      Trẻ em thêm: {formatVnd(room.extraChildFee)} / trẻ / đêm
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Tiện ích trong phòng */}
             <div className="mt-5">
@@ -488,8 +403,14 @@ export default function HotelRooms() {
   const { language } = useLanguage();
   const isEn = language === "en";
   const [searchParams] = useSearchParams();
-  const hotel = hotels.find((item) => item.slug === slug) || hotels[0];
-  const [rooms, setRooms] = useState<RoomType[]>(defaultRooms);
+  const { data: publicHotels = [], isError: hotelListError } = useGetPublicHotelsQuery();
+  const routeHotelId = slug && /^\d+$/.test(slug)
+    ? Number(slug)
+    : hotelSlugToIdMap[slug || ""] || 0;
+  const hotel = publicHotels.find((item) => item.id === routeHotelId);
+  const [rooms, setRooms] = useState<RoomType[]>([]);
+  const [roomsLoadError, setRoomsLoadError] = useState("");
+  const initializedSelectionKey = useRef<string | null>(null);
 
   const initialCheckIn = searchParams.get("checkIn") || dateValue(today);
   const initialCheckOut =
@@ -501,26 +422,73 @@ export default function HotelRooms() {
 
   useEffect(() => {
     let isMounted = true;
-    if (slug || hotel.slug) {
-      fetchRoomsByHotel(
-        slug || hotel.slug,
-        defaultDates.checkIn,
-        defaultDates.checkOut,
-      ).then((fetched) => {
-        if (isMounted && fetched && fetched.length > 0) {
-          setRooms(fetched);
-          setQuantities((prev) => {
-            const next = { ...prev };
-            for (const r of fetched) {
-              const availCount = r.availableRooms
-                ? r.availableRooms.length
-                : r.inventory;
-              if ((next[r.id] || 0) > availCount) {
-                next[r.id] = availCount;
-              }
-            }
-            return next;
-          });
+    if (Number.isSafeInteger(routeHotelId) && routeHotelId > 0) {
+      setRooms([]);
+      setRoomsLoadError("");
+      fetchRoomsByHotel(
+        routeHotelId,
+        defaultDates.checkIn,
+        defaultDates.checkOut,
+      ).then((fetched) => {
+        if (isMounted) {
+          const selectionKey = `${routeHotelId}:${searchParams.toString()}`;
+          const shouldSeedSelection = initializedSelectionKey.current !== selectionKey;
+          initializedSelectionKey.current = selectionKey;
+          const requestedRoom = (searchParams.get("room") || "").toLowerCase();
+          const requestedRoomCount = Math.min(
+            4,
+            Math.max(0, Number(searchParams.get("rooms") || 0)),
+          );
+          const preferredRoom =
+            fetched.find(
+              (room) =>
+                requestedRoom &&
+                (room.id.toLowerCase().includes(requestedRoom) ||
+                  room.nameVi.toLowerCase().includes(requestedRoom) ||
+                  room.name.toLowerCase().includes(requestedRoom)),
+            ) || fetched[0];
+          setRooms(fetched);
+          setQuantities((prev) => {
+            const next: Record<string, number> = {};
+            for (const r of fetched) {
+              const availCount = r.availableRooms?.length ?? r.inventory;
+              next[r.id] = Math.min(prev[r.id] || 0, availCount);
+            }
+            if (shouldSeedSelection && preferredRoom && requestedRoomCount > 0) {
+              next[preferredRoom.id] = Math.min(
+                requestedRoomCount,
+                preferredRoom.availableRooms?.length ?? preferredRoom.inventory,
+              );
+            }
+            return next;
+          });
+          if (shouldSeedSelection && preferredRoom && requestedRoomCount > 0) {
+            const initialQuantity = Math.min(
+              requestedRoomCount,
+              preferredRoom.availableRooms?.length ?? preferredRoom.inventory,
+            );
+            setGuestForms((prev) => ({
+              ...prev,
+              [preferredRoom.id]: Array.from(
+                { length: initialQuantity },
+                (_, index) =>
+                  prev[preferredRoom.id]?.[index] || defaultGuest(searchParams),
+              ),
+            }));
+            setRoomStays((prev) => ({
+              ...prev,
+              [preferredRoom.id]: Array.from(
+                { length: initialQuantity },
+                (_, index) => prev[preferredRoom.id]?.[index] || { ...defaultDates },
+              ),
+            }));
+            setSelectedRoomCodes((prev) => ({
+              ...prev,
+              [preferredRoom.id]: preferredRoom.roomCodes
+                .slice(0, initialQuantity)
+                .map(normalizeRoomDisplayName),
+            }));
+          }
           setSelectedRoomCodes((prev) => {
             const next = { ...prev };
             for (const r of fetched) {
@@ -547,73 +515,34 @@ export default function HotelRooms() {
             return next;
           });
         }
-      });
-    }
+      }).catch((error: unknown) => {
+        if (isMounted) {
+          console.error("Failed to load hotel rooms:", error);
+          setRoomsLoadError(isEn ? "Unable to load rooms. Please try again later." : "Không thể tải danh sách phòng. Vui lòng thử lại sau.");
+        }
+      });
+    } else {
+      setRooms([]);
+      setRoomsLoadError(isEn ? "Hotel not found." : "Không tìm thấy khách sạn.");
+    }
     return () => {
       isMounted = false;
     };
-  }, [slug, hotel.slug, defaultDates.checkIn, defaultDates.checkOut]);
-  const [roomStays, setRoomStays] = useState<Record<string, StayDates[]>>(() =>
-    Object.fromEntries(defaultRooms.map((room) => [room.id, []])),
-  );
+  }, [routeHotelId, defaultDates.checkIn, defaultDates.checkOut, isEn, searchParams]);
+  const [roomStays, setRoomStays] = useState<Record<string, StayDates[]>>({});
   const [arrivalTime, setArrivalTime] = useState("14:00");
   const [departureTime, setDepartureTime] = useState("12:00");
-  const oldRoom = (searchParams.get("room") || "").toLowerCase();
-  const oldRoomIndex = defaultRooms.findIndex(
-    (room) =>
-      oldRoom.includes(room.id) || oldRoom.includes(room.nameVi.toLowerCase()),
-  );
-  const [quantities, setQuantities] = useState<Record<string, number>>(() => {
-    const initial = Object.fromEntries(defaultRooms.map((room) => [room.id, 0]));
-    const legacyIndex = oldRoomIndex >= 0 ? oldRoomIndex : 0;
-    initial[defaultRooms[legacyIndex].id] = Math.min(
-      4,
-      Math.max(0, Number(searchParams.get("rooms") || 0)),
-    );
-    return initial;
-  });
-  const [guestForms, setGuestForms] = useState<Record<string, GuestForm[]>>(
-    () => {
-      const initial = Object.fromEntries(
-        defaultRooms.map((room) => [room.id, [] as GuestForm[]]),
-      );
-      const legacyIndex = oldRoomIndex >= 0 ? oldRoomIndex : 0;
-      const quantity = Math.min(
-        4,
-        Math.max(0, Number(searchParams.get("rooms") || 0)),
-      );
-      initial[defaultRooms[legacyIndex].id] = Array.from({ length: quantity }, () =>
-        defaultGuest(searchParams),
-      );
-      return initial;
-    },
-  );
-  const [selectedRoomCodes, setSelectedRoomCodes] = useState<
-    Record<string, string[]>
-  >(() => {
-    const initial = Object.fromEntries(
-      defaultRooms.map((room) => [room.id, [] as string[]]),
-    );
-    const legacyIndex = oldRoomIndex >= 0 ? oldRoomIndex : 0;
-    const quantity = Math.min(
-      4,
-      Math.max(0, Number(searchParams.get("rooms") || 0)),
-    );
-    initial[defaultRooms[legacyIndex].id] = defaultRooms[legacyIndex].roomCodes
-      .slice(0, quantity)
-      .map(normalizeRoomDisplayName);
-    return initial;
-  });
-  const [selectedRoom, setSelectedRoom] = useState(
-    oldRoomIndex >= 0 ? oldRoomIndex : 0,
-  );
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [guestForms, setGuestForms] = useState<Record<string, GuestForm[]>>({});
+  const [selectedRoomCodes, setSelectedRoomCodes] = useState<Record<string, string[]>>({});
+  const [selectedRoom, setSelectedRoom] = useState(0);
   const [calendarTarget, setCalendarTarget] = useState<CalendarTarget | null>(
     null,
   );
   const [detailRoom, setDetailRoom] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  const hotelId = hotel.id || (slug ? hotelSlugToId[slug] : 1) || 1;
+  const hotelId = routeHotelId;
   const { data: dailyPrices } = useGetBranchRoomDailyPricesQuery(
     {
       hotelId,
@@ -626,26 +555,23 @@ export default function HotelRooms() {
   const getDates = (roomId: string, index: number) =>
     roomStays[roomId]?.[index] || defaultDates;
 
-  const maxAvailable = (roomIndex: number, dates: StayDates) => {
-    const room = rooms[roomIndex];
-    if (room && room.availableRooms !== undefined) {
-      return room.availableRooms.length;
-    }
-    const result = getMockRoomAvailability(
-      roomIndex,
-      1,
-      dates.checkIn,
-      dates.checkOut,
-    );
-    return Math.max(0, result.remaining);
-  };
+  const maxAvailable = (roomIndex: number) => {
+    const room = rooms[roomIndex];
+    return room?.availableRooms?.length ?? room?.inventory ?? 0;
+  };
+  const getRoomAvailability = (roomIndex: number, requestedRooms: number) => {
+    const remaining = maxAvailable(roomIndex);
+    return {
+      available: roomIndex >= 0 && remaining >= requestedRooms,
+      remaining,
+    };
+  };
 
   const setRoomQuantity = (roomId: string, requestedQuantity: number) => {
     const roomIndex = rooms.findIndex((room) => room.id === roomId);
-    const currentDates = roomStays[roomId]?.[0] || defaultDates;
     const quantity = Math.min(
       Math.max(0, requestedQuantity),
-      maxAvailable(roomIndex, currentDates),
+      maxAvailable(roomIndex),
     );
     setQuantities((current) => ({ ...current, [roomId]: quantity }));
     setGuestForms((current) => ({
@@ -723,9 +649,9 @@ export default function HotelRooms() {
     value: number,
   ) => {
     const room = rooms.find((r) => r.id === roomId);
-    const standardGuests = room?.standardCapacity || room?.capacity?.adults || 2;
-    const maxExtra = room?.maxExtraGuests ?? 2;
-    const maxTotalCapacity = standardGuests + maxExtra;
+    const standardGuests = room?.standardCapacity ?? room?.capacity?.adults ?? 0;
+    const maxExtra = room?.maxExtraGuests ?? 0;
+    const maxTotalCapacity = Math.max(1, standardGuests + maxExtra);
 
     setGuestForms((current) => ({
       ...current,
@@ -928,16 +854,14 @@ export default function HotelRooms() {
     (sum, selection) => sum + selection.quantity,
     0,
   );
-  const selectedAvailabilities = selections.flatMap((selection) =>
-    (selection.stays || []).map((stay) =>
-      getMockRoomAvailability(
-        rooms.findIndex((room) => room.id === selection.roomId),
-        1,
-        stay.checkIn,
-        stay.checkOut,
-      ),
-    ),
-  );
+  const selectedAvailabilities = selections.flatMap((selection) =>
+    (selection.stays || []).map((stay) =>
+      getRoomAvailability(
+        rooms.findIndex((room) => room.id === selection.roomId),
+        selection.quantity,
+      ),
+    ),
+  );
 
   const goCheckout = () => {
     if (!selections.length)
@@ -957,7 +881,7 @@ export default function HotelRooms() {
     setError("");
     const first = selections[0];
     const query = new URLSearchParams({
-      hotel: hotel.slug,
+      hotel: String(hotelId),
       room: first.roomNameVi,
       checkIn: first.checkIn || defaultDates.checkIn,
       checkOut: first.checkOut || defaultDates.checkOut,
@@ -973,7 +897,7 @@ export default function HotelRooms() {
       arrivalTime,
       departureTime,
     });
-    navigate(`/hotels/${hotel.slug}/services?${query.toString()}`);
+    navigate(`/hotels/${hotelId}/services?${query.toString()}`);
   };
 
   return (
@@ -981,34 +905,31 @@ export default function HotelRooms() {
       <QuickSearch />
       <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card">
         <div className="grid md:grid-cols-[1fr_1.2fr]">
-          <img loading="lazy" decoding="async"
-            src={hotel.image}
-            alt={hotel.name}
-            className="h-64 w-full object-cover md:h-full"
-          />
-          <div className="p-6 md:p-8">
-            <div className="flex items-center gap-1 text-sm text-gold">
-              <Star className="h-4 w-4 fill-gold" /> {hotel.rating} / 5
-            </div>
-            <h1 className="mt-3 font-display text-4xl font-bold text-primary">
-              {hotel.name}
-            </h1>
-            <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              {formatHotelLocation(hotel)}
-            </p>
-            <p className="mt-5 leading-relaxed text-muted-foreground">
-              {language === "vi" ? hotel.description : hotel.descriptionEn}
-            </p>
-            <Link
-              to={`/hotels/${hotel.slug}/details`}
-              className="mt-5 inline-block text-sm font-semibold text-primary underline underline-offset-4"
-            >
-              {language === "vi"
-                ? "Xem chi tiết khách sạn"
-                : "View hotel details"}
-            </Link>
-          </div>
+          <div className="relative flex min-h-64 items-center justify-center overflow-hidden bg-secondary text-xl font-semibold text-primary">
+            {hotel?.imageUrls?.[0] ? (
+              <img
+                src={hotel.imageUrls[0]}
+                alt={hotel.name}
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <span>Sen Việt</span>
+            )}
+          </div>
+          <div className="p-6 md:p-8">
+            <h1 className="mt-3 font-display text-4xl font-bold text-primary">
+              {hotel?.name || (isEn ? "Hotel" : "Khách sạn")}
+            </h1>
+            <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4" />
+              {[hotel?.address, hotel?.provinceName].filter(Boolean).join(", ")}
+            </p>
+            {hotelListError && (
+              <p role="alert" className="mt-4 text-sm text-red-700">
+                {isEn ? "Unable to load hotel details." : "Không thể tải thông tin khách sạn."}
+              </p>
+            )}
+          </div>
         </div>
       </div>
       <section className="mt-8 rounded-2xl border border-border bg-white p-5 shadow-sm">
@@ -1106,17 +1027,21 @@ export default function HotelRooms() {
               {error}
             </p>
           )}
+          {roomsLoadError && (
+            <p role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {roomsLoadError}
+            </p>
+          )}
+          {!roomsLoadError && rooms.length === 0 && (
+            <p className="mt-4 rounded-xl border border-border bg-card p-3 text-sm text-muted-foreground">
+              {isEn ? "No rooms are currently available." : "Hiện chưa có dữ liệu phòng."}
+            </p>
+          )}
           <div className="mt-5 space-y-5">
             {rooms.map((item, index) => {
               const quantity = quantities[item.id] || 0;
               const dates = getDates(item.id, 0);
-              const availability = getMockRoomAvailability(
-                index,
-                1,
-                dates.checkIn,
-                dates.checkOut,
-              );
-              const maxQuantity = maxAvailable(index, dates);
+              const maxQuantity = maxAvailable(index);
               const stayRoomId = item.roomId || item.id;
               const priceCalc = getStayPrice(
                 stayRoomId,
@@ -1130,8 +1055,8 @@ export default function HotelRooms() {
                 (dailyPrices[String(stayRoomId)] || dailyPrices[Number(stayRoomId)])
               );
               const displayNightlyPrice = priceCalc.avgNightly;
-              const standardGuests = item.standardCapacity || item.capacity.adults || 2;
-              const maxTotalGuests = standardGuests + (item.maxExtraGuests || 0);
+              const standardGuests = item.standardCapacity ?? item.capacity.adults;
+              const maxTotalGuests = standardGuests + (item.maxExtraGuests ?? 0);
               return (
                 <article
                   key={item.id}
@@ -1141,7 +1066,7 @@ export default function HotelRooms() {
                   <div className="grid md:grid-cols-[190px_1fr_auto]">
                     <div className="relative">
                       <img loading="lazy" decoding="async"
-                        src={item.image}
+                        src={item.image || "/placeholder.svg"}
                         alt={item.nameVi}
                         className="aspect-[4/3] h-full w-full object-cover md:aspect-auto"
                       />
@@ -1183,7 +1108,9 @@ export default function HotelRooms() {
                         </span>
                         <span className="inline-flex items-center gap-1">
                           <Users className="h-4 w-4 text-gold" />
-                          {isEn ? `Standard ${standardGuests} adults${maxTotalGuests > standardGuests ? ` (max ${maxTotalGuests} guests)` : ""}` : `Chuẩn ${standardGuests} người lớn${maxTotalGuests > standardGuests ? ` (tối đa ${maxTotalGuests} khách)` : ""}`}
+                          {standardGuests > 0
+                            ? (isEn ? `Standard ${standardGuests} adults${maxTotalGuests > standardGuests ? ` (max ${maxTotalGuests} guests)` : ""}` : `Chuẩn ${standardGuests} người lớn${maxTotalGuests > standardGuests ? ` (tối đa ${maxTotalGuests} khách)` : ""}`)
+                            : (isEn ? "Capacity not provided" : "Chưa có thông tin sức chứa")}
                         </span>
                       </div>
                       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -1198,26 +1125,11 @@ export default function HotelRooms() {
                             : (isEn ? "Sold out" : "Hết phòng")}
                         </span>
                         <span className="text-muted-foreground">
-                          {isEn ? "Building" : "Tòa"} {item.building} · {isEn ? "Floor" : "Tầng"} {item.floor} · {hasDynamicPricing ? (isEn ? "Daily pricing" : "Giá theo ngày") : (isEn ? "Standard rate" : "Giá tiêu chuẩn")}
+                          {item.buildingName && `${isEn ? "Building" : "Tòa"} ${item.buildingName} · `}
+                          {item.floor > 0 && `${isEn ? "Floor" : "Tầng"} ${item.floor} · `}
+                          {hasDynamicPricing ? (isEn ? "Daily pricing" : "Giá theo ngày") : (isEn ? "Standard rate" : "Giá tiêu chuẩn")}
                         </span>
                       </div>
-                      {(() => {
-                        const notice = getCancellationNotice(dates.checkIn, new Date(), isEn);
-                        return (
-                          <div
-                            className={`mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${notice.badgeClass}`}
-                          >
-                            {notice.type === "free" ? (
-                              <Check className="h-3.5 w-3.5 shrink-0" />
-                            ) : notice.type === "partial" ? (
-                              <span className="text-xs">⚠️</span>
-                            ) : (
-                              <span className="text-xs font-bold">✕</span>
-                            )}
-                            <span>{notice.text}</span>
-                          </div>
-                        );
-                      })()}
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -1374,23 +1286,6 @@ export default function HotelRooms() {
                                     : "Chọn khoảng ngày"}
                                 </button>
                               </div>
-                              {(() => {
-                                const notice = getCancellationNotice(stayDates.checkIn);
-                                return (
-                                  <div
-                                    className={`mt-2 inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${notice.badgeClass}`}
-                                  >
-                                    {notice.type === "free" ? (
-                                      <Check className="h-3 w-3 shrink-0" />
-                                    ) : notice.type === "partial" ? (
-                                      <span className="text-xs">⚠️</span>
-                                    ) : (
-                                      <span className="text-xs font-bold">✕</span>
-                                    )}
-                                    <span>{notice.text}</span>
-                                  </div>
-                                );
-                              })()}
                               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                 <label className="text-xs font-semibold text-primary">
                                   Nhận phòng
@@ -1430,12 +1325,14 @@ export default function HotelRooms() {
                               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                                 {(() => {
                                   const standardGuests =
-                                    item.standardCapacity ||
-                                    item.capacity?.adults ||
-                                    2;
-                                  const maxExtra = item.maxExtraGuests ?? 2;
-                                  const maxTotalCapacity =
-                                    standardGuests + maxExtra;
+                                    item.standardCapacity ??
+                                    item.capacity?.adults ??
+                                    0;
+                                  const maxExtra = item.maxExtraGuests ?? 0;
+                                  const maxTotalCapacity = Math.max(
+                                    1,
+                                    standardGuests + maxExtra,
+                                  );
                                   const maxAdultsAllowed = Math.max(
                                     1,
                                     maxTotalCapacity - (guest.children || 0),
@@ -1562,7 +1459,7 @@ export default function HotelRooms() {
           </div>
         </section>
         <BookingSummaryPanel
-          hotelName={hotel.name}
+          hotelName={hotel?.name || ""}
           selections={selections}
           arrivalTime={arrivalTime}
           departureTime={departureTime}
@@ -1599,9 +1496,8 @@ export default function HotelRooms() {
         <RoomDetailsModal
           room={rooms[detailRoom]}
           remainingRooms={
-            maxAvailable(detailRoom, getDates(rooms[detailRoom].id, 0))
+            maxAvailable(detailRoom)
           }
-          checkInDate={getDates(rooms[detailRoom].id, 0).checkIn}
           onClose={() => setDetailRoom(null)}
         />
       )}
