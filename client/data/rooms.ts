@@ -88,8 +88,8 @@ const roomCodes = {
 } as const;
 
 const cancellationPolicies = {
-  flexible: "Hủy từ 7 ngày trước nhận phòng: hoàn 100%; từ 3 đến dưới 7 ngày: hoàn 50%; dưới 3 ngày hoặc no-show: 0%.",
-  flexibleVi: "Hủy từ 7 ngày trước nhận phòng: hoàn 100%; từ 3 đến dưới 7 ngày: hoàn 50%; dưới 3 ngày hoặc no-show: 0%.",
+  flexible: "Hủy từ 72 giờ (3 ngày) trước nhận phòng: hoàn 100%; từ 24 đến dưới 72 giờ: hoàn 50%; dưới 24 giờ hoặc no-show: 0%.",
+  flexibleVi: "Hủy từ 72 giờ (3 ngày) trước nhận phòng: hoàn 100%; từ 24 đến dưới 72 giờ: hoàn 50%; dưới 24 giờ hoặc no-show: 0%.",
   nonRefundable: "Không hoàn tiền khi hủy hoặc không đến.",
   nonRefundableVi: "Không hoàn tiền khi hủy hoặc không đến.",
 };
@@ -109,7 +109,7 @@ function createOffers(price: number): RoomOffer[] {
         "Giảm 15% dịch vụ ẩm thực & Spa",
       ],
       highlight: "Hủy linh hoạt",
-      conditions: "Miễn phí hủy trước ngày nhận phòng 7 ngày.",
+      conditions: "Miễn phí hủy trước giờ nhận phòng 72 giờ (3 ngày).",
       cancellationType: "flexible",
       cancellationPolicy: cancellationPolicies.flexible,
       cancellationPolicyVi: cancellationPolicies.flexibleVi,

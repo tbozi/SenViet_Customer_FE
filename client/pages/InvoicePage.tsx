@@ -313,7 +313,7 @@ export default function InvoicePage() {
       (order && discount > 0) || (foundBooking && discount > 0) ? "ƯU ĐÃI THÀNH VIÊN" : "";
     const vat = isMock
       ? 1996000
-      : foundBooking?.vat || Math.round((subTotal - discount) * 0.08);
+      : foundBooking?.vat || 0;
     const totalAmount = order ? Number(order.totalAmount || 0) : (isMock
       ? 26946000
       : foundBooking?.total || subTotal - discount + vat);
@@ -578,12 +578,14 @@ export default function InvoicePage() {
             </div>
           )}
 
-          <div className="flex justify-between text-slate-600">
-            <span>Thuế GTGT (8%)</span>
-            <span className="font-semibold text-slate-800">
-              {formatVnd(invoiceData.vat)}
-            </span>
-          </div>
+          {invoiceData.vat > 0 && (
+            <div className="flex justify-between text-slate-600">
+              <span>Thuế GTGT (8%)</span>
+              <span className="font-semibold text-slate-800">
+                {formatVnd(invoiceData.vat)}
+              </span>
+            </div>
+          )}
 
           <div className="border-t border-slate-200 pt-2.5 flex justify-between text-sm font-bold text-slate-900">
             <span>Tổng thanh toán</span>

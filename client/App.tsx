@@ -34,6 +34,7 @@ const CustomerCRM = lazy(() => import("@/pages/CustomerCRM"));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
 const AboutPage = lazy(() => import("@/pages/AboutPage"));
 const ContactPage = lazy(() => import("@/pages/ContactPage"));
+const AiChatPage = lazy(() => import("@/pages/AiChatPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 // Lazy imports for sub-components
@@ -108,9 +109,9 @@ function App() {
                           <Route path="/search" element={<SearchResults />} />
                           <Route path="/hotels/:slug" element={<HotelRooms />} />
                           <Route path="/hotels/:slug/details" element={<HotelDetails />} />
-                          <Route path="/hotels/:slug/services" element={<BookingServices />} />
-                          <Route path="/booking-services" element={<BookingServices />} />
-                          <Route path="/checkout" element={<Checkout />} />
+                          <Route path="/hotels/:slug/services" element={<ProtectedRoute><BookingServices /></ProtectedRoute>} />
+                          <Route path="/booking-services" element={<ProtectedRoute><BookingServices /></ProtectedRoute>} />
+                          <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
                           <Route path="/booking-success" element={<BookingSuccess />} />
                           <Route path="/booking-success/:bookingId" element={<BookingSuccess />} />
                           <Route
@@ -122,6 +123,7 @@ function App() {
                             }
                           />
                           <Route path="/history" element={<Navigate to="/bookings" replace />} />
+                          <Route path="/booking-list" element={<Navigate to="/bookings" replace />} />
                           <Route
                             path="/invoices"
                             element={
@@ -151,22 +153,8 @@ function App() {
                               </ProtectedRoute>
                             }
                           />
-                          <Route
-                            path="/loyalty"
-                            element={
-                              <ProtectedRoute>
-                                <LoyaltyPage />
-                              </ProtectedRoute>
-                            }
-                          />
-                          <Route
-                            path="/crm"
-                            element={
-                              <ProtectedRoute>
-                                <CustomerCRM />
-                              </ProtectedRoute>
-                            }
-                          />
+                          <Route path="/loyalty" element={<Navigate to="/account" replace />} />
+                          <Route path="/crm" element={<Navigate to="/account" replace />} />
                           <Route path="/reviews/:bookingId" element={<ReviewPage />} />
                           <Route
                             path="/profile"
@@ -180,6 +168,7 @@ function App() {
                           <Route path="/change-password" element={<Navigate to="/profile" replace />} />
                           <Route path="/about" element={<AboutPage />} />
                           <Route path="/contact" element={<ContactPage />} />
+                          <Route path="/chat" element={<AiChatPage />} />
                           <Route path="/admin" element={<Placeholder title="Hệ thống Quản lý Chuỗi Sen Việt" />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

@@ -21,6 +21,7 @@ export const hotelSlugToId: Record<string, number> = {
   "sen-viet-da-lat": 5,
   "sen-viet-go-cong": 6,
   "sen-viet-an-nhon": 7,
+  "sen-viet-quy-nhon": 8,
 };
 
 export const hotels: Hotel[] = [
@@ -128,6 +129,21 @@ export const hotels: Hotel[] = [
     image:
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80&w=1200&auto=format&fit=crop",
     amenities: ["Vườn sen thiền định", "Tour di sản Champa & Tây Sơn", "Ẩm thực đặc sản Bình Định", "Hồ bơi nhiệt đới", "Lớp học trà sen"],
+  },
+  {
+    id: 8,
+    slug: "sen-viet-quy-nhon",
+    name: "Sen Việt Quy Nhơn",
+    city: "TP. Quy Nhơn",
+    province: "Bình Định",
+    region: "central",
+    description: "Tọa lạc tại vùng biển Ghềnh Ráng tiên cảnh thuộc thành phố biển Quy Nhơn, Sen Việt Quy Nhơn mang trọn hơi thở biển xanh cát trắng và phong cách nghỉ dưỡng ven biển đẳng cấp quốc tế. Với các villa hướng biển tuyệt mỹ, hồ bơi vô cực ngắm hoàng hôn vịnh biển và hải sản tươi sống đánh bắt trong ngày, khách sạn là điểm đến lý tưởng cho những kỳ nghỉ dưỡng biển thảnh thơi và trọn vẹn.",
+    descriptionEn: "Located on the pristine coast of Ghenh Rang, Quy Nhon City, Sen Việt Quy Nhon captures the invigorating coastal essence with world-class seaside indulgence. Featuring panoramic sea-view villas, an oceanfront infinity pool and fresh local seafood dining, it offers an idyllic haven for rejuvenating tropical escapes.",
+    price: 1200000,
+    rating: 4.8,
+    image:
+      "https://images.unsplash.com/photo-1540555700478-4be289fbecef?q=80&w=1200&auto=format&fit=crop",
+    amenities: ["Hồ bơi vô cực hướng biển", "Bãi biển riêng Ghềnh Ráng", "Nhà hàng hải sản tươi sống", "Spa thảo dược biển", "Quầy bar hoàng hôn"],
   },
 ];
 

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
@@ -8,7 +8,8 @@ import axiosInstance from "@/lib/axiosInstance";
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
+  const isEn = language === "en";
   const location = useLocation();
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
@@ -89,12 +90,20 @@ export default function ProfilePage() {
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">Sen Việt member</p>
+            <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
+              {isEn ? "Customer Account" : "Tài khoản khách hàng"}
+            </p>
             <h1 className="mt-2 font-display text-4xl font-bold text-primary">{t("profile.title")}</h1>
           </div>
-          <Link to="/bookings" className="text-sm font-semibold text-primary underline">
-            {t("profile.bookingHistory")}
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/account" className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-primary transition">
+              <ArrowLeft className="h-4 w-4" />
+              {t("nav.account")}
+            </Link>
+            <Link to="/bookings" className="text-sm font-semibold text-primary underline">
+              {t("profile.bookingHistory")}
+            </Link>
+          </div>
         </div>
 
         {/* ====== Form thông tin cá nhân ====== */}
@@ -107,7 +116,7 @@ export default function ProfilePage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input p-3"
+                className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
               />
             </label>
             <label className="text-sm font-medium text-primary">
@@ -115,7 +124,7 @@ export default function ProfilePage() {
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input p-3"
+                className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
               />
             </label>
             <label className="text-sm font-medium text-primary">
@@ -124,7 +133,7 @@ export default function ProfilePage() {
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input p-3"
+                className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
               />
             </label>
             <label className="text-sm font-medium text-primary">
@@ -132,7 +141,7 @@ export default function ProfilePage() {
               <input
                 value={identityNumber}
                 onChange={(e) => setIdentityNumber(e.target.value)}
-                className="mt-1 w-full rounded-xl border border-input p-3"
+                className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
               />
             </label>
             <label className="text-sm font-medium text-primary sm:col-span-2">
@@ -145,13 +154,13 @@ export default function ProfilePage() {
             </label>
           </div>
           {error && (
-            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
+            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{error}</p>
           )}
           <div className="mt-6 flex items-center gap-4">
             <Button type="submit" className="rounded-xl" disabled={loading}>
               {loading ? "Đang lưu..." : t("profile.save")}
             </Button>
-            {saved && <span className="text-sm text-emerald-600">✓ Đã lưu thông tin</span>}
+            {saved && <span className="text-sm text-emerald-600 dark:text-emerald-400">✓ Đã lưu thông tin</span>}
           </div>
         </form>
 
@@ -167,7 +176,7 @@ export default function ProfilePage() {
                   required
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full rounded-xl border border-input p-3 pr-11"
+                  className="w-full rounded-xl border border-input bg-background text-foreground p-3 pr-11"
                   placeholder="Nhập mật khẩu hiện tại"
                 />
                 <button
@@ -189,7 +198,7 @@ export default function ProfilePage() {
                   minLength={6}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-xl border border-input p-3 pr-11"
+                  className="w-full rounded-xl border border-input bg-background text-foreground p-3 pr-11"
                   placeholder="Ít nhất 6 ký tự"
                 />
                 <button
@@ -211,7 +220,7 @@ export default function ProfilePage() {
                   minLength={6}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-xl border border-input p-3 pr-11"
+                  className="w-full rounded-xl border border-input bg-background text-foreground p-3 pr-11"
                   placeholder="Nhập lại mật khẩu mới"
                 />
                 <button
@@ -226,10 +235,10 @@ export default function ProfilePage() {
             </div>
           </div>
           {passwordError && (
-            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{passwordError}</p>
+            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{passwordError}</p>
           )}
           {passwordMsg && (
-            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{passwordMsg}</p>
+            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">{passwordMsg}</p>
           )}
           <div className="mt-4 flex flex-wrap gap-3">
             <Button type="submit" variant="outline" className="rounded-xl" disabled={passwordLoading}>

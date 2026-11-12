@@ -5,6 +5,8 @@ import HotelCard from "@/components/HotelCard";
 import { hotels as staticHotels, Hotel } from "@/data/hotels";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
+import { motion } from "framer-motion";
+import { MotionStaggerList } from "@/components/ui/animate-ui";
 
 export default function Hotels() {
   const { t, language } = useLanguage();
@@ -167,7 +169,7 @@ export default function Hotels() {
                   ? "Search by hotel name, address, or city..."
                   : "Tìm theo tên khách sạn, địa chỉ, thành phố..."
               }
-              className="w-full rounded-full border border-border bg-white pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+              className="w-full rounded-full border border-border bg-white pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
             />
             {searchQuery && (
               <button
@@ -184,7 +186,7 @@ export default function Hotels() {
             <select
               value={selectedProvince}
               onChange={(e) => updateFilters(region, e.target.value, searchQuery)}
-              className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+              className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
             >
               <option value="all">
                 {isEn ? "📍 All Provinces & Cities" : "📍 Tất cả tỉnh thành"}
@@ -204,20 +206,30 @@ export default function Hotels() {
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mr-1">
               {isEn ? "Region:" : "Khu vực miền:"}
             </span>
-            {regionFilters.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => updateFilters(key, selectedProvince, searchQuery)}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
-                  region === key
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "bg-secondary text-muted-foreground hover:text-primary hover:bg-secondary/80"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+            {regionFilters.map(([key, label]) => {
+              const isActive = region === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => updateFilters(key, selectedProvince, searchQuery)}
+                  className={`relative rounded-full px-4 py-1.5 text-xs font-semibold transition-colors duration-200 active:scale-95 ${
+                    isActive
+                      ? "text-primary-foreground"
+                      : "bg-secondary/70 text-muted-foreground hover:text-primary hover:bg-secondary"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="activeRegionPill"
+                      transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                      className="absolute inset-0 rounded-full bg-primary shadow-xs"
+                    />
+                  )}
+                  <span className="relative z-10">{label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {(region !== "all" || selectedProvince !== "all" || searchQuery.trim() !== "") && (
@@ -302,11 +314,11 @@ export default function Hotels() {
           </button>
         </div>
       ) : (
-        <div className="mx-auto mt-6 grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <MotionStaggerList className="mx-auto mt-6 grid max-w-6xl gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filtered.map((hotel) => (
             <HotelCard hotel={hotel} key={hotel.slug || hotel.id} />
           ))}
-        </div>
+        </MotionStaggerList>
       )}
     </main>
   );

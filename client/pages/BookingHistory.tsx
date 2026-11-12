@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatVnd } from "@/data/hotels";
+import { formatDisplayDate } from "@/lib/dateTime";
 import {
   getBookings,
   getCancellationPolicy,
@@ -41,21 +42,21 @@ import { useLanguage } from "@/lib/i18n";
 import { useCancelCustomerBookingMutation, useGetMyBookingsQuery, BookingResponseDto } from "@/services/bookingApi";
 
 const VIETNAMESE_BANKS = [
-  { code: "VCB", name: "Vietcombank - Ngân hàng TMCP Ngoại thương Việt Nam" },
-  { code: "MB", name: "MB Bank - Ngân hàng TMCP Quân đội" },
-  { code: "TCB", name: "Techcombank - Ngân hàng TMCP Kỹ thương Việt Nam" },
-  { code: "BIDV", name: "BIDV - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam" },
-  { code: "CTG", name: "VietinBank - Ngân hàng TMCP Công thương Việt Nam" },
-  { code: "ACB", name: "ACB - Ngân hàng TMCP Á Châu" },
-  { code: "VPB", name: "VPBank - Ngân hàng TMCP Việt Nam Thịnh Vượng" },
-  { code: "TPB", name: "TPBank - Ngân hàng TMCP Tiên Phong" },
-  { code: "STB", name: "Sacombank - Ngân hàng TMCP Sài Gòn Thương Tín" },
-  { code: "VBA", name: "Agribank - Ngân hàng NN&PT Nông thôn Việt Nam" },
-  { code: "HDB", name: "HDBank - Ngân hàng TMCP Phát triển TP.HCM" },
-  { code: "VIB", name: "VIB - Ngân hàng TMCP Quốc tế Việt Nam" },
-  { code: "SHB", name: "SHB - Ngân hàng TMCP Sài Gòn - Hà Nội" },
-  { code: "MSB", name: "MSB - Ngân hàng TMCP Hàng Hải Việt Nam" },
-  { code: "OCB", name: "OCB - Ngân hàng TMCP Phương Đông" },
+  { code: "970436", shortCode: "VCB", name: "Vietcombank - Ngân hàng TMCP Ngoại thương Việt Nam" },
+  { code: "970422", shortCode: "MB", name: "MB Bank - Ngân hàng TMCP Quân đội" },
+  { code: "970407", shortCode: "TCB", name: "Techcombank - Ngân hàng TMCP Kỹ thương Việt Nam" },
+  { code: "970418", shortCode: "BIDV", name: "BIDV - Ngân hàng TMCP Đầu tư và Phát triển Việt Nam" },
+  { code: "970415", shortCode: "CTG", name: "VietinBank - Ngân hàng TMCP Công thương Việt Nam" },
+  { code: "970416", shortCode: "ACB", name: "ACB - Ngân hàng TMCP Á Châu" },
+  { code: "970432", shortCode: "VPB", name: "VPBank - Ngân hàng TMCP Việt Nam Thịnh Vượng" },
+  { code: "970423", shortCode: "TPB", name: "TPBank - Ngân hàng TMCP Tiên Phong" },
+  { code: "970403", shortCode: "STB", name: "Sacombank - Ngân hàng TMCP Sài Gòn Thương Tín" },
+  { code: "970405", shortCode: "VBA", name: "Agribank - Ngân hàng NN&PT Nông thôn Việt Nam" },
+  { code: "970437", shortCode: "HDB", name: "HDBank - Ngân hàng TMCP Phát triển TP.HCM" },
+  { code: "970441", shortCode: "VIB", name: "VIB - Ngân hàng TMCP Quốc tế Việt Nam" },
+  { code: "970443", shortCode: "SHB", name: "SHB - Ngân hàng TMCP Sài Gòn - Hà Nội" },
+  { code: "970426", shortCode: "MSB", name: "MSB - Ngân hàng TMCP Hàng Hải Việt Nam" },
+  { code: "970448", shortCode: "OCB", name: "OCB - Ngân hàng TMCP Phương Đông" },
 ];
 
 const QUICK_CANCEL_REASONS = [
@@ -292,7 +293,7 @@ export default function BookingHistory() {
 
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);
   const [cancelReason, setCancelReason] = useState("");
-  const [cancelBankCode, setCancelBankCode] = useState("VCB");
+  const [cancelBankCode, setCancelBankCode] = useState("970436");
   const [cancelBankName, setCancelBankName] = useState(
     VIETNAMESE_BANKS[0].name,
   );
@@ -304,7 +305,7 @@ export default function BookingHistory() {
   useEffect(() => {
     if (cancelTarget) {
       setCancelReason("");
-      setCancelBankCode("VCB");
+      setCancelBankCode("970436");
       setCancelBankName(VIETNAMESE_BANKS[0].name);
       setCancelAccountNumber("");
       setCancelAccountName(
@@ -401,6 +402,13 @@ export default function BookingHistory() {
     let refundPercent = policy.refundPercent;
 
     // Gọi API Backend POST /bookings/{bookingId}/cancel để lưu thông tin ngân hàng + bắn Socket cho lễ tân
+    // Đánh dấu hủy thủ công để chatbot AI không chèn thông báo hủy phòng
+    if (typeof window !== "undefined") {
+      const w = window as any;
+      w.__senvietManualCancelled = w.__senvietManualCancelled || new Set<string>();
+      w.__senvietManualCancelled.add(String(cancelTarget.id));
+      w.__senvietManualCancelled.add(String(cancelTarget.id).replace(/^BK[-_]?/i, ""));
+    }
     const numericBookingId = String(cancelTarget.id).replace(/^BK-/i, "");
     try {
       const apiRes = await cancelCustomerBooking({
@@ -529,7 +537,7 @@ export default function BookingHistory() {
                 {isVi ? "Hoàn tiền đầy đủ" : "Full refund"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-emerald-800/80">
-                {isVi ? "Hủy trước từ 7 ngày trở lên." : "Cancel 7+ days before check-in."}
+                {isVi ? "Hủy trước từ 72 giờ (3 ngày) trở lên." : "Cancel 72+ hours before check-in."}
               </p>
             </div>
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -538,7 +546,7 @@ export default function BookingHistory() {
                 {isVi ? "Hoàn một phần" : "Partial refund"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-amber-800/80">
-                {isVi ? "Hủy từ 3 đến dưới 7 ngày." : "Cancel 3 to under 7 days before check-in."}
+                {isVi ? "Hủy từ 24 đến dưới 72 giờ (1-3 ngày)." : "Cancel 24 to under 72 hours before check-in."}
               </p>
             </div>
             <div className="rounded-xl border border-red-200 bg-red-50 p-4">
@@ -547,7 +555,7 @@ export default function BookingHistory() {
                 {isVi ? "Không hoàn tiền" : "Non-refundable"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-red-800/80">
-                {isVi ? "Hủy dưới 3 ngày hoặc không đến nhận phòng." : "Cancel under 3 days or no-show."}
+                {isVi ? "Hủy dưới 24 giờ (1 ngày) hoặc không đến nhận phòng." : "Cancel under 24 hours or no-show."}
               </p>
             </div>
           </div>
@@ -606,7 +614,7 @@ export default function BookingHistory() {
             filteredBookings.map((booking) => (
               <article
                 key={booking.id}
-                className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6"
+                className="rounded-2xl border border-slate-100 bg-card p-5 shadow-sm sm:p-6 transition-all duration-200 hover:shadow-md hover:border-amber-100/60"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -760,21 +768,23 @@ export default function BookingHistory() {
                           </strong>
                         </div>
                       ))}
-                    <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
-                      <span>{isVi ? "Thuế VAT (8%)" : "VAT (8%)"}</span>
-                      <strong>
-                        {formatVnd(booking.vat)}
-                      </strong>
-                    </div>
+                    {booking.vat > 0 && (
+                      <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
+                        <span>{isVi ? "Thuế VAT (8%)" : "VAT (8%)"}</span>
+                        <strong>
+                          {formatVnd(booking.vat)}
+                        </strong>
+                      </div>
+                    )}
                     {booking.discount > 0 && (
                       <div className="flex justify-between gap-3 text-emerald-700">
                         <span>{isVi ? "Giảm giá" : "Discount"}</span>
                         <strong>-{formatVnd(booking.discount)}</strong>
                       </div>
                     )}
-                    <div className="flex justify-between gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
+                    <div className="flex justify-between items-center gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
                       <span>{isVi ? "Tổng thanh toán" : "Total Payment"}</span>
-                      <span>{formatVnd(booking.total)}</span>
+                      <span className="tabular-nums text-lg font-extrabold text-amber-700">{formatVnd(booking.total)}</span>
                     </div>
                   </div>
                 </div>
@@ -952,10 +962,10 @@ export default function BookingHistory() {
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-sm">
                       {policy.refundPercent === 0
-                        ? (isVi ? "Hủy sát ngày (dưới 3 ngày)" : "Late cancellation (under 3 days)")
+                        ? (isVi ? "Hủy sát giờ (dưới 24 giờ)" : "Late cancellation (under 24 hours)")
                         : policy.refundPercent === 50
-                          ? (isVi ? "Hủy từ 3 đến dưới 7 ngày" : "Cancellation between 3 to 7 days")
-                          : (isVi ? "Miễn phí hủy phòng (trước 7 ngày)" : "Free cancellation (7+ days prior)")}
+                          ? (isVi ? "Hủy từ 24 đến 72 giờ" : "Cancellation between 24 to 72 hours")
+                          : (isVi ? "Miễn phí hủy phòng (trước 72 giờ)" : "Free cancellation (72+ hours prior)")}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
@@ -1200,7 +1210,7 @@ export default function BookingHistory() {
               )}
               {cancelResult.refundPercent === 0 ? (
                 <p className="border-t border-slate-200 pt-2 text-[11px] leading-relaxed text-rose-700">
-                  Theo chính sách hủy sát ngày (dưới 3 ngày trước nhận phòng), số tiền hoàn lại là: <strong>0₫</strong>. Phòng đã được giải phóng và thông báo tới lễ tân.
+                  Theo chính sách hủy sát giờ (dưới 24 giờ trước nhận phòng), số tiền hoàn lại là: <strong>0₫</strong>. Phòng đã được giải phóng và thông báo tới lễ tân.
                 </p>
               ) : (
                 <p className="border-t border-slate-200 pt-2 text-[11px] leading-relaxed text-slate-600">
@@ -1547,10 +1557,12 @@ export default function BookingHistory() {
                     </div>
                   )}
 
-                  <div className="flex justify-between text-slate-600">
-                    <span>Thuế giá trị gia tăng (VAT 8%):</span>
-                    <strong className="text-slate-900">{formatVnd(booking.vat)}</strong>
-                  </div>
+                  {booking.vat > 0 && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Thuế giá trị gia tăng (VAT 8%):</span>
+                      <strong className="text-slate-900">{formatVnd(booking.vat)}</strong>
+                    </div>
+                  )}
 
                   {booking.serviceFee > 0 && (
                     <div className="flex justify-between text-slate-600">

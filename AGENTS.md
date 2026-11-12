@@ -7,6 +7,7 @@ This file defines the strict behavioral rules and coding guidelines for AI agent
 
 ## 1. COMMUNICATION & LANGUAGE (GIAO TIẾP VỚI LẬP TRÌNH VIÊN)
 - **Developer Communication**: Always reply to the developer in Vietnamese (Tiếng Việt) clearly, honestly, and concisely.
+- **Visual Design Standard (DESIGN.md)**: All UI creation and styling MUST follow `DESIGN.md` (Google Labs standard + Taste-Skill + Impeccable guidelines) to prevent "AI Slop" and maintain 5-star luxury aesthetics.
 - **End of Response**: End every reply with 1-2 lines summarizing: (1) exact files/lines modified, (2) what was skipped or untouched, (3) any edge-case risks.
 - **Customer Chatbot Multilingual Behavior**: The customer chat widget communicates with guests dynamically. It defaults to Vietnamese but MUST automatically detect and adapt to foreign languages (English, Chinese, Japanese, Korean, etc.) based on the customer's input.
 

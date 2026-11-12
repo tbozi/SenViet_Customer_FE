@@ -19,6 +19,7 @@ import {
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { formatVnd } from "@/data/hotels";
+import { formatDisplayDate } from "@/lib/dateTime";
 import {
   getBookings,
   isRoomSpecificFee,
@@ -111,6 +112,22 @@ export default function BookingSuccess() {
       ? list.find((item) => String(item.id) === String(targetId))
       : list[0];
     setBooking(b);
+
+    if (targetId) {
+      fetch(`${API_BASE_URL}/orders/booking/${targetId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.result) {
+            const ord = data.result;
+            if (ord.orderStatus === "CLOSED" || (typeof ord.remainingAmount === "number" && ord.remainingAmount <= 0)) {
+              updateBooking(targetId, { status: "confirmed" });
+              setBooking((curr) => (curr ? { ...curr, status: "confirmed" } : undefined));
+              return;
+            }
+          }
+        })
+        .catch(() => {});
+    }
 
     if (b && b.status === "pending_payment" && b.createdAt) {
       const createdTime = new Date(b.createdAt).getTime();
@@ -595,7 +612,7 @@ export default function BookingSuccess() {
             <div className="mt-5 space-y-2 text-sm">
               <div className="flex justify-between gap-3">
                 <span>{isEn ? "Room Subtotal" : "Tạm tính các phòng"}</span>
-                <strong>{formatVnd(subtotalBeforeDiscount)}</strong>
+                <strong className="tabular-nums font-semibold">{formatVnd(subtotalBeforeDiscount)}</strong>
               </div>
               {commonFeeLines.map((fee) => (
                 <div
@@ -610,22 +627,24 @@ export default function BookingSuccess() {
                       </small>
                     )}
                   </span>
-                  <strong className="shrink-0">{formatVnd(fee.amount)}</strong>
+                  <strong className="shrink-0 tabular-nums font-semibold">{formatVnd(fee.amount)}</strong>
                 </div>
               ))}
-              <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
-                <span>{isEn ? "VAT (8%)" : "Thuế VAT (8%)"}</span>
-                <strong>{formatVnd(booking.vat)}</strong>
-              </div>
+              {booking.vat > 0 && (
+                <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
+                  <span>{isEn ? "VAT (8%)" : "Thuế VAT (8%)"}</span>
+                  <strong className="tabular-nums font-semibold">{formatVnd(booking.vat)}</strong>
+                </div>
+              )}
               {booking.discount > 0 && (
                 <div className="flex justify-between gap-3 text-emerald-700">
                   <span>{isEn ? "Discount" : "Giảm giá"}</span>
-                  <strong>-{formatVnd(booking.discount)}</strong>
+                  <strong className="tabular-nums font-semibold">-{formatVnd(booking.discount)}</strong>
                 </div>
               )}
-              <div className="flex justify-between gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
+              <div className="flex justify-between items-center gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
                 <span>{isEn ? "Total Payment" : "Tổng thanh toán"}</span>
-                <span>{formatVnd(booking.total)}</span>
+                <span className="tabular-nums text-xl font-extrabold text-amber-700">{formatVnd(booking.total)}</span>
               </div>
             </div>
 

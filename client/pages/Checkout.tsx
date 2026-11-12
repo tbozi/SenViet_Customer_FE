@@ -7,9 +7,11 @@ import {
 } from "react-router-dom";
 import {
   Banknote,
+  Clock,
   CreditCard,
   LockKeyhole,
   QrCode,
+  RefreshCw,
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -125,24 +127,9 @@ function selectionStays(selection: RoomSelection): RoomStay[] {
 
 const cancellationDeadlineFor = (checkIn: string) => {
   if (!checkIn) return "";
-  const checkInDate = new Date(`${checkIn}T00:00:00`);
-  const today = new Date();
-  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const daysBefore = Math.floor(
-    (checkInDate.getTime() - todayDate.getTime()) / 86400000,
-  );
-
-  if (daysBefore >= 7) {
-    const deadline = new Date(checkInDate);
-    deadline.setDate(deadline.getDate() - 7);
-    return deadline.toISOString();
-  }
-  if (daysBefore >= 3) {
-    const deadline = new Date(checkInDate);
-    deadline.setDate(deadline.getDate() - 3);
-    return deadline.toISOString();
-  }
-  return "";
+  const checkInDate = new Date(`${checkIn}T14:00:00`);
+  const deadline = new Date(checkInDate.getTime() - 72 * 3600 * 1000);
+  return deadline > new Date() ? deadline.toISOString() : "";
 };
 
 export default function Checkout() {
@@ -184,6 +171,41 @@ export default function Checkout() {
   const [paymentState, setPaymentState] = useState<"idle" | "processing">(
     "idle",
   );
+
+  // Bộ đếm thời gian giữ phòng 5 phút (300 giây)
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(() => {
+    const key = `senviet_checkout_timer_${params.get("hotel") || "draft"}`;
+    const saved = sessionStorage.getItem(key);
+    const now = Date.now();
+    if (saved) {
+      const startTime = parseInt(saved, 10);
+      const elapsed = Math.floor((now - startTime) / 1000);
+      const left = 300 - elapsed;
+      if (left > 0) return left;
+    }
+    sessionStorage.setItem(key, String(now));
+    return 300;
+  });
+
+  useEffect(() => {
+    if (remainingSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setRemainingSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [remainingSeconds]);
+
+  const formatCountdown = (secs: number) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, "0");
+    const s = (secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
   const [selections, setSelections] = useState<RoomSelection[]>(() =>
     parseSelections(params),
   );
@@ -275,6 +297,7 @@ export default function Checkout() {
         code,
         hotelTarget,
       );
+      const isAlreadyUsed = Boolean(backendMatch?.isUsed);
       const backendDiscountText = backendMatch
         ? backendMatch.discountType === "PERCENTAGE" || backendMatch.discountValue <= 100
           ? `Giảm ${backendMatch.discountValue}%`
@@ -293,8 +316,10 @@ export default function Checkout() {
           promotionNames[code] ||
           "Ưu đãi Sen Việt",
         discountText: rule?.discountText || backendDiscountText,
-        applicable,
-        reason,
+        applicable: isAlreadyUsed ? false : applicable,
+        reason: isAlreadyUsed
+          ? (isEn ? "Already used (1 use per account)" : "Mã đã được sử dụng (mỗi tài khoản chỉ dùng 1 lần)")
+          : reason,
       };
     });
   }, [savedPromotionCodes, hotelTarget, savedPromosBackend, activePromotions]);
@@ -410,7 +435,7 @@ export default function Checkout() {
     0,
     roomSubtotal + extraGuestCharge + serviceTotal - discount,
   );
-  const vat = Math.round(taxableSubtotal * 0.08);
+  const vat = 0; // Website không áp dụng thuế VAT
   const serviceFee = 0;
   const total = isDemoPromo ? 2000 : taxableSubtotal + vat;
   const firstCheckIn =
@@ -528,6 +553,9 @@ export default function Checkout() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
+    if (remainingSeconds <= 0) {
+      return setError(isEn ? "The 5-minute reservation hold has expired. Please click 'Renew Hold' to continue." : "Đã hết 5 phút giữ phòng tạm thời. Quý khách vui lòng bấm 'Tải lại giữ phòng' để tiếp tục thanh toán.");
+    }
     if (!hotel || !Number.isSafeInteger(hotelId) || hotelId <= 0) {
       return setError(
         hotelsError
@@ -728,6 +756,74 @@ export default function Checkout() {
             ? "Guest representative information only needs to be entered once. Specific rooms, stay dates, services, and fees are itemized below."
             : "Thông tin người đại diện chỉ cần nhập một lần. Từng phòng cụ thể, khoảng ngày, dịch vụ và phụ phí được liệt kê riêng bên dưới."}
         </p>
+
+        {/* BỘ ĐẾM THỜI GIAN GIỮ PHÒNG 5 PHÚT */}
+        <div
+          className={`mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 rounded-2xl border px-4 py-3.5 sm:px-5 sm:py-4 transition shadow-xs ${
+            remainingSeconds > 60
+              ? "border-amber-300/90 bg-amber-50/90 dark:border-amber-600/50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200"
+              : remainingSeconds > 0
+                ? "border-rose-400/90 bg-rose-50/90 dark:border-rose-600/50 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 animate-pulse"
+                : "border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                remainingSeconds > 60
+                  ? "bg-amber-500/20 text-amber-800 dark:text-amber-300"
+                  : remainingSeconds > 0
+                    ? "bg-rose-500/20 text-rose-800 dark:text-rose-300"
+                    : "bg-slate-300/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+              }`}
+            >
+              <Clock className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-bold leading-tight">
+                {remainingSeconds > 0
+                  ? (isEn ? "Room Reserved Exclusively for You" : "Hệ thống đang tạm giữ phòng cho quý khách")
+                  : (isEn ? "Reservation Hold Expired" : "Hết thời gian tạm giữ phòng")}
+              </p>
+              <p className="text-xs opacity-85 mt-0.5">
+                {remainingSeconds > 0
+                  ? (isEn
+                      ? "Complete booking within 5 minutes to guarantee your rate and room."
+                      : "Vui lòng hoàn tất trong vòng 5 phút để đảm bảo phòng không bị mở bán lại cho khách khác.")
+                  : (isEn
+                      ? "The 5-minute hold window has ended. Please refresh to renew hold."
+                      : "Đã quá 5 phút giữ phòng. Vui lòng làm mới trang để tiếp tục giữ phòng.")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            {remainingSeconds > 0 ? (
+              <div className="flex items-center gap-1.5 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-current/25 px-3 py-1.5 shadow-2xs font-mono font-bold text-base">
+                <span className="text-xs uppercase tracking-wider opacity-70 font-sans mr-0.5">
+                  {isEn ? "Left:" : "Còn lại:"}
+                </span>
+                <span>{formatCountdown(remainingSeconds)}</span>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const key = `senviet_checkout_timer_${params.get("hotel") || "draft"}`;
+                  try { sessionStorage.setItem(key, String(Date.now())); } catch {}
+                  setRemainingSeconds(300);
+                  setError("");
+                }}
+                className="rounded-full text-xs gap-1.5 border-current hover:bg-current/10"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>{isEn ? "Renew Hold" : "Tải lại giữ phòng"}</span>
+              </Button>
+            )}
+          </div>
+        </div>
         <form
           onSubmit={submit}
           className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]"
@@ -750,7 +846,7 @@ export default function Checkout() {
                     required
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-input p-3"
+                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
                   />
                 </label>
                 <label className="text-sm font-medium text-primary">
@@ -759,7 +855,7 @@ export default function Checkout() {
                     required
                     value={phone}
                     onChange={(event) => setPhone(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-input p-3"
+                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
                   />
                 </label>
                 <label className="text-sm font-medium text-primary">
@@ -769,7 +865,7 @@ export default function Checkout() {
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-input p-3"
+                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
                   />
                 </label>
                 <label className="text-sm font-medium text-primary">
@@ -779,7 +875,7 @@ export default function Checkout() {
                     value={cccd}
                     onChange={(event) => setCccd(event.target.value)}
                     placeholder={isEn ? "Enter Citizen ID / Passport number" : "Nhập số CCCD (12 số)"}
-                    className="mt-1 w-full rounded-xl border border-input p-3"
+                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
                   />
                 </label>
                 <label className="text-sm font-medium text-primary sm:col-span-2">
@@ -789,7 +885,7 @@ export default function Checkout() {
                     onChange={(event) => setRequest(event.target.value)}
                     rows={3}
                     placeholder={isEn ? "e.g. arrival after 22:00, need baby cot..." : "Ví dụ: đến sau 22:00, cần baby cot..."}
-                    className="mt-1 w-full rounded-xl border border-input p-3"
+                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
                   />
                 </label>
               </div>
@@ -867,7 +963,7 @@ export default function Checkout() {
                         setPromo(event.target.value.toUpperCase().trim())
                       }
                       placeholder={isEn ? "Enter or select promo code" : "Nhập hoặc chọn mã ưu đãi"}
-                      className="w-full rounded-xl border border-input p-3 font-mono font-bold uppercase tracking-wider text-primary"
+                      className="w-full rounded-xl border border-input bg-background p-3 font-mono font-bold uppercase tracking-wider text-primary"
                     />
                     {promo && (
                       <button
@@ -930,7 +1026,7 @@ export default function Checkout() {
               <>
                 <Button
                   type="submit"
-                  disabled={paymentState === "processing"}
+                  disabled={paymentState === "processing" || remainingSeconds <= 0}
                   className="w-full rounded-xl"
                 >
                   {paymentState === "processing"
@@ -938,7 +1034,7 @@ export default function Checkout() {
                     : (isEn ? "Confirm Booking" : "Xác nhận đặt phòng")}
                 </Button>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  {isEn ? "Check-in 14:00 · Check-out 12:00 · Room held for 5 minutes." : "Nhận phòng từ 14:00 · Trả phòng trước 12:00 · Giữ phòng 15 phút."}
+                  {isEn ? "Check-in 14:00 · Check-out 12:00 · Room held for 5 minutes." : "Nhận phòng từ 14:00 · Trả phòng trước 12:00 · Giữ phòng 5 phút."}
                 </p>
               </>
             }

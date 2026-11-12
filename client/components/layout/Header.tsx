@@ -12,6 +12,8 @@ import {
   AlertCircle,
   Clock,
   ChevronRight,
+  LogOut,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -523,19 +525,22 @@ export default function Header() {
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/account">{t("nav.account")}</Link>
+                  <Link to="/account" className="flex items-center gap-2 cursor-pointer">
+                    <User className="h-4 w-4 text-primary" />
+                    <span>{t("nav.account")}</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/loyalty">{t("nav.loyalty")}</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/crm">{isEn ? "Personal CRM" : "CRM cá nhân"}</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/profile">{t("nav.profile")}</Link>
+                  <Link to="/profile" className="flex items-center gap-2 cursor-pointer">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <span>{t("nav.profile")}</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>{t("nav.logout")}</DropdownMenuItem>
+                <DropdownMenuItem onClick={logout} className="flex items-center gap-2 cursor-pointer text-rose-600 focus:text-rose-600 focus:bg-rose-50">
+                  <LogOut className="h-4 w-4 text-rose-600" />
+                  <span>{t("nav.logout")}</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
@@ -582,6 +587,13 @@ export default function Header() {
                   <>
                     <Link
                       to="/account"
+                      onClick={() => setOpen(false)}
+                      className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground"
+                    >
+                      {t("nav.account")}
+                    </Link>
+                    <Link
+                      to="/profile"
                       onClick={() => setOpen(false)}
                       className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground"
                     >

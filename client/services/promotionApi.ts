@@ -10,6 +10,8 @@ export interface PromotionItem {
   discountValue: number;
   maxDiscountAmount?: number;
   minBookingValue?: number;
+  hotelId?: number;
+  hotelName?: string;
   startDate?: string;
   endDate?: string;
   status: string;
@@ -30,6 +32,8 @@ export interface SavedPromotionItem {
   discountValue: number;
   maxDiscountAmount?: number;
   minBookingValue?: number;
+  hotelId?: number;
+  hotelName?: string;
   startDate?: string;
   endDate?: string;
   status: string;

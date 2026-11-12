@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { toLocalDateStr } from "@/lib/utils";
+import { formatDisplayDate } from "@/lib/dateTime";
 
 export default function QuickSearch() {
   const { t, language } = useLanguage();
@@ -61,7 +62,7 @@ export default function QuickSearch() {
   return (
     <form
       onSubmit={submit}
-      className="grid min-w-0 grid-cols-1 gap-2 rounded-2xl border border-border bg-white p-3 shadow-xl md:grid-cols-2 xl:grid-cols-4"
+      className="grid min-w-0 grid-cols-1 gap-2.5 rounded-2xl border border-border bg-card/95 text-card-foreground p-3.5 shadow-[0_16px_36px_-6px_rgba(15,25,47,0.10)] backdrop-blur-md md:grid-cols-2 xl:grid-cols-4 transition-all"
     >
       <label className="flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2">
         <MapPin className="h-4 w-4 shrink-0 text-primary" />
@@ -72,52 +73,66 @@ export default function QuickSearch() {
             setError("");
           }}
           aria-label={t("hotels.searchLocation")}
-          className="w-full bg-transparent text-sm outline-none"
-          disabled={hotelsLoading || hotelsError}
+          className="w-full bg-transparent text-sm text-foreground outline-none"
+          disabled={hotelsLoading}
         >
-          <option value="">{t("hotels.searchLocation")}</option>
+          <option className="bg-background text-foreground" value="">{t("hotels.searchLocation")}</option>
           {hotels.map((hotel) => (
-            <option value={hotel.id} key={hotel.id}>
+            <option className="bg-background text-foreground" value={hotel.id} key={hotel.id}>
               {hotel.name} — {hotel.provinceName || hotel.address}
             </option>
           ))}
         </select>
       </label>
 
-      <label className="flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2">
-        <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
-        <input
-          type="date"
-          min={today}
-          value={checkIn}
-          onChange={(e) => {
-            const next = e.target.value;
-            setCheckIn(next);
-            if (checkOut && checkOut <= next) {
-              const nextDay = new Date(`${next}T00:00:00`);
-              nextDay.setDate(nextDay.getDate() + 1);
-              setCheckOut(toLocalDateStr(nextDay));
-            }
-            setError("");
-          }}
-          aria-label={t("hotels.searchCheckIn")}
-          className="min-w-0 w-full bg-transparent text-sm outline-none"
-        />
+      <label className="flex flex-col justify-center rounded-xl bg-secondary/60 px-3 py-1.5 min-w-0">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+          <input
+            type="date"
+            min={today}
+            value={checkIn}
+            onChange={(e) => {
+              const next = e.target.value;
+              setCheckIn(next);
+              if (checkOut && checkOut <= next) {
+                const nextDay = new Date(`${next}T00:00:00`);
+                nextDay.setDate(nextDay.getDate() + 1);
+                setCheckOut(toLocalDateStr(nextDay));
+              }
+              setError("");
+            }}
+            aria-label={t("hotels.searchCheckIn")}
+            className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none"
+          />
+        </div>
+        {checkIn && (
+          <span className="text-[10px] text-primary/80 font-medium pl-6">
+            {formatDisplayDate(checkIn, language)}
+          </span>
+        )}
       </label>
 
-      <label className="flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2">
-        <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
-        <input
-          type="date"
-          min={checkIn || today}
-          value={checkOut}
-          onChange={(e) => {
-            setCheckOut(e.target.value);
-            setError("");
-          }}
-          aria-label={t("hotels.searchCheckOut")}
-          className="min-w-0 w-full bg-transparent text-sm outline-none"
-        />
+      <label className="flex flex-col justify-center rounded-xl bg-secondary/60 px-3 py-1.5 min-w-0">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+          <input
+            type="date"
+            min={checkIn || today}
+            value={checkOut}
+            onChange={(e) => {
+              setCheckOut(e.target.value);
+              setError("");
+            }}
+            aria-label={t("hotels.searchCheckOut")}
+            className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none"
+          />
+        </div>
+        {checkOut && (
+          <span className="text-[10px] text-primary/80 font-medium pl-6">
+            {formatDisplayDate(checkOut, language)}
+          </span>
+        )}
       </label>
 
       <label className="flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2">
@@ -126,10 +141,10 @@ export default function QuickSearch() {
           value={rooms}
           onChange={(e) => setRooms(e.target.value)}
           aria-label={t("hotels.searchRooms")}
-          className="w-full bg-transparent text-sm outline-none"
+          className="w-full bg-transparent text-sm text-foreground outline-none"
         >
           {[1, 2, 3, 4, 5].map((count) => (
-            <option value={String(count)} key={count}>
+            <option className="bg-background text-foreground" value={String(count)} key={count}>
               {count} {isEn ? (count === 1 ? "Room" : "Rooms") : "phòng"}
             </option>
           ))}
@@ -142,10 +157,10 @@ export default function QuickSearch() {
           value={adults}
           onChange={(e) => setAdults(e.target.value)}
           aria-label={isEn ? "Adults" : "Người lớn"}
-          className="w-full bg-transparent text-sm outline-none"
+          className="w-full bg-transparent text-sm text-foreground outline-none"
         >
           {[1, 2, 3, 4, 5, 6, 7, 8].map((count) => (
-            <option value={count} key={count}>
+            <option className="bg-background text-foreground" value={count} key={count}>
               {count} {isEn ? (count === 1 ? "Adult" : "Adults") : "người lớn"}
             </option>
           ))}
@@ -158,11 +173,11 @@ export default function QuickSearch() {
           value={children}
           onChange={(e) => changeChildren(e.target.value)}
           aria-label={isEn ? "Children" : "Trẻ em"}
-          className="w-full bg-transparent text-sm outline-none"
+          className="w-full bg-transparent text-sm text-foreground outline-none"
         >
-          <option value="0">{isEn ? "No children" : "Không có trẻ em"}</option>
+          <option className="bg-background text-foreground" value="0">{isEn ? "No children" : "Không có trẻ em"}</option>
           {[1, 2, 3, 4].map((count) => (
-            <option value={count} key={count}>
+            <option className="bg-background text-foreground" value={count} key={count}>
               {count} {isEn ? (count === 1 ? "Child" : "Children") : "trẻ em"}
             </option>
           ))}
@@ -182,7 +197,7 @@ export default function QuickSearch() {
 
       <Button
         type="submit"
-        className="rounded-xl bg-gold px-5 text-gold-foreground hover:bg-gold/90"
+        className="rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 px-5 text-white shadow-md shadow-amber-600/20 hover:from-amber-700 hover:to-amber-800 active:scale-95 transition-all font-semibold cursor-pointer"
       >
         <Search className="mr-2 h-4 w-4" />
         {t("hotels.searchButton")}
@@ -203,11 +218,11 @@ export default function QuickSearch() {
                 )
               }
               aria-label={isEn ? `Child ${index + 1} age` : `Tuổi trẻ em ${index + 1}`}
-              className="rounded-lg border border-input bg-white p-1.5"
+              className="rounded-lg border border-input bg-background text-foreground p-1.5"
             >
-              <option value="0">{index + 1}: {isEn ? "0–5 years old" : "0–5 tuổi"}</option>
+              <option className="bg-background text-foreground" value="0">{index + 1}: {isEn ? "0–5 years old" : "0–5 tuổi"}</option>
               {[6, 7, 8, 9, 10, 11].map((a) => (
-                <option value={String(a)} key={a}>
+                <option className="bg-background text-foreground" value={String(a)} key={a}>
                   {index + 1}: {a} {isEn ? "years old" : "tuổi"}
                 </option>
               ))}

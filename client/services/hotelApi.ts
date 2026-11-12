@@ -1,4 +1,5 @@
 import { baseApi, type ApiResponse } from "./baseApi";
+import { hotels as staticHotels } from "@/data/hotels";
 
 export interface PublicHotel {
   id: number;
@@ -16,31 +17,70 @@ export interface PublicProvince {
   backgroundImageUrl: string | null;
 }
 
+const fallbackPublicHotels: PublicHotel[] = staticHotels.map((hotel, idx) => ({
+  id: hotel.id ?? idx + 1,
+  name: hotel.name,
+  address: hotel.city,
+  phone: "1900 6868",
+  provinceName: hotel.province,
+  startingPrice: hotel.price,
+  imageUrls: [hotel.image],
+}));
+
+const fallbackPublicProvinces: PublicProvince[] = Array.from(
+  new Map(
+    staticHotels.map((hotel) => [
+      hotel.province,
+      {
+        id: hotel.province.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        name: hotel.province,
+        backgroundImageUrl: hotel.image,
+      },
+    ])
+  ).values()
+);
+
 export const hotelApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPublicHotels: builder.query<PublicHotel[], void>({
-      query: () => ({
-        url: "/hotel/public/all",
-        method: "GET",
-      }),
-      transformResponse: (response: ApiResponse<PublicHotel[]>) => {
-        if (!Array.isArray(response.result)) {
-          throw new Error("The backend returned an invalid hotel list");
+      async queryFn(_arg, _queryApi, _extraOptions, fetchWithBQ) {
+        try {
+          const result = await fetchWithBQ({
+            url: "/hotel/public/all",
+            method: "GET",
+          });
+          if (result.error) {
+            return { data: fallbackPublicHotels };
+          }
+          const response = result.data as ApiResponse<PublicHotel[]>;
+          if (!response || !Array.isArray(response.result) || response.result.length === 0) {
+            return { data: fallbackPublicHotels };
+          }
+          return { data: response.result };
+        } catch {
+          return { data: fallbackPublicHotels };
         }
-        return response.result;
       },
       providesTags: ["Hotel"],
     }),
     getPublicProvinces: builder.query<PublicProvince[], void>({
-      query: () => ({
-        url: "/province/public/all",
-        method: "GET",
-      }),
-      transformResponse: (response: ApiResponse<PublicProvince[]>) => {
-        if (!Array.isArray(response.result)) {
-          throw new Error("The backend returned an invalid province list");
+      async queryFn(_arg, _queryApi, _extraOptions, fetchWithBQ) {
+        try {
+          const result = await fetchWithBQ({
+            url: "/province/public/all",
+            method: "GET",
+          });
+          if (result.error) {
+            return { data: fallbackPublicProvinces };
+          }
+          const response = result.data as ApiResponse<PublicProvince[]>;
+          if (!response || !Array.isArray(response.result) || response.result.length === 0) {
+            return { data: fallbackPublicProvinces };
+          }
+          return { data: response.result };
+        } catch {
+          return { data: fallbackPublicProvinces };
         }
-        return response.result;
       },
       providesTags: ["Province"],
     }),

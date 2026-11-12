@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { AlertCircle, BookmarkCheck, CalendarDays, Check, Tag, Users, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { formatVnd } from "@/data/hotels";
+import { formatDisplayDate } from "@/lib/dateTime";
 import { useLanguage } from "@/lib/i18n";
 import {
   getCancellationNotice,
@@ -83,7 +84,8 @@ function selectionStays(selection: RoomSelection): RoomStay[] {
 
 function dateTimeLabel(date: string, time: string, isEn = false) {
   if (!date) return isEn ? "Not selected" : "Chưa chọn";
-  return `${time}, ${new Date(`${date}T12:00:00`).toLocaleDateString(isEn ? "en-US" : "vi-VN")}`;
+  const dateFormatted = formatDisplayDate(date, isEn ? "en" : "vi");
+  return `${time}, ${dateFormatted}`;
 }
 
 export default function BookingSummaryPanel({
@@ -162,7 +164,7 @@ export default function BookingSummaryPanel({
 
   return (
     <aside
-      className={`h-fit rounded-2xl border border-primary/20 bg-white p-5 shadow-lg sm:p-6 lg:sticky lg:top-6 ${className}`}
+      className={`h-fit rounded-2xl border border-primary/20 bg-card text-card-foreground p-5 shadow-lg sm:p-6 lg:sticky lg:top-6 ${className}`}
     >
       <div className="flex items-start justify-between gap-3 border-b border-border pb-4">
         <div>
@@ -220,7 +222,7 @@ export default function BookingSummaryPanel({
                       </p>
                     )}
                   </div>
-                  <span className="text-sm font-bold text-primary">
+                  <span className="text-sm font-bold text-primary tabular-nums">
                     {formatVnd(breakdown.subtotal)}
                   </span>
                 </div>
@@ -267,12 +269,12 @@ export default function BookingSummaryPanel({
                 <div className="mt-3 space-y-2 border-t border-primary/10 pt-3 text-xs">
                   <div className="flex justify-between gap-3">
                     <span>{isEn ? `Room rate (${stay.nights} ${stay.nights === 1 ? "night" : "nights"})` : `Tiền phòng (${stay.nights} đêm)`}</span>
-                    <span className="font-semibold text-slate-800">{formatVnd(breakdown.roomPrice)}</span>
+                    <span className="font-semibold text-foreground tabular-nums">{formatVnd(breakdown.roomPrice)}</span>
                   </div>
                   {breakdown.extraGuestSurcharge > 0 && (
                     <div className="flex justify-between gap-3 font-medium text-amber-700">
                       <span>{isEn ? "Extra guest surcharge" : "Phụ thu vượt sức chứa"}</span>
-                      <span>+{formatVnd(breakdown.extraGuestSurcharge)}</span>
+                      <span className="tabular-nums">+{formatVnd(breakdown.extraGuestSurcharge)}</span>
                     </div>
                   )}
                   <div className="border-t border-primary/10 pt-2">
@@ -287,7 +289,7 @@ export default function BookingSummaryPanel({
                             <span>
                               {service.name} × {service.quantity}
                             </span>
-                            <span>{formatVnd(service.total)}</span>
+                            <span className="tabular-nums">{formatVnd(service.total)}</span>
                           </div>
                         ))}
                       </div>
@@ -297,7 +299,7 @@ export default function BookingSummaryPanel({
                   </div>
                   <div className="flex justify-between gap-3 border-t border-primary/10 pt-2 font-bold text-primary">
                     <span>{isEn ? "Room Subtotal" : "Tạm tính phòng"}</span>
-                    <span>{formatVnd(breakdown.subtotal)}</span>
+                    <span className="tabular-nums">{formatVnd(breakdown.subtotal)}</span>
                   </div>
                 </div>
               </section>
@@ -316,10 +318,10 @@ export default function BookingSummaryPanel({
         <>
           {promo}
           {savedPromotions.length > 0 && onSelectPromotion ? (
-            <div className="mt-4 rounded-xl border border-amber-300/80 bg-amber-50/60 p-3.5 shadow-2xs">
+            <div className="mt-4 rounded-xl border border-amber-300/80 dark:border-amber-500/40 bg-amber-50/60 dark:bg-amber-950/30 p-3.5 shadow-2xs">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-amber-900">
-                  <BookmarkCheck className="h-4 w-4 text-amber-700" />
+                <div className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200">
+                  <BookmarkCheck className="h-4 w-4 text-amber-700 dark:text-amber-400" />
                   <p className="text-xs font-bold uppercase tracking-wider">
                     {isEn ? `Saved Offers (${savedPromotions.length})` : `Ưu đãi đã lưu (${savedPromotions.length})`}
                   </p>
@@ -339,10 +341,10 @@ export default function BookingSummaryPanel({
                       key={promotion.code}
                       className={`relative flex items-start justify-between gap-2.5 rounded-lg border p-2.5 text-left text-xs transition ${
                         !isApplicable
-                          ? "border-slate-200 bg-slate-100/80 opacity-45 cursor-not-allowed"
+                          ? "border-slate-200 dark:border-slate-700 bg-slate-100/80 dark:bg-slate-800/60 opacity-45 cursor-not-allowed"
                           : isSelected
-                            ? "border-emerald-500 bg-emerald-50/90 shadow-2xs"
-                            : "border-amber-200/90 bg-white hover:border-primary hover:shadow-2xs"
+                            ? "border-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/40 shadow-2xs"
+                            : "border-amber-200/90 dark:border-amber-700/50 bg-card hover:border-primary hover:shadow-2xs"
                       }`}
                     >
                       <div className="min-w-0 flex-1">
@@ -356,11 +358,11 @@ export default function BookingSummaryPanel({
                             </span>
                           )}
                         </div>
-                        <p className="mt-0.5 font-medium text-slate-800 line-clamp-1">
+                        <p className="mt-0.5 font-medium text-foreground line-clamp-1">
                           {promotion.name}
                         </p>
                         {promotion.discountText && (
-                          <p className="text-[10px] font-semibold text-amber-800">
+                          <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-300">
                             {promotion.discountText}
                           </p>
                         )}
@@ -416,7 +418,7 @@ export default function BookingSummaryPanel({
                 {totals?.subtotal !== undefined && (
                   <div className="flex justify-between gap-3">
                     <span>{totals.subtotalLabel || (isEn ? "Room Subtotal" : "Tạm tính các phòng")}</span>
-                    <span>{formatVnd(totals.subtotal)}</span>
+                    <span className="tabular-nums font-semibold">{formatVnd(totals.subtotal)}</span>
                   </div>
                 )}
                 {commonFeeRows.map((fee) => (
@@ -432,26 +434,26 @@ export default function BookingSummaryPanel({
                         </small>
                       )}
                     </span>
-                    <span className="shrink-0">{formatVnd(fee.amount)}</span>
+                    <span className="shrink-0 tabular-nums font-semibold">{formatVnd(fee.amount)}</span>
                   </div>
                 ))}
                 {vatAndSystemFee > 0 && (
                   <div className="flex justify-between gap-3">
                     <span>{isEn ? "VAT (8%)" : "Thuế VAT (8%)"}</span>
-                    <span>{formatVnd(vatAndSystemFee)}</span>
+                    <span className="tabular-nums font-semibold">{formatVnd(vatAndSystemFee)}</span>
                   </div>
                 )}
                 {discount > 0 && (
                   <div className="flex justify-between gap-3 text-emerald-700">
                     <span>{isEn ? "Discount" : "Giảm giá"}</span>
-                    <span>-{formatVnd(discount)}</span>
+                    <span className="tabular-nums font-semibold">-{formatVnd(discount)}</span>
                   </div>
                 )}
               </div>
             ) : null}
             <div className="flex items-center justify-between gap-3 text-lg font-bold text-primary">
               <span>{showOuterBreakdown ? (isEn ? "Total" : "Tổng cộng") : (isEn ? "Subtotal" : "Tạm tính")}</span>
-              <span>{formatVnd(total)}</span>
+              <span className="tabular-nums text-xl font-extrabold text-amber-700">{formatVnd(total)}</span>
             </div>
             {!showOuterBreakdown && (
               <p className="mt-2 text-xs leading-5 text-muted-foreground">

@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useLanguage } from "@/lib/i18n";
+import { formatDisplayDate } from "@/lib/dateTime";
 import { useAuth } from "@/lib/auth";
 import {
   getSavedPromotionCodes,
@@ -203,10 +204,22 @@ export function Offers() {
           "from-violet-50 to-white",
           "from-orange-50 to-white",
         ];
+        const hotelName = (p as any).hotelName || "Toàn hệ thống";
+        const isSpecificHotel = Boolean((p as any).hotelId && hotelName !== "Toàn hệ thống");
+        const appliesText = isSpecificHotel ? `Chỉ áp dụng tại ${hotelName}` : "Áp dụng toàn bộ hệ thống Sen Việt";
+        const appliesTextEn = isSpecificHotel ? `Valid only at ${hotelName}` : "All Sen Việt branches";
+
+        const detailVi = p.minBookingValue
+          ? `Đơn tối thiểu ${formatVnd(p.minBookingValue)} • ${appliesText}`
+          : appliesText;
+        const detailEn = p.minBookingValue
+          ? `Min order ${formatVnd(p.minBookingValue)} • ${appliesTextEn}`
+          : appliesTextEn;
+
         return {
           id: p.id,
           hotelId: (p as any).hotelId,
-          hotelName: (p as any).hotelName || "Toàn hệ thống",
+          hotelName: hotelName,
           rawType: p.type,
           tag: p.type === "ROOM" ? "PHÒNG" : p.type === "SERVICE" ? "DỊCH VỤ" : "TOÀN BỘ",
           icon: isPercent ? Percent : Gift,
@@ -216,23 +229,25 @@ export function Offers() {
           descriptionEn: p.description || `${discountText} for booking at Sen Việt Luxury.`,
           code: p.code,
           image: (p as any).imageUrl || "https://images.unsplash.com/photo-1540541338287-41700207dee6?q=80&w=1000",
-          detail: p.minBookingValue ? `Đơn tối thiểu ${formatVnd(p.minBookingValue)}` : "Áp dụng toàn bộ hệ thống Sen Việt",
-          detailEn: p.minBookingValue ? `Min order ${formatVnd(p.minBookingValue)}` : "All Sen Việt branches",
+          detail: detailVi,
+          detailEn: detailEn,
           usage: `Nhập mã ${p.code} tại ô Mã khuyến mãi khi đặt phòng hoặc thanh toán.`,
           usageEn: `Enter ${p.code} at promo code during booking.`,
           conditions: [
             p.minBookingValue ? `Áp dụng cho đơn từ ${formatVnd(p.minBookingValue)}` : "Áp dụng cho đặt phòng",
             p.maxDiscountAmount ? `Giảm tối đa ${formatVnd(p.maxDiscountAmount)}` : "Không giới hạn mức giảm tối đa",
+            isSpecificHotel ? `Chỉ áp dụng tại chi nhánh ${hotelName}` : "Áp dụng cho toàn bộ chuỗi Sen Việt",
             "Mỗi khách hàng áp dụng 1 lần / đơn",
           ],
           conditionsEn: [
             p.minBookingValue ? `Valid for orders from ${formatVnd(p.minBookingValue)}` : "Valid for bookings",
+            isSpecificHotel ? `Applicable strictly at ${hotelName}` : "Valid across all Sen Việt locations",
             "Non-transferable",
           ],
-          hotels: ["Tất cả khách sạn Sen Việt"],
-          hotelsEn: ["All Sen Việt hotels"],
-          valid: p.endDate ? new Date(p.endDate).toLocaleDateString("vi-VN") : "31/12/2026",
-          validEn: p.endDate ? new Date(p.endDate).toLocaleDateString("vi-VN") : "31/12/2026",
+          hotels: isSpecificHotel ? [hotelName] : ["Tất cả khách sạn Sen Việt"],
+          hotelsEn: isSpecificHotel ? [hotelName] : ["All Sen Việt hotels"],
+          valid: p.endDate ? formatDisplayDate(p.endDate, "vi") : "31/12/2026",
+          validEn: p.endDate ? formatDisplayDate(p.endDate, "en") : "31 Dec 2026",
           accent: accents[idx % accents.length],
         };
       })
@@ -415,13 +430,13 @@ export function Offers() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               {/* Search Input */}
               <div className="relative flex-1">
-                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={isVietnamese ? "Tìm kiếm theo tên ưu đãi, mã voucher..." : "Search by promotion name, promo code..."}
-                  className="w-full rounded-full border border-border bg-white pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                  className="w-full rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
                 />
                 {searchTerm && (
                   <button
@@ -439,10 +454,10 @@ export function Offers() {
                 <select
                   value={selectedHotel}
                   onChange={(e) => setSelectedHotel(e.target.value)}
-                  className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                  className="w-full rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 px-4 py-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs cursor-pointer"
                 >
-                  <option value="all">{isVietnamese ? "🏨 Tất cả chi nhánh & khách sạn" : "🏨 All hotels & branches"}</option>
-                  <option value="system">{isVietnamese ? "⭐ Toàn hệ thống Sen Việt" : "⭐ Entire Sen Việt system"}</option>
+                  <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isVietnamese ? "🏨 Tất cả chi nhánh & khách sạn" : "🏨 All hotels & branches"}</option>
+                  <option value="system" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isVietnamese ? "⭐ Toàn hệ thống Sen Việt" : "⭐ Entire Sen Việt system"}</option>
                   {hotels.map((h) => (
                     <option key={h.slug} value={String(h.id || h.slug)}>
                       {h.name} ({h.city})
@@ -470,7 +485,7 @@ export function Offers() {
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                     selectedType === f.key
                       ? "bg-primary text-primary-foreground shadow-xs"
-                      : "bg-white/80 text-muted-foreground border border-border hover:text-primary hover:bg-white"
+                      : "bg-white/90 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:text-primary hover:bg-white dark:hover:bg-slate-700"
                   }`}
                 >
                   {isVietnamese ? f.labelVi : f.labelEn}
@@ -537,14 +552,18 @@ export function Offers() {
               return (
                 <article
                   key={offer.code}
-                  className={`group flex flex-col rounded-2xl border border-border bg-gradient-to-br ${offer.accent} p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:p-6`}
+                  className={`group flex flex-col rounded-2xl border border-slate-200 dark:border-slate-800 bg-gradient-to-br ${offer.accent} dark:from-slate-900 dark:to-slate-950 p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:p-6`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-amber-400 border border-slate-200/80 dark:border-slate-700 shadow-xs">
                       <Icon className="h-5 w-5" />
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary/80 px-2.5 py-1 text-[10px] font-medium text-primary">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] ${
+                        (offer as any).hotelId
+                          ? "bg-amber-100 text-amber-900 border border-amber-300 font-bold shadow-xs"
+                          : "bg-secondary/80 text-primary font-medium"
+                      }`}>
                         <Building2 className="h-3 w-3 text-gold" />
                         {(offer as any).hotelName || "Toàn hệ thống"}
                       </span>
@@ -553,33 +572,33 @@ export function Offers() {
                       </span>
                     </div>
                   </div>
-                  <h2 className="mt-6 font-display text-2xl font-bold leading-tight text-primary">
+                  <h2 className="mt-6 font-display text-2xl font-bold leading-tight text-slate-900 dark:text-slate-100">
                     {isVietnamese ? offer.title : offer.titleEn}
                   </h2>
-                  <p className="mt-3 flex-1 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-3 flex-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                     {isVietnamese ? offer.description : offer.descriptionEn}
                   </p>
-                  <div className="mt-5 flex items-center justify-between gap-2 rounded-xl border border-primary/10 bg-white/80 p-3">
+                  <div className="mt-5 flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 p-3 shadow-xs">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-muted-foreground">
+                      <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-slate-500 dark:text-slate-400">
                         {isVietnamese ? "Mã ưu đãi" : "Promo code"}
                       </p>
-                      <p className="mt-1 font-bold tracking-wider text-primary">{offer.code}</p>
+                      <p className="mt-1 font-bold tracking-wider text-slate-900 dark:text-amber-400">{offer.code}</p>
                     </div>
                     <button
                       type="button"
                       onClick={() => copyCode(offer.code)}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-primary shadow-xs transition hover:bg-secondary"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 shadow-xs transition hover:bg-slate-100 dark:hover:bg-slate-600"
                       aria-label={isVietnamese ? "Sao chép mã" : "Copy code"}
                     >
                       {copied ? (
                         <>
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
-                          <span className="text-emerald-600">Đã chép</span>
+                          <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-emerald-600 dark:text-emerald-400">Đã chép</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="h-3.5 w-3.5" />
+                          <Copy className="h-3.5 w-3.5 text-slate-600 dark:text-slate-300" />
                           <span>Sao chép</span>
                         </>
                       )}
@@ -741,7 +760,7 @@ export function Offers() {
         )}
       </Dialog>
 
-      <section className="container py-12 sm:py-16">
+      <section className="container py-12 sm:py-16 pb-24 sm:pb-28">
         <div className="mx-auto grid max-w-6xl gap-5 md:grid-cols-3">
           <div className="flex gap-4 rounded-2xl border border-border bg-card p-5">
             <Ticket className="h-6 w-6 shrink-0 text-gold" />
