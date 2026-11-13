@@ -252,32 +252,21 @@ export default function BookingSuccess() {
         return;
       }
 
-      // 3. Nếu là tiền mặt hoặc ví điện tử khác
-      if (activeOrderId) {
-        const token = localStorage.getItem("senviet_token") || localStorage.getItem("accessToken");
-        const payRes = await fetch(`${API_BASE_URL}/orders/payments`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            orderId: activeOrderId,
-            amount: payAmount,
-            paymentType: paymentMethod,
-            cashFlowType: "RECEIPT",
-            note: "Khách thanh toán trực tuyến trên website",
-          }),
-        });
-        if (!payRes.ok) {
-          const errText = await payRes.text().catch(() => "");
-          throw new Error(errText || `HTTP ${payRes.status}`);
-        }
+      // 3. Thanh toán tại quầy lễ tân: không tự đánh dấu đã thanh toán trên web
+      if (paymentMethod === "CASH") {
+        toast.info(
+          isEn
+            ? "Your booking is reserved. Please pay at the front desk upon check-in."
+            : "Đơn đặt phòng đang được giữ chỗ. Vui lòng thanh toán trực tiếp tại quầy lễ tân khi nhận phòng.",
+        );
+        return;
       }
 
-      updateBooking(booking.id, { status: "confirmed" });
-      setBooking((prev) => (prev ? { ...prev, status: "confirmed" } : undefined));
-      toast.success("Thanh toán đơn đặt phòng thành công!");
+      toast.info(
+        isEn
+          ? "Please use Bank Transfer / QR Code (PayOS) for online payment."
+          : "Vui lòng chọn Chuyển khoản / Quét mã QR (PayOS) để thanh toán trực tuyến.",
+      );
     } catch (err) {
       console.error("Lỗi khi xử lý thanh toán:", err);
       toast.error("Thanh toán thất bại, vui lòng thử lại!");
@@ -718,25 +707,6 @@ export default function BookingSuccess() {
                     />
                     <QrCode className="h-4 w-4 text-primary" />
                     <span>{isEn ? "Bank Transfer / QR Code" : "Chuyển khoản / Quét mã QR"}</span>
-                  </label>
-
-                  <label
-                    className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition ${
-                      paymentMethod === "EWALLET"
-                        ? "border-primary bg-white shadow-sm font-semibold text-primary"
-                        : "border-border bg-white/60 text-muted-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="EWALLET"
-                      checked={paymentMethod === "EWALLET"}
-                      onChange={() => setPaymentMethod("EWALLET")}
-                      className="accent-primary"
-                    />
-                    <Wallet className="h-4 w-4 text-primary" />
-                    <span>{isEn ? "MoMo / VNPay E-wallet" : "Ví MoMo / VNPay"}</span>
                   </label>
 
                   <label

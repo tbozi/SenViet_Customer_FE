@@ -448,9 +448,6 @@ export default function Checkout() {
     return usedPromoCodesSet.has(clean);
   }, [promo, usedPromoCodesSet]);
 
-  const isDemoPromo =
-    promo.trim().toUpperCase() === "DEMO" ||
-    promo.trim().toUpperCase() === "TESTPAY";
   const standardDiscount = getPromotionDiscount(promo, {
     roomSubtotal,
     serviceTotal,
@@ -459,18 +456,14 @@ export default function Checkout() {
     hotelSlugOrName: hotelTarget,
   });
   const effectiveDiscount = matchedActivePromo ? backendDiscount : standardDiscount;
-  const discount = promoAlreadyUsed
-    ? 0
-    : isDemoPromo
-      ? Math.max(0, roomSubtotal + extraGuestCharge + serviceTotal - 1852)
-      : effectiveDiscount;
+  const discount = promoAlreadyUsed ? 0 : effectiveDiscount;
   const taxableSubtotal = Math.max(
     0,
     roomSubtotal + extraGuestCharge + serviceTotal - discount,
   );
   const vat = 0; // Website không áp dụng thuế VAT
   const serviceFee = 0;
-  const total = !promoAlreadyUsed && isDemoPromo ? 2000 : taxableSubtotal + vat;
+  const total = taxableSubtotal + vat;
   const firstCheckIn =
     selections
       .flatMap((selection) =>
@@ -1042,30 +1035,9 @@ export default function Checkout() {
                 )}
                 {promo && discount > 0 && (
                   <p className="rounded-lg bg-emerald-50 p-2 text-xs font-semibold text-emerald-700">
-                    ✓ Áp dụng thành công: giảm {formatVnd(discount)} {isDemoPromo ? "(Chế độ Demo: Tổng tiền 2.000đ)" : ""}
+                    ✓ Áp dụng thành công: giảm {formatVnd(discount)}
                   </p>
                 )}
-
-                {/* Nút bấm nhanh chế độ Demo Đồ án 2.000đ */}
-                <div className="pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setPromo("DEMO")}
-                    className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs transition ${
-                      promo === "DEMO"
-                        ? "border-emerald-500 bg-emerald-100/80 text-emerald-900 font-bold"
-                        : "border-dashed border-emerald-400 bg-emerald-50/70 text-emerald-800 hover:bg-emerald-100"
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] text-white font-bold">⚡</span>
-                      <span>{isEn ? "Demo Mode (Pay 2,000 VND)" : "Chế độ Demo (Thanh toán 2.000đ)"}</span>
-                    </span>
-                    <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {promo === "DEMO" ? (isEn ? "Applied" : "Đang áp dụng") : (isEn ? "Enable DEMO" : "Bật mã DEMO")}
-                    </span>
-                  </button>
-                </div>
               </div>
             }
             savedPromotions={savedPromotionItems}
