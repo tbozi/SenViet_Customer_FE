@@ -1530,6 +1530,8 @@ export default function ChatWidget() {
 
     setActivePaymentOrderId(null);
 
+    setDynamicQuickReplies([]);
+
     setMessages([{ id: Date.now(), from: "bot", text: t("ai.widgetGreeting") }]);
 
   }, [t, sessionKey, cacheKey]);
@@ -1791,6 +1793,11 @@ export default function ChatWidget() {
         const reply = result.result?.reply || t("ai.genericReply");
 
         const state = result.result?.state;
+
+        const nextChips = Array.isArray((result.result as { quickReplies?: string[] })?.quickReplies)
+          ? ((result.result as { quickReplies?: string[] }).quickReplies ?? [])
+          : [];
+        setDynamicQuickReplies(nextChips);
 
 
 
@@ -2390,7 +2397,12 @@ export default function ChatWidget() {
 
 
 
-  const quickReplies = isAwaitingConfirmation
+  const [dynamicQuickReplies, setDynamicQuickReplies] = useState<string[]>([]);
+
+  const quickReplies =
+    dynamicQuickReplies.length > 0
+      ? dynamicQuickReplies
+      : isAwaitingConfirmation
 
     ? (isEn
 
