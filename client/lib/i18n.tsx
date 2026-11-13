@@ -1,4 +1,9 @@
-import { createContext, useContext, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import {
+  restoreOriginalDomTexts,
+  setupDynamicDomTranslationObserver,
+  translateVisibleDomToEn,
+} from "./dynamicTranslate";
 
 export type Language = "vi" | "en";
 
@@ -858,6 +863,24 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("senviet_lang", lang);
     }
   };
+
+  const langRef = useRef<Language>(language);
+  langRef.current = language;
+
+  useEffect(() => {
+    if (language === "en") {
+      const timer = setTimeout(() => {
+        translateVisibleDomToEn();
+      }, 150);
+      const cleanupObserver = setupDynamicDomTranslationObserver(() => langRef.current);
+      return () => {
+        clearTimeout(timer);
+        cleanupObserver();
+      };
+    } else {
+      restoreOriginalDomTexts();
+    }
+  }, [language]);
 
   const value = useMemo<LanguageContextValue>(
     () => ({

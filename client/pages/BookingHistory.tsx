@@ -16,7 +16,8 @@ import {
   Tag,
   XCircle,
 } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -126,6 +127,7 @@ export default function BookingHistory() {
   const labels = isVi ? labelsVi : labelsEn;
   const paymentLabels = isVi ? paymentLabelsVi : paymentLabelsEn;
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [success, setSuccess] = useState("");
@@ -276,19 +278,15 @@ export default function BookingHistory() {
   }, [bookings, params]);
 
   const completePayment = (booking: Booking) => {
-    if (new Date(booking.holdUntil).getTime() <= Date.now())
-      return window.alert(
-        "Thời gian giữ phòng đã hết. Vui lòng tạo lại đơn đặt phòng.",
+    if (booking.holdUntil && new Date(booking.holdUntil).getTime() <= Date.now()) {
+      toast.error(
+        isVi
+          ? "Thời gian giữ phòng đã hết. Vui lòng tạo lại đơn đặt phòng."
+          : "Room hold time has expired. Please create a new booking.",
       );
-    updateBooking(booking.id, { status: "confirmed" });
-    setBookings((current) =>
-      current.map((item) =>
-        item.id === booking.id ? { ...item, status: "confirmed" } : item,
-      ),
-    );
-    setSuccess(
-      `Thanh toán thành công cho đơn ${booking.id}. Đặt phòng đã được xác nhận.`,
-    );
+      return;
+    }
+    navigate(`/booking-success/${booking.id}`);
   };
 
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null);

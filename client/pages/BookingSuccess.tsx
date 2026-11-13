@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   CheckCircle2,
   Clock3,
@@ -54,6 +54,7 @@ export default function BookingSuccess() {
   const [booking, setBooking] = useState<Booking | undefined>(foundBooking);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"BANK" | "EWALLET" | "CASH">("BANK");
+  const autoTriggeredQrRef = useRef(false);
 
   // QR Modal States (Chuẩn giao diện POS / VietQR của Dung)
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -119,7 +120,9 @@ export default function BookingSuccess() {
         .then((data) => {
           if (data?.result) {
             const ord = data.result;
-            if (ord.orderStatus === "CLOSED" || (typeof ord.remainingAmount === "number" && ord.remainingAmount <= 0)) {
+            const paid = typeof ord.paidAmount === "number" ? ord.paidAmount : Number(ord.paidAmount || 0);
+            const remaining = typeof ord.remainingAmount === "number" ? ord.remainingAmount : Number(ord.remainingAmount ?? 1);
+            if (ord.orderStatus === "CLOSED" || ord.paymentStatus === "PAID" || (paid > 0 && remaining <= 0)) {
               updateBooking(targetId, { status: "confirmed" });
               setBooking((curr) => (curr ? { ...curr, status: "confirmed" } : undefined));
               return;
@@ -190,46 +193,55 @@ export default function BookingSuccess() {
       // 2. Nếu chọn Chuyển khoản / Quét mã QR -> Mở màn hình quét mã VietQR PayOS
       if (paymentMethod === "BANK") {
         let checkoutUrl: string | undefined = undefined;
-        let qrCodeUrl = `https://img.vietqr.io/image/MB-6172155164659-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=HUYNH+VAN+HIEU`;
+        let qrCodeUrl = "";
+        let bankName = "PayOS VietQR";
+        let accountNo = "";
+        let accountName = "";
 
-        try {
-          const qrRes = await fetch(`${API_BASE_URL}/payment/create-qr`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              orderId: activeOrderId,
-              amount: Math.round(payAmount),
-            }),
-          });
-          if (qrRes.ok) {
-            const qrJson = await qrRes.json();
-            if (qrJson.description) {
-              paymentDescription = qrJson.description;
-            }
-            if (qrJson.checkoutUrl) {
-              checkoutUrl = qrJson.checkoutUrl;
-              if (qrJson.qrCode && qrJson.qrCode.startsWith("000201")) {
-                qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrJson.qrCode)}`;
-              } else if (qrJson.qrCode && qrJson.qrCode.startsWith("http")) {
-                qrCodeUrl = qrJson.qrCode;
-              } else {
-                qrCodeUrl = `https://img.vietqr.io/image/MB-6172155164659-compact2.png?amount=${Math.round(payAmount)}&addInfo=${encodeURIComponent(paymentDescription)}&accountName=HUYNH+VAN+HIEU`;
-              }
-            }
-          }
-        } catch (e) {
-          console.warn("Lỗi gọi /payment/create-qr:", e);
+        const qrRes = await fetch(`${API_BASE_URL}/payment/create-qr`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            orderId: activeOrderId,
+            amount: Math.round(payAmount),
+          }),
+        });
+
+        if (!qrRes.ok) {
+          const errJson = await qrRes.json().catch(() => null);
+          throw new Error(errJson?.message || `Không thể tạo mã QR PayOS (HTTP ${qrRes.status})`);
+        }
+
+        const qrJson = await qrRes.json();
+        if (qrJson.description) {
+          paymentDescription = qrJson.description;
+        }
+        if (qrJson.checkoutUrl) {
+          checkoutUrl = qrJson.checkoutUrl;
+        }
+        if (qrJson.accountNumber) accountNo = qrJson.accountNumber;
+        if (qrJson.accountName) accountName = qrJson.accountName;
+        if (qrJson.bin) bankName = qrJson.bin;
+
+        if (qrJson.qrCode && qrJson.qrCode.startsWith("000201")) {
+          qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrJson.qrCode)}`;
+        } else if (qrJson.qrCode && qrJson.qrCode.startsWith("http")) {
+          qrCodeUrl = qrJson.qrCode;
+        }
+
+        if (!qrCodeUrl && !checkoutUrl) {
+          throw new Error(qrJson?.message || "PayOS không trả về mã QR hợp lệ.");
         }
 
         setQrData({
           orderId: activeOrderId,
           amount: payAmount,
           customerName: booking.guestName || "Khách đặt phòng",
-          bankName: "Ngân hàng TMCP Quân Đội (MB Bank)",
-          accountNo: "6172155164659",
-          accountName: "HUYNH VAN HIEU",
+          bankName,
+          accountNo,
+          accountName,
           description: paymentDescription,
           qrUrl: qrCodeUrl,
           checkoutUrl,
@@ -341,6 +353,41 @@ export default function BookingSuccess() {
       }
     };
   }, [qrModalOpen, qrData?.orderId, booking?.id, booking?.status]);
+
+  // Tự động đánh dấu mã ưu đãi của đơn đã xác nhận là đã sử dụng
+  useEffect(() => {
+    if (!booking?.id || booking.status !== "confirmed") return;
+    try {
+      const mapRaw = localStorage.getItem("senviet_booking_promos");
+      if (!mapRaw) return;
+      const map = JSON.parse(mapRaw);
+      const promoCode = map?.[String(booking.id)];
+      if (!promoCode) return;
+      const usedKey = `senviet_used_promos_${(booking.userEmail || "guest").toLowerCase()}`;
+      const existingRaw = localStorage.getItem(usedKey);
+      const existing: string[] = existingRaw ? JSON.parse(existingRaw) : [];
+      const upper = String(promoCode).trim().toUpperCase();
+      if (!existing.includes(upper)) {
+        existing.push(upper);
+        localStorage.setItem(usedKey, JSON.stringify(existing));
+        window.dispatchEvent(new Event("senviet_saved_promotions_changed"));
+      }
+    } catch {}
+  }, [booking?.id, booking?.status, booking?.userEmail]);
+
+  // Tự động mở màn hình quét mã QR PayOS khi khách vừa chuyển từ Checkout sang với phương thức QR
+  useEffect(() => {
+    if (
+      booking &&
+      booking.status === "pending_payment" &&
+      booking.paymentMethod === "qr" &&
+      !qrModalOpen &&
+      !autoTriggeredQrRef.current
+    ) {
+      autoTriggeredQrRef.current = true;
+      handlePayment();
+    }
+  }, [booking?.id, booking?.status, booking?.paymentMethod, qrModalOpen]);
 
   const handleCheckPaymentStatus = async () => {
     if (!booking || !qrData?.orderId) return;
@@ -916,36 +963,40 @@ export default function BookingSuccess() {
                   {/* Hàng 3: Ngân hàng & Chủ tài khoản */}
                   <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 space-y-1.5">
                     <div className="flex justify-between items-start gap-2">
-                      <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Beneficiary Bank:" : "Ngân hàng thụ hưởng:"}</span>
+                      <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Payment Gateway:" : "Cổng thanh toán:"}</span>
                       <span className="font-bold text-slate-900 text-xs text-right leading-tight">
-                        {qrData.bankName}
+                        {qrData.bankName || "PayOS VietQR"}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center border-t border-slate-200/70 pt-1.5">
-                      <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Account Name:" : "Chủ tài khoản:"}</span>
-                      <span className="font-bold text-slate-900 text-xs uppercase text-right">
-                        {qrData.accountName}
-                      </span>
-                    </div>
+                    {qrData.accountName && (
+                      <div className="flex justify-between items-center border-t border-slate-200/70 pt-1.5">
+                        <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Account Name:" : "Chủ tài khoản:"}</span>
+                        <span className="font-bold text-slate-900 text-xs uppercase text-right">
+                          {qrData.accountName}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Hàng 4: Số tài khoản */}
-                  <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
-                    <div>
-                      <p className="text-[11px] text-slate-500">{isEn ? "Account Number" : "Số tài khoản"}</p>
-                      <p className="font-mono font-bold text-slate-900 text-sm tracking-wide">{qrData.accountNo}</p>
+                  {/* Hàng 4: Số tài khoản (nếu có) */}
+                  {qrData.accountNo && (
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+                      <div>
+                        <p className="text-[11px] text-slate-500">{isEn ? "Account Number" : "Số tài khoản"}</p>
+                        <p className="font-mono font-bold text-slate-900 text-sm tracking-wide">{qrData.accountNo}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(qrData.accountNo, "Số tài khoản")}
+                        className="h-7 px-2.5 gap-1 rounded-lg text-xs font-medium border-slate-200 hover:bg-slate-100"
+                      >
+                        {copiedField === "Số tài khoản" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                        <span>{isEn ? "Copy" : "Sao chép"}</span>
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(qrData.accountNo, "Số tài khoản")}
-                      className="h-7 px-2.5 gap-1 rounded-lg text-xs font-medium border-slate-200 hover:bg-slate-100"
-                    >
-                      {copiedField === "Số tài khoản" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
-                      <span>{isEn ? "Copy" : "Sao chép"}</span>
-                    </Button>
-                  </div>
+                  )}
 
                   {/* Hàng 5: Nội dung chuyển khoản */}
                   <div className="flex items-center justify-between rounded-xl border border-amber-200/90 bg-amber-50/70 px-3 py-2">

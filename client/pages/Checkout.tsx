@@ -258,9 +258,34 @@ export default function Checkout() {
     skip: !user || !user.userId,
   });
 
+  const usedPromoCodesSet = useMemo(() => {
+    const set = new Set<string>();
+    try {
+      const key = `senviet_used_promos_${(user?.email || "guest").toLowerCase()}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((c) => set.add(String(c).trim().toUpperCase()));
+        }
+      }
+    } catch {}
+    if (savedPromosBackend) {
+      savedPromosBackend
+        .filter((sp) => sp.isUsed)
+        .forEach((sp) => {
+          const codeVal = sp.promotionCode || (sp.code ? sp.code.split("-")[0] : sp.code);
+          if (codeVal) set.add(String(codeVal).trim().toUpperCase());
+        });
+    }
+    return set;
+  }, [user?.email, savedPromosBackend]);
+
   useEffect(() => {
     const update = () => {
-      const localCodes = getSavedPromotionCodes(user?.email);
+      const localCodes = getSavedPromotionCodes(user?.email).filter(
+        (c) => !usedPromoCodesSet.has(String(c).trim().toUpperCase()),
+      );
       const backendCodes = savedPromosBackend
         ? savedPromosBackend
             .filter((sp) => !sp.isUsed)
@@ -417,6 +442,12 @@ export default function Checkout() {
     return matchedActivePromo.discountValue || 0;
   }, [matchedActivePromo, promoMinBookingFailed, roomSubtotal, serviceTotal]);
 
+  const promoAlreadyUsed = useMemo(() => {
+    const clean = promo.trim().toUpperCase();
+    if (!clean) return false;
+    return usedPromoCodesSet.has(clean);
+  }, [promo, usedPromoCodesSet]);
+
   const isDemoPromo =
     promo.trim().toUpperCase() === "DEMO" ||
     promo.trim().toUpperCase() === "TESTPAY";
@@ -428,16 +459,18 @@ export default function Checkout() {
     hotelSlugOrName: hotelTarget,
   });
   const effectiveDiscount = matchedActivePromo ? backendDiscount : standardDiscount;
-  const discount = isDemoPromo
-    ? Math.max(0, roomSubtotal + extraGuestCharge + serviceTotal - 1852)
-    : effectiveDiscount;
+  const discount = promoAlreadyUsed
+    ? 0
+    : isDemoPromo
+      ? Math.max(0, roomSubtotal + extraGuestCharge + serviceTotal - 1852)
+      : effectiveDiscount;
   const taxableSubtotal = Math.max(
     0,
     roomSubtotal + extraGuestCharge + serviceTotal - discount,
   );
   const vat = 0; // Website không áp dụng thuế VAT
   const serviceFee = 0;
-  const total = isDemoPromo ? 2000 : taxableSubtotal + vat;
+  const total = !promoAlreadyUsed && isDemoPromo ? 2000 : taxableSubtotal + vat;
   const firstCheckIn =
     selections
       .flatMap((selection) =>
@@ -555,6 +588,9 @@ export default function Checkout() {
     event.preventDefault();
     if (remainingSeconds <= 0) {
       return setError(isEn ? "The 5-minute reservation hold has expired. Please click 'Renew Hold' to continue." : "Đã hết 5 phút giữ phòng tạm thời. Quý khách vui lòng bấm 'Tải lại giữ phòng' để tiếp tục thanh toán.");
+    }
+    if (promo && promoAlreadyUsed) {
+      return setError(isEn ? "This promo code has already been used by your account. Please clear or choose a different code." : "Mã ưu đãi này đã được tài khoản của bạn sử dụng ở đơn trước. Vui lòng xóa mã hoặc chọn mã khác.");
     }
     if (!hotel || !Number.isSafeInteger(hotelId) || hotelId <= 0) {
       return setError(
@@ -675,6 +711,14 @@ export default function Checkout() {
 
       if (res && res.bookingId) {
         generatedId = String(res.bookingId);
+        if (cleanPromo && !promoAlreadyUsed) {
+          try {
+            const mapRaw = localStorage.getItem("senviet_booking_promos");
+            const map = mapRaw ? JSON.parse(mapRaw) : {};
+            map[generatedId] = cleanPromo;
+            localStorage.setItem("senviet_booking_promos", JSON.stringify(map));
+          } catch {}
+        }
       } else {
         throw new Error("Backend không trả về bookingId hợp lệ");
       }
@@ -976,17 +1020,22 @@ export default function Checkout() {
                     )}
                   </div>
                 </label>
-                {promo && !promoApplicability.applicable && (
+                {promo && promoAlreadyUsed && (
+                  <p className="rounded-lg bg-rose-50 p-2 text-xs font-medium text-rose-700">
+                    ✕ {isEn ? "You have already used this promo code on a previous booking. Each account may use it once." : "Bạn đã sử dụng mã ưu đãi này cho một đơn đặt phòng thành công trước đó. Mỗi tài khoản chỉ dùng 1 lần."}
+                  </p>
+                )}
+                {promo && !promoAlreadyUsed && !promoApplicability.applicable && (
                   <p className="rounded-lg bg-rose-50 p-2 text-xs font-medium text-rose-700">
                     ✕ {promoApplicability.reason || "Mã không áp dụng cho khách sạn này."}
                   </p>
                 )}
-                {promo && promoMinBookingFailed && (
+                {promo && !promoAlreadyUsed && promoMinBookingFailed && (
                   <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
                     ⚠ Mã {matchedActivePromo?.code} yêu cầu giá trị tiền phòng tối thiểu {matchedActivePromo?.minBookingValue?.toLocaleString("vi-VN")}đ (hiện tại: {roomSubtotal.toLocaleString("vi-VN")}đ).
                   </p>
                 )}
-                {promo && promoApplicability.applicable && !promoMinBookingFailed && discount === 0 && (
+                {promo && !promoAlreadyUsed && promoApplicability.applicable && !promoMinBookingFailed && discount === 0 && (
                   <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
                     ⚠ Mã chưa đủ điều kiện cho đơn này (ví dụ: số đêm tối thiểu).
                   </p>

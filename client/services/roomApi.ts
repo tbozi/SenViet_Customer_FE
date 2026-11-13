@@ -573,11 +573,14 @@ export async function fetchRoomsByHotel(
 
 
 
-      // Chỉ lấy phòng READY (trống và chưa có đơn đặt trùng ngày) để khách có thể chọn
-
-
-
-      const readyRooms = sameType.filter((r) => r.roomStatus === "READY");
+      // Chỉ lấy phòng READY (hoặc phòng trống do backend đã lọc theo ngày) để khách có thể chọn
+      const readyRooms = sameType.filter((r) => {
+        const st = String(r.roomStatus || "").toUpperCase();
+        if (checkIn && checkOut) {
+          return st !== "MAINTENANCE" && st !== "INACTIVE";
+        }
+        return st === "READY" || st === "AVAILABLE" || st === "";
+      });
 
 
 

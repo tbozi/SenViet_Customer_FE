@@ -979,6 +979,51 @@ export default function ChatWidget() {
   const wantsListeningRef = useRef(false);
   const voiceBaseInputRef = useRef("");
   const finalTranscriptRef = useRef("");
+  const voiceTargetRef = useRef<"ai" | "staff">("ai");
+  const staffInputRef = useRef<HTMLInputElement>(null);
+
+  // Draggable floating chat launcher position (offset from bottom-right)
+  const [fabPos, setFabPos] = useState<{ right: number; bottom: number } | null>(null);
+  const fabDragRef = useRef<{ startX: number; startY: number; startRight: number; startBottom: number; moved: boolean } | null>(null);
+  const didDragFabRef = useRef(false);
+
+  const handleFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const currentRight = fabPos ? fabPos.right : Math.max(12, window.innerWidth - rect.right);
+    const currentBottom = fabPos ? fabPos.bottom : Math.max(12, window.innerHeight - rect.bottom);
+    fabDragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startRight: currentRight,
+      startBottom: currentBottom,
+      moved: false,
+    };
+    didDragFabRef.current = false;
+
+    const onMove = (ev: PointerEvent) => {
+      if (!fabDragRef.current) return;
+      const dx = ev.clientX - fabDragRef.current.startX;
+      const dy = ev.clientY - fabDragRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        fabDragRef.current.moved = true;
+        didDragFabRef.current = true;
+      }
+      if (fabDragRef.current.moved) {
+        const nextRight = Math.min(Math.max(8, fabDragRef.current.startRight - dx), window.innerWidth - 72);
+        const nextBottom = Math.min(Math.max(8, fabDragRef.current.startBottom - dy), window.innerHeight - 64);
+        setFabPos({ right: nextRight, bottom: nextBottom });
+      }
+    };
+
+    const onUp = () => {
+      fabDragRef.current = null;
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1007,12 +1052,18 @@ export default function ChatWidget() {
       const combined = [voiceBaseInputRef.current, finalTranscriptRef.current, interim.trim()]
         .filter(Boolean)
         .join(" ");
-      setInput(combined);
+      if (voiceTargetRef.current === "staff") {
+        setStaffInput(combined);
+      } else {
+        setInput(combined);
+      }
     };
 
     rec.onend = () => {
       if (wantsListeningRef.current) {
-        voiceBaseInputRef.current = (inputRef.current?.value || "").trim();
+        voiceBaseInputRef.current = (
+          (voiceTargetRef.current === "staff" ? staffInputRef.current?.value : inputRef.current?.value) || ""
+        ).trim();
         finalTranscriptRef.current = "";
         setTimeout(() => {
           if (!wantsListeningRef.current) return;
@@ -1401,7 +1452,7 @@ export default function ChatWidget() {
 
 
 
-  const toggleListening = () => {
+  const toggleListening = (target: "ai" | "staff" = "ai") => {
     if (!recognitionRef.current) {
       toast({
         title: isEn ? "Voice Input Unavailable" : "Trình duyệt chưa hỗ trợ",
@@ -1416,7 +1467,8 @@ export default function ChatWidget() {
       try { recognitionRef.current.stop(); } catch {}
       setIsListening(false);
     } else {
-      voiceBaseInputRef.current = input.trim();
+      voiceTargetRef.current = target;
+      voiceBaseInputRef.current = (target === "staff" ? staffInput : input).trim();
       finalTranscriptRef.current = "";
       wantsListeningRef.current = true;
       try {
@@ -2455,15 +2507,11 @@ export default function ChatWidget() {
 
 
 
-  // Kiem tra trang thai truc tuyen cua chi nhanh
+  // Kiem tra trang thai truc tuyen cua chi nhanh (hoac Tong dai CSKH Super Admin)
 
   useEffect(() => {
 
-    if (currentBranchHotelId) {
-
-      checkBranchOnline(currentBranchHotelId);
-
-    }
+    checkBranchOnline(currentBranchHotelId);
 
   }, [selectedBranch, currentBranchHotelId, staffOpen]);
 
@@ -3108,7 +3156,10 @@ export default function ChatWidget() {
 
 
   const handleToggleLauncher = () => {
-
+    if (didDragFabRef.current) {
+      didDragFabRef.current = false;
+      return;
+    }
     if (open || staffOpen) {
 
       setOpen(false);
@@ -3146,11 +3197,15 @@ export default function ChatWidget() {
 
       <button
 
+        onPointerDown={handleFabPointerDown}
+
         onClick={handleToggleLauncher}
 
         aria-label={isEn ? "Contact Sen Việt Support" : "Liên hệ tư vấn Sen Việt"}
 
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex h-11 w-11 sm:h-auto sm:w-auto items-center justify-center gap-2 sm:gap-2.5 rounded-full bg-gradient-to-r from-primary via-primary to-slate-900 p-0 sm:px-5 sm:py-3.5 text-white shadow-xl shadow-black/30 ring-2 ring-gold/60 transition hover:scale-105"
+        style={fabPos ? { right: `${fabPos.right}px`, bottom: `${fabPos.bottom}px`, touchAction: "none" } : { touchAction: "none" }}
+
+        className={`fixed z-50 flex h-11 w-11 sm:h-auto sm:w-auto items-center justify-center gap-2 sm:gap-2.5 rounded-full bg-gradient-to-r from-primary via-primary to-slate-900 p-0 sm:px-5 sm:py-3.5 text-white shadow-xl shadow-black/30 ring-2 ring-gold/60 transition hover:scale-105 cursor-grab active:cursor-grabbing ${fabPos ? "" : "bottom-4 right-4 sm:bottom-6 sm:right-6"}`}
 
       >
 
@@ -3334,23 +3389,15 @@ export default function ChatWidget() {
 
                   <span className="text-sm font-bold text-primary whitespace-nowrap">
 
-                    {isEn ? "Front Desk & Zalo Chat" : "Chat với Nhân viên & Zalo"}
+                    {isEn ? "Front Desk Chat" : "Chat với Nhân viên"}
 
                   </span>
 
-                  {staffUnreadCount > 0 ? (
+                  {staffUnreadCount > 0 && (
 
                     <span className="rounded-full bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-600 animate-pulse">
 
                       {staffUnreadCount} {isEn ? "new" : "mới"}
-
-                    </span>
-
-                  ) : (
-
-                    <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
-
-                      Zalo OA
 
                     </span>
 
@@ -3360,7 +3407,7 @@ export default function ChatWidget() {
 
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
 
-                  {isEn ? "Talk directly to hotel receptionists on Web or connect via Zalo" : "Trao đổi trực tiếp với Lễ tân trên Web hoặc chuyển sang ứng dụng Zalo"}
+                  {isEn ? "Talk directly to hotel receptionists or customer support" : "Trao đổi trực tiếp với Lễ tân chi nhánh hoặc Tổng đài CSKH"}
 
                 </p>
 
@@ -3436,7 +3483,7 @@ export default function ChatWidget() {
 
                 <div className="text-[11px] text-white/80">
 
-                  {isEn ? "Live Support on Web & Official Zalo" : "Hỗ trợ trực tuyến trên Web & Zalo Official"}
+                  {isEn ? "Live Support on Web" : "Hỗ trợ trực tuyến trên Web"}
 
                 </div>
 
@@ -3506,66 +3553,6 @@ export default function ChatWidget() {
 
 
 
-          {/* Thanh chuyển đổi 2 chế độ: Chat trực tiếp trên Web vs Mở Zalo */}
-
-          <div className="grid grid-cols-2 gap-1.5 border-b border-border bg-muted/40 p-2">
-
-            <button
-
-              type="button"
-
-              onClick={() => setStaffMode("web")}
-
-              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition ${
-
-                staffMode === "web"
-
-                  ? "bg-primary text-primary-foreground shadow-sm"
-
-                  : "text-muted-foreground hover:bg-background hover:text-primary"
-
-              }`}
-
-            >
-
-              <MessageCircle className="h-3.5 w-3.5" />
-
-              {isEn ? "Web Chat" : "Chat trên Web"}
-
-            </button>
-
-            <button
-
-              type="button"
-
-              onClick={() => setStaffMode("zalo")}
-
-              className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold transition ${
-
-                staffMode === "zalo"
-
-                  ? "bg-[#0068FF] text-white shadow-sm"
-
-                  : "text-muted-foreground hover:bg-background hover:text-[#0068FF]"
-
-              }`}
-
-            >
-
-              <QrCode className="h-3.5 w-3.5" />
-
-              {isEn ? "Chat on Zalo" : "Nhắn qua Zalo"}
-
-            </button>
-
-          </div>
-
-
-
-          {staffMode === "web" ? (
-
-            <>
-
               {/* Bộ chọn chi nhánh cần hỗ trợ (Routing về 1 đầu mối) */}
 
               <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary/30 px-3.5 py-2 text-xs">
@@ -3634,55 +3621,25 @@ export default function ChatWidget() {
 
               >
 
-                {/* Banner gợi ý chuyển sang Zalo giống CellphoneS */}
-
-                <div className="flex items-center justify-between gap-2 rounded-xl border border-blue-200 bg-blue-50/90 p-2.5 text-[11px] text-blue-950">
-
-                  <span>
-
-                    💬 Muốn giữ liên lạc tiện lợi trên điện thoại? Kết nối ngay qua <strong>Zalo Sen Việt</strong>!
-
-                  </span>
-
-                  <a
-
-                    href={SENVIET_ZALO_URL}
-
-                    target="_blank"
-
-                    rel="noopener noreferrer"
-
-                    className="shrink-0 rounded-lg bg-[#0068FF] px-2.5 py-1.5 font-bold text-white shadow-sm hover:bg-[#0054cc]"
-
-                  >
-
-                    Mở Zalo
-
-                  </a>
-
-                </div>
-
-
-
                 {staffMessages.map((msg) =>
 
                   msg.from === "user" ? (
 
-                    <div
+                    <div key={msg.id} className="flex justify-end">
 
-                      key={msg.id}
+                      <div
 
-                      className={`ml-auto space-y-1 ${
+                        className={`w-fit space-y-1 ${
 
-                        isStaffExpanded ? "max-w-[70%]" : "max-w-[85%]"
+                          isStaffExpanded ? "max-w-[70%]" : "max-w-[85%]"
 
-                      }`}
+                        }`}
 
-                    >
+                      >
 
-                      <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2.5 text-xs text-primary-foreground shadow-sm">
+                        <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2.5 text-xs text-primary-foreground shadow-sm">
 
-                        {msg.text}
+                          {msg.text}
 
                       </div>
 
@@ -3713,6 +3670,8 @@ export default function ChatWidget() {
                           </span>
 
                         )}
+
+                      </div>
 
                       </div>
 
@@ -3828,6 +3787,8 @@ export default function ChatWidget() {
 
                 <input
 
+                  ref={staffInputRef}
+
                   value={staffInput}
 
                   onChange={(e) => setStaffInput(e.target.value)}
@@ -3837,6 +3798,38 @@ export default function ChatWidget() {
                   className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
 
                 />
+
+                {recognitionRef.current && (
+
+                  <Button
+
+                    type="button"
+
+                    variant="ghost"
+
+                    size="icon"
+
+                    onClick={() => toggleListening("staff")}
+
+                    title={isEn ? "Voice input" : "Nhập bằng giọng nói"}
+
+                    className={`h-9 w-9 shrink-0 rounded-full transition-colors ${
+
+                      isListening && voiceTargetRef.current === "staff"
+
+                        ? "bg-red-100 text-red-500 border-red-500 animate-pulse"
+
+                        : "text-muted-foreground hover:text-primary"
+
+                    }`}
+
+                  >
+
+                    <Mic className="h-4 w-4" />
+
+                  </Button>
+
+                )}
 
                 <Button
 
@@ -3855,152 +3848,6 @@ export default function ChatWidget() {
                 </Button>
 
               </form>
-
-            </>
-
-          ) : (
-
-            /* TAB 2: KẾT NỐI QUA ZALO (GIỐNG CELLPHONES) */
-
-            <div className="flex flex-1 flex-col items-center justify-between overflow-y-auto p-5 text-center">
-
-              <div className="space-y-2">
-
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-[#0068FF]">
-
-                  Zalo Official Hỗ trợ Khách hàng
-
-                </span>
-
-                <h3 className="text-base font-bold text-primary">
-
-                  Chat với Nhân viên {selectedBranch} qua Zalo
-
-                </h3>
-
-                <p className="text-xs leading-relaxed text-muted-foreground">
-
-                  Quét mã QR bằng ứng dụng Zalo hoặc nhấn nút bên dưới để mở khung chat Zalo trực tiếp với bộ phận Lễ tân & CSKH ({selectedBranch}).
-
-                </p>
-
-              </div>
-
-
-
-              {/* Bộ chọn chi nhánh nhanh ngay trong tab Zalo */}
-
-              <div className="w-full flex items-center justify-between gap-2 rounded-xl border border-border bg-secondary/30 px-3 py-1.5 text-xs text-left">
-
-                <span className="shrink-0 font-medium text-muted-foreground text-[11px]">Chi nhánh:</span>
-
-                <select
-
-                  value={selectedBranch}
-
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-
-                  className="flex-1 truncate rounded-lg border border-border bg-background px-2 py-1 text-xs font-semibold text-primary outline-none focus:border-primary"
-
-                >
-
-                  <option value="Tổng đài CSKH Toàn hệ thống Sen Việt">Tổng đài CSKH Toàn hệ thống</option>
-
-                  {hotels.map((h) => (
-
-                    <option key={h.slug} value={h.name}>{h.name}</option>
-
-                  ))}
-
-                </select>
-
-              </div>
-
-
-
-              <div className="my-2 rounded-2xl border-2 border-dashed border-[#0068FF]/40 bg-white p-3.5 shadow-md">
-
-                <img
-
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-
-                    `https://zalo.me/${
-
-                      selectedBranch.includes("Sài Gòn") ? "0989809036" :
-
-                      selectedBranch.includes("Hà Nội") ? "0989809036" :
-
-                      selectedBranch.includes("Đà Nẵng") ? "0989809036" :
-
-                      SENVIET_ZALO_HOTLINE
-
-                    }`
-
-                  )}`}
-
-                  alt={`Zalo QR ${selectedBranch}`}
-
-                  className="mx-auto h-36 w-36 object-contain"
-
-                />
-
-                <p className="mt-2 text-[11px] font-semibold text-slate-700">
-
-                  Hotline / Zalo tiếp nhận: <span className="font-mono text-[#0068FF]">{SENVIET_ZALO_HOTLINE}</span>
-
-                </p>
-
-                <p className="text-[10px] text-muted-foreground">
-
-                  (Đầu số Zalo OA tiếp nhận điều phối tự động về quầy Lễ tân {selectedBranch})
-
-                </p>
-
-              </div>
-
-
-
-              <div className="w-full space-y-2">
-
-                <Button
-
-                  asChild
-
-                  className="w-full rounded-full bg-[#0068FF] py-5 text-xs font-bold text-white shadow-lg hover:bg-[#0054cc]"
-
-                >
-
-                  <a
-
-                    href={SENVIET_ZALO_URL}
-
-                    target="_blank"
-
-                    rel="noopener noreferrer"
-
-                  >
-
-                    <ExternalLink className="mr-2 h-4 w-4" />
-
-                    Mở ứng dụng Zalo & Chat ngay
-
-                  </a>
-
-                </Button>
-
-                <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
-
-                  <PhoneCall className="h-3.5 w-3.5 text-emerald-600" />
-
-                  <span>Hỗ trợ đặt phòng, xuất hóa đơn VAT & giải quyết khiếu nại 24/7</span>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          )}
 
         </div>
 
@@ -5254,9 +5101,9 @@ export default function ChatWidget() {
 
               variant="outline"
 
-              onClick={toggleListening}
+              onClick={() => toggleListening("ai")}
 
-              className={`h-9 w-9 shrink-0 rounded-full transition-colors ${isListening ? 'bg-red-100 text-red-500 border-red-500 animate-pulse' : 'text-muted-foreground hover:text-gold'}`}
+              className={`h-9 w-9 shrink-0 rounded-full transition-colors ${isListening && voiceTargetRef.current === "ai" ? 'bg-red-100 text-red-500 border-red-500 animate-pulse' : 'text-muted-foreground hover:text-gold'}`}
 
               title="Nhập bằng giọng nói"
 

@@ -2147,7 +2147,7 @@ export default function HotelRooms() {
 
                         >
 
-                          <option value={0}>Không chọn</option>
+                          <option value={0}>{isEn ? "None selected" : "Không chọn"}</option>
 
                           {Array.from(
 
@@ -2157,7 +2157,7 @@ export default function HotelRooms() {
 
                               <option key={roomIndex + 1} value={roomIndex + 1}>
 
-                                {roomIndex + 1} phòng
+                                {roomIndex + 1} {isEn ? (roomIndex === 0 ? "room" : "rooms") : "phòng"}
 
                               </option>
 
@@ -2295,7 +2295,7 @@ export default function HotelRooms() {
 
                                       : item.roomCodes
 
-                                    ).map((rawCode) => {
+                                    ).map((rawCode, codeIdx) => {
 
                                       const code = normalizeRoomDisplayName(rawCode);
 
@@ -2317,7 +2317,7 @@ export default function HotelRooms() {
 
                                         <option
 
-                                          key={code}
+                                          key={`${code}-${codeIdx}`}
 
                                           value={code}
 

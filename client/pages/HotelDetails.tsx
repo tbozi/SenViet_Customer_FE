@@ -1103,17 +1103,15 @@ export default function HotelDetails() {
     let isMounted = true;
 
     if (slug) {
-
-      fetchRoomsByHotel(slug, checkIn, checkOut).then((rooms) => {
-
-        if (isMounted && rooms && rooms.length > 0) {
-
-          setRoomList(rooms);
-
-        }
-
-      });
-
+      fetchRoomsByHotel(slug, checkIn, checkOut)
+        .then((rooms) => {
+          if (isMounted && rooms && rooms.length > 0) {
+            setRoomList(rooms);
+          }
+        })
+        .catch((err) => {
+          console.warn("Không thể tải danh sách phòng từ backend, dùng dữ liệu dự phòng:", err);
+        });
     }
 
     return () => {

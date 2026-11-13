@@ -171,7 +171,7 @@ export function checkBranchOnline(hotelId: number | string | null) {
   if (!socket || !socket.connected) {
     initCustomerSocket();
   }
-  if (socket && hotelId) {
+  if (socket) {
     socket.emit("check_branch_online_status", { hotelId });
   }
 }

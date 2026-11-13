@@ -186,6 +186,14 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const [verificationEmail, setVerificationEmail] = useState("");
   const [verificationStep, setVerificationStep] = useState(false);
   const [accountStep, setAccountStep] = useState(false);
+
+  useEffect(() => {
+    setVerificationStep(false);
+    setAccountStep(false);
+    setOtp("");
+    setError("");
+    setResendMessage("");
+  }, [mode]);
   const [error, setError] = useState<string | { key: string; detail?: string }>(
     "",
   );
@@ -372,6 +380,8 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
         }
       }
       // Nếu không có mật khẩu tạm hoặc đăng nhập thất bại thì chuyển về trang đăng nhập với thông báo
+      setVerificationStep(false);
+      setAccountStep(false);
       navigate("/login", {
         replace: true,
         state: {
