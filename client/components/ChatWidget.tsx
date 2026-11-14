@@ -966,6 +966,33 @@ export default function ChatWidget() {
 
   const [cancelledBookingIds, setCancelledBookingIds] = useState<string[]>([]);
 
+  const chatBookingIdsRef = useRef<Set<string>>(
+    (() => {
+      try {
+        const raw = localStorage.getItem("senviet_chat_booking_ids");
+        const arr = raw ? JSON.parse(raw) : [];
+        return new Set<string>(Array.isArray(arr) ? arr.map(String) : []);
+      } catch {
+        return new Set<string>();
+      }
+    })()
+  );
+
+  const registerChatBookingId = useCallback((id?: string | null) => {
+    if (!id) return;
+    const clean = String(id).trim();
+    if (!clean) return;
+    const stripped = clean.replace(/^BK[-_]?/i, "");
+    chatBookingIdsRef.current.add(clean);
+    if (stripped) chatBookingIdsRef.current.add(stripped);
+    try {
+      const items = Array.from(chatBookingIdsRef.current).slice(-100);
+      localStorage.setItem("senviet_chat_booking_ids", JSON.stringify(items));
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
   const [botUnreadCount, setBotUnreadCount] = useState(0);
 
   const [staffUnreadCount, setStaffUnreadCount] = useState(0);
@@ -1338,6 +1365,24 @@ export default function ChatWidget() {
 
 
 
+      // Chỉ báo hủy lên ô chat nếu đơn này được tạo từ trong ô chat AI (không báo đơn đặt thủ công)
+
+      const strippedId = cleanId.replace(/^BK[-_]?/i, "");
+
+      const isChatBooking =
+
+        chatBookingIdsRef.current.has(cleanId) ||
+
+        (strippedId ? chatBookingIdsRef.current.has(strippedId) : false) ||
+
+        currentBookingIdRef.current === cleanId ||
+
+        activePaymentOrderId === cleanId;
+
+      if (!isChatBooking) return;
+
+
+
       cancelledOrdersRef.current.add(cleanId);
 
       setCancelledBookingIds((prev) => (prev.includes(cleanId) ? prev : [...prev, cleanId]));
@@ -1608,6 +1653,8 @@ export default function ChatWidget() {
 
             currentBookingIdRef.current = res.result.state.bookingId;
 
+            registerChatBookingId(res.result.state.bookingId);
+
           }
 
           if (res.result?.state?.orderId) {
@@ -1855,6 +1902,8 @@ export default function ChatWidget() {
 
           currentBookingIdRef.current = state.bookingId;
 
+          registerChatBookingId(state.bookingId);
+
           const existing = getBookings().find((b) => b.id === state.bookingId);
 
           if (!existing) {
@@ -2081,9 +2130,21 @@ export default function ChatWidget() {
 
         const orderIdToTrack = state?.orderId || parsedBotForPolling.payosPayment?.orderId || parsedBotForPolling.payosPayment?.bookingId || state?.bookingId;
 
-        if (parsedBotForPolling.payosPayment?.bookingId && !currentBookingIdRef.current) {
+        if (orderIdToTrack) {
 
-          currentBookingIdRef.current = String(parsedBotForPolling.payosPayment.bookingId);
+          registerChatBookingId(String(orderIdToTrack));
+
+        }
+
+        if (parsedBotForPolling.payosPayment?.bookingId) {
+
+          registerChatBookingId(String(parsedBotForPolling.payosPayment.bookingId));
+
+          if (!currentBookingIdRef.current) {
+
+            currentBookingIdRef.current = String(parsedBotForPolling.payosPayment.bookingId);
+
+          }
 
         }
 
