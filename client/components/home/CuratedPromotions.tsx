@@ -22,46 +22,6 @@ export function CuratedPromotions() {
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
-  // Fallback curated seasonal offers if backend list is empty
-  const fallbackOffers = [
-    {
-      id: "promo-1",
-      code: "HERITAGE25",
-      name: isEn ? "Heritage Early Bird Privilege" : "Ưu Đãi Đặt Sớm Di Sản 2026",
-      discountBadge: isEn ? "25% OFF" : "GIẢM 25%",
-      description: isEn
-        ? "Enjoy 25% off when booking your stay 30 days in advance. Includes complimentary gourmet buffet breakfast."
-        : "Tiết kiệm 25% giá phòng khi đặt trước 30 ngày. Miễn phí bữa sáng buffet thượng hạng mỗi ngày.",
-      validity: isEn ? "Valid until Dec 31, 2026" : "Áp dụng đến 31/12/2026",
-      tag: isEn ? "Early Bird" : "Đặt sớm",
-      color: "from-amber-500/20 to-amber-600/10 border-amber-500/30",
-    },
-    {
-      id: "promo-2",
-      code: "HONEYMOON",
-      name: isEn ? "Golden Lotus Honeymoon Retreat" : "Tuần Trăng Mật Hoàng Kim",
-      discountBadge: isEn ? "FREE SPA & DINNER" : "TẶNG SPA & DINNER",
-      description: isEn
-        ? "Bespoke romantic getaway: complimentary 60-min Lotus Spa ritual, candlelit lagoon dinner, and sparkling wine."
-        : "Kỳ nghỉ ngọt ngào cho cặp đôi: tặng liệu trình spa 60 phút, bữa tối lãng mạn bên hồ sen và rượu vang.",
-      validity: isEn ? "Exclusive for 2 Guests" : "Đặc quyền cho 2 khách",
-      tag: isEn ? "Honeymoon" : "Trăng mật",
-      color: "from-rose-500/20 to-rose-600/10 border-rose-500/30",
-    },
-    {
-      id: "promo-3",
-      code: "WEEKENDVIP",
-      name: isEn ? "Weekend Serenity & Late Check-out" : "Cuối Tuần Tịnh Dưỡng & Trả Phòng Muộn",
-      discountBadge: isEn ? "UPGRADE + 15:00" : "NÂNG HẠNG + 15:00",
-      description: isEn
-        ? "Complimentary room upgrade subject to availability, late check-out at 15:00, and welcome royal herbal tea."
-        : "Ưu tiên nâng hạng phòng miễn phí, kéo dài thời gian trả phòng đến 15:00 và set trà sen chào đón.",
-      validity: isEn ? "Friday - Sunday Stays" : "Áp dụng Thứ 6 - Chủ Nhật",
-      tag: isEn ? "Weekend" : "Cuối tuần",
-      color: "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30",
-    },
-  ];
-
   // Display real backend promos from Database (no fake hardcoded vouchers)
   const displayOffers = activePromos.slice(0, 6).map((p, idx) => {
     const isPercent =

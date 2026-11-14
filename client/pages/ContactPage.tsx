@@ -41,51 +41,6 @@ export default function ContactPage() {
     }, 600);
   };
 
-  const branchContacts = [
-    {
-      name: "Sen Việt Sài Gòn",
-      address: "125 Hai Bà Trưng, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
-      phone: "(+84) 28 3822 6868",
-      email: "saigon@senviet.vn",
-    },
-    {
-      name: "Sen Việt Hà Nội",
-      address: "28 Tràng Tiền, Phường Tràng Tiền, Hoàn Kiếm, Hà Nội",
-      phone: "(+84) 24 3933 6868",
-      email: "hanoi@senviet.vn",
-    },
-    {
-      name: "Sen Việt Đà Nẵng",
-      address: "188 Võ Nguyên Giáp, Ngũ Hành Sơn, TP. Đà Nẵng",
-      phone: "(+84) 236 384 6868",
-      email: "danang@senviet.vn",
-    },
-    {
-      name: "Sen Việt Nha Trang",
-      address: "72 Trần Phú, Phường Lộc Thọ, TP. Nha Trang, Khánh Hòa",
-      phone: "(+84) 258 385 6868",
-      email: "nhatrang@senviet.vn",
-    },
-    {
-      name: "Sen Việt Đà Lạt",
-      address: "Khu du lịch Hồ Tuyền Lâm, Phường 4, TP. Đà Lạt, Lâm Đồng",
-      phone: "(+84) 263 386 6868",
-      email: "dalat@senviet.vn",
-    },
-    {
-      name: "Sen Việt Gò Công",
-      address: "Đường Trương Định, Phường 1, TP. Gò Công, Tiền Giang",
-      phone: "(+84) 273 387 6868",
-      email: "gocong@senviet.vn",
-    },
-    {
-      name: "Sen Việt An Nhơn",
-      address: "Quốc lộ 1A, Phường Bình Định, Thị xã An Nhơn, Bình Định",
-      phone: "(+84) 256 388 6868",
-      email: "annhon@senviet.vn",
-    },
-  ];
-
   return (
     <main className="bg-background text-foreground">
       {/* ================= HERO BANNER ================= */}
