@@ -1213,19 +1213,21 @@ export default function HotelDetails() {
       }
     });
 
-    roomList.forEach((rm) => {
-      const rmImgs = rm.images && rm.images.length > 0 ? rm.images : rm.image ? [rm.image] : [];
-      rmImgs.forEach((url) => {
-        if (url && !list.some((item) => item.url === url)) {
-          list.push({
-            url,
-            captionVi: `${rm.nameVi || rm.name} - ${hotel?.name || "Sen Việt"}`,
-            captionEn: `${rm.name || rm.nameVi} - ${hotel?.name || "Sen Viet"}`,
-            category: "rooms",
-          });
-        }
+    if (list.length === 0) {
+      roomList.forEach((rm) => {
+        const rmImgs = rm.images && rm.images.length > 0 ? rm.images : rm.image ? [rm.image] : [];
+        rmImgs.forEach((url) => {
+          if (url && !list.some((item) => item.url === url)) {
+            list.push({
+              url,
+              captionVi: `${rm.nameVi || rm.name} - ${hotel?.name || "Sen Việt"}`,
+              captionEn: `${rm.name || rm.nameVi} - ${hotel?.name || "Sen Viet"}`,
+              category: "rooms",
+            });
+          }
+        });
       });
-    });
+    }
 
     if (list.length === 0 && hotel?.image) {
       list.push({

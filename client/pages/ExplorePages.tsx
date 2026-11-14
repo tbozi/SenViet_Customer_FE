@@ -45,7 +45,8 @@ import {
   useUnsavePromotionMutation,
 } from "@/services/promotionApi";
 import { useGetServicesQuery } from "@/services/hotelServiceApi";
-import { formatVnd, hotels } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
+import { formatVnd } from "@/data/hotels";
 
 const offers = [
   {
@@ -186,6 +187,7 @@ export function Offers() {
 
   // Lấy danh sách ưu đãi và voucher đã lưu từ Backend
   const { data: activePromos } = useGetActivePromotionsQuery();
+  const { data: publicHotels = [] } = useGetPublicHotelsQuery();
   const { data: savedPromos } = useGetMySavedPromotionsQuery(undefined, {
     skip: !user,
   });
@@ -458,9 +460,9 @@ export function Offers() {
                 >
                   <option value="all" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isVietnamese ? "🏨 Tất cả chi nhánh & khách sạn" : "🏨 All hotels & branches"}</option>
                   <option value="system" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isVietnamese ? "⭐ Toàn hệ thống Sen Việt" : "⭐ Entire Sen Việt system"}</option>
-                  {hotels.map((h) => (
-                    <option key={h.slug} value={String(h.id || h.slug)}>
-                      {h.name} ({h.city})
+                  {publicHotels.map((h) => (
+                    <option key={h.id} value={String(h.id)}>
+                      {h.name} {h.provinceName ? `(${h.provinceName})` : ""}
                     </option>
                   ))}
                 </select>
@@ -804,7 +806,8 @@ export function Offers() {
 export function Services() {
   const { language } = useLanguage();
   const isVietnamese = language === "vi";
-  const { data: backendServices } = useGetServicesQuery({ activeOnly: true });
+  const { data: backendServices, isLoading: servicesLoading } = useGetServicesQuery({ activeOnly: true });
+  const { data: publicHotels = [] } = useGetPublicHotelsQuery();
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -922,9 +925,9 @@ export function Services() {
               >
                 <option value="all">{isVietnamese ? "🏨 Tất cả khách sạn / chi nhánh" : "🏨 All hotels & branches"}</option>
                 <option value="system">{isVietnamese ? "⭐ Toàn chuỗi Sen Việt" : "⭐ Chain-wide services"}</option>
-                {hotels.map((h) => (
-                  <option key={h.slug} value={String(h.id || h.slug)}>
-                    {h.name} ({h.city})
+                {publicHotels.map((h) => (
+                  <option key={h.id} value={String(h.id)}>
+                    {h.name} {h.provinceName ? `(${h.provinceName})` : ""}
                   </option>
                 ))}
               </select>
@@ -1049,18 +1052,22 @@ export function Services() {
           </div>
         )
       ) : (
-        <div className="mt-10 grid gap-5 sm:grid-cols-2">
-          {staticServices.map(([Icon, title, desc]) => (
-            <article key={title as string} className="flex gap-4 rounded-2xl border border-border bg-card p-6">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
-                <Icon className="h-6 w-6" />
-              </div>
-              <div>
-                <h2 className="font-display text-xl font-bold text-primary">{title as string}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{desc as string}</p>
-              </div>
-            </article>
-          ))}
+        <div className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed border-border bg-white/70 p-8 text-center">
+          <UtensilsCrossed className="mx-auto h-10 w-10 text-muted-foreground/60" />
+          <h3 className="mt-3 font-bold text-primary">
+            {servicesLoading
+              ? isVietnamese
+                ? "Đang tải danh sách dịch vụ..."
+                : "Loading services..."
+              : isVietnamese
+                ? "Hiện chưa có dịch vụ nào được cập nhật"
+                : "No services currently available"}
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isVietnamese
+              ? "Danh sách dịch vụ sẽ tự động hiển thị ngay khi được thêm từ hệ thống quản lý."
+              : "Services will automatically appear once added in the management system."}
+          </p>
         </div>
       )}
     </main>

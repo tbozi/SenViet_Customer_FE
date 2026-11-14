@@ -54,9 +54,43 @@ export const hotelApi = baseApi.injectEndpoints({
           }
           const response = result.data as ApiResponse<PublicHotel[]>;
           if (!response || !Array.isArray(response.result) || response.result.length === 0) {
-            return { data: fallbackPublicHotels };
+            return { data: [] };
           }
-          return { data: response.result };
+          const enrichedHotels = await Promise.all(
+            response.result.map(async (hotel) => {
+              try {
+                const roomsRes = await fetchWithBQ({
+                  url: `/rooms/hotel/${hotel.id}`,
+                  method: "GET",
+                });
+                const roomsData = (roomsRes.data as ApiResponse<any[]>)?.result;
+                if (Array.isArray(roomsData) && roomsData.length > 0) {
+                  const roomTotalPrices = roomsData
+                    .map((r) => Number(r.totalPrice ?? r.basePrice ?? 0))
+                    .filter((p) => Number.isFinite(p) && p > 0);
+                  const minRoomPrice =
+                    roomTotalPrices.length > 0
+                      ? Math.min(...roomTotalPrices)
+                      : hotel.startingPrice;
+                  const fallbackImages = roomsData
+                    .map((r) => r.defaultImageUrl)
+                    .filter((u): u is string => Boolean(u));
+                  return {
+                    ...hotel,
+                    startingPrice: minRoomPrice ?? hotel.startingPrice,
+                    imageUrls:
+                      hotel.imageUrls && hotel.imageUrls.length > 0
+                        ? hotel.imageUrls
+                        : fallbackImages,
+                  };
+                }
+              } catch {
+                // Keep original hotel data if room query fails
+              }
+              return hotel;
+            }),
+          );
+          return { data: enrichedHotels };
         } catch {
           return { data: fallbackPublicHotels };
         }

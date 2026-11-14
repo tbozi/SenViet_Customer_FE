@@ -235,7 +235,7 @@ function getStayPrice(
 
 ) {
 
-  if (!checkIn || !checkOut) return { total: fallbackNightlyPrice, avgNightly: fallbackNightlyPrice };
+  if (!checkIn || !checkOut || checkOut <= checkIn) return { total: 0, avgNightly: fallbackNightlyPrice };
 
   const start = new Date(`${checkIn}T00:00:00`);
 
@@ -1598,10 +1598,18 @@ export default function HotelRooms() {
 
     if (
       selections.some((selection) =>
-        (selection.stays || []).some((stay) => stay.nights < 1),
+        (selection.stays || []).some(
+          (stay) =>
+            !stay.checkIn ||
+            !stay.checkOut ||
+            !Number.isFinite(stay.nights) ||
+            stay.nights < 1,
+        ),
       )
     )
-      return failWithToast("Vui lòng chọn ít nhất 1 đêm lưu trú (ngày trả phòng phải sau ngày nhận phòng).");
+      return failWithToast(
+        "Vui lòng chọn ngày nhận phòng và ngày trả phòng (ít nhất 1 đêm lưu trú) trên lịch trước khi qua bước tiếp theo.",
+      );
 
     if (selectedAvailabilities.some((availability) => !availability.available))
       return failWithToast(

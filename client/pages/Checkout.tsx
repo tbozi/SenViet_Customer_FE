@@ -870,33 +870,21 @@ export default function Checkout() {
               <h2 className="font-display text-2xl font-bold text-primary">
                 {isEn ? "Payment Method" : "Phương thức thanh toán"}
               </h2>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {(
-                  [
-                    ["qr", isEn ? "Bank QR Code (PayOS)" : "Quét mã ngân hàng (PayOS)", QrCode],
-                    ["cash", isEn ? "Pay at Front Desk" : "Tiền mặt tại lễ tân", Banknote],
-                  ] as const
-                ).map(([value, label, Icon]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setPayment(value)}
-                    className={`flex items-center gap-3 rounded-xl border p-4 text-left text-sm ${payment === value ? "border-primary bg-secondary text-primary" : "border-border"}`}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="font-semibold">{label}</span>
-                  </button>
-                ))}
-              </div>
-              {payment === "cash" && (
-                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
-                  <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+              <div className="mt-5">
+                <div className="flex items-center gap-3 rounded-xl border border-primary bg-secondary p-4 text-left text-sm text-primary">
+                  <QrCode className="h-5 w-5 shrink-0" />
                   <div>
-                    <span className="font-semibold text-amber-950">{isEn ? "Note:" : "Lưu ý:"}</span>{" "}
-                    {isEn ? "Your reservation will be held in 'Pending payment' status until confirmed at the front desk." : 'Đơn đặt phòng sẽ được giữ chỗ và lễ tân sẽ xác nhận thanh toán trực tiếp tại quầy khi quý khách nhận phòng.'}
+                    <span className="font-semibold block">
+                      {isEn ? "Online Bank QR Transfer (PayOS)" : "Chuyển khoản / Quét mã QR ngân hàng trực tuyến (PayOS)"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {isEn
+                        ? "Automatic instant confirmation via VietQR / PayOS gateway."
+                        : "Đặt phòng trực tuyến thanh toán qua mã VietQR PayOS và tự động xác nhận ngay lập tức."}
+                    </span>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
             {error && (
               <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">

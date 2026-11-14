@@ -461,6 +461,50 @@ export default function BookingSummaryPanel({
               </p>
             )}
           </div>
+          {roomBreakdowns.some(
+            (b) => !b.stay.checkIn || !b.stay.checkOut || !Number.isFinite(b.stay.nights) || b.stay.nights < 1,
+          ) && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+              <span>
+                {isEn
+                  ? "Please select valid check-in and check-out dates (at least 1 night) on the calendar before proceeding."
+                  : "Vui lòng chọn đầy đủ ngày nhận phòng và ngày trả phòng (ít nhất 1 đêm lưu trú) trên lịch trước khi qua bước tiếp theo."}
+              </span>
+            </div>
+          )}
+          <div className="mt-4 rounded-xl border border-border/80 bg-secondary/20 p-3.5 text-xs">
+            <p className="font-bold text-primary">
+              {isEn ? "Booking Cancellation & Refund Policy" : "Hoàn tiền do hủy booking"}
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {isEn
+                ? "Room charge deduction depends on the cancellation request time relative to the first check-in time of the booking."
+                : "Mức khấu trừ tiền phòng phụ thuộc vào thời điểm yêu cầu hủy so với giờ check-in đầu tiên của booking."}
+            </p>
+            <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground list-disc pl-4">
+              <li>
+                {isEn
+                  ? "72 hours or more before check-in: no room penalty (100% refund)."
+                  : "Từ 72 giờ trước check-in trở lên: không áp dụng phạt tiền phòng."}
+              </li>
+              <li>
+                {isEn
+                  ? "From 24 to under 72 hours: 50% penalty on allocated room amount."
+                  : "Từ 24 đến dưới 72 giờ: mức phạt là 50% phần tiền phòng được phân bổ."}
+              </li>
+              <li>
+                {isEn
+                  ? "Under 24 hours or no-show: 100% penalty on allocated room amount."
+                  : "Dưới 24 giờ hoặc khách không đến: mức phạt là 100% phần tiền phòng được phân bổ."}
+              </li>
+              <li>
+                {isEn
+                  ? "100% of paid service amounts are refunded; cancellation penalties apply only to room charges."
+                  : "Toàn bộ phần tiền đã thanh toán được phân bổ cho dịch vụ được hoàn; mức phạt hủy chỉ khấu trừ vào phần tiền phòng."}
+              </li>
+            </ul>
+          </div>
           {cta ? <div className="mt-5">{cta}</div> : null}
         </>
       ) : null}
