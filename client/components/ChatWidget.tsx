@@ -77,7 +77,8 @@ import { useSendChatMessageMutation, useLazyGetChatHistoryQuery } from "@/servic
 
 import type { ChatMessage as ChatMessageType } from "@/services/chatApi";
 
-import { formatVnd, hotels } from "@/data/hotels";
+import { formatVnd } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { AnimatePresence, motion, chatWindowVariants } from "@/components/ui/animate-ui";
 
 import { toLocalDateStr } from "@/lib/utils";
@@ -2499,7 +2500,9 @@ export default function ChatWidget() {
 
 
 
-  // Tự động nhận diện chi nhánh từ URL trang đang xem hoặc đơn đặt phòng gần nhất (Ưu tiên Sen Việt Đà Nẵng)
+  const { data: publicHotels = [] } = useGetPublicHotelsQuery();
+
+  // Tự động nhận diện chi nhánh từ URL trang đang xem hoặc đơn đặt phòng gần nhất
 
   const detectedBranchName = useMemo(() => {
 
@@ -2511,7 +2514,7 @@ export default function ChatWidget() {
 
         const slug = pathMatch[1];
 
-        const h = hotels.find((hotel) => hotel.slug === slug || String(hotel.id) === slug);
+        const h = publicHotels.find((hotel) => String(hotel.id) === slug);
 
         if (h) return h.name;
 
@@ -2523,7 +2526,7 @@ export default function ChatWidget() {
 
       if (hotelSlug) {
 
-        const h = hotels.find((hotel) => hotel.slug === hotelSlug || hotel.name.toLowerCase().includes(hotelSlug.toLowerCase()) || String(hotel.id) === hotelSlug);
+        const h = publicHotels.find((hotel) => hotel.name.toLowerCase().includes(hotelSlug.toLowerCase()) || String(hotel.id) === hotelSlug);
 
         if (h) return h.name;
 
@@ -2533,7 +2536,7 @@ export default function ChatWidget() {
 
     return "Tổng đài CSKH Toàn hệ thống Sen Việt";
 
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, publicHotels]);
 
 
 
@@ -2543,28 +2546,13 @@ export default function ChatWidget() {
 
   const currentBranchHotelId = useMemo(() => {
 
-    const h = hotels.find((hotel) => hotel.name === selectedBranch || hotel.name.toLowerCase().includes(selectedBranch.toLowerCase()));
+    const h = publicHotels.find((hotel) => hotel.name === selectedBranch || hotel.name.toLowerCase().includes(selectedBranch.toLowerCase()));
 
     if (h?.id) return h.id;
 
-    if (selectedBranch.includes("Sài Gòn")) return 1;
-
-    if (selectedBranch.includes("Hà Nội")) return 2;
-
-    if (selectedBranch.includes("Đà Nẵng")) return 3;
-
-    if (selectedBranch.includes("Nha Trang")) return 4;
-
-    if (selectedBranch.includes("Đà Lạt")) return 5;
-
-    if (selectedBranch.includes("Gò Công")) return 6;
-
-    if (selectedBranch.includes("An Nhơn")) return 7;
-    if (selectedBranch.includes("Quy Nhơn")) return 8;
-
     return null;
 
-  }, [selectedBranch]);
+  }, [selectedBranch, publicHotels]);
 
 
 
@@ -3652,9 +3640,9 @@ export default function ChatWidget() {
 
                   </option>
 
-                  {hotels.map((h) => (
+                  {publicHotels.map((h) => (
 
-                    <option key={h.slug} value={h.name}>
+                    <option key={h.id} value={h.name}>
 
                       {h.name}
 
@@ -4147,7 +4135,7 @@ export default function ChatWidget() {
 
                 const hotelSlug = getSlugFromHotelName(rawName, branchId);
 
-                const hotelName = rawName || hotels.find((h) => h.slug === hotelSlug)?.name || "Khách sạn Sen Việt";
+                const hotelName = rawName || publicHotels.find((h) => Number(h.id) === branchId)?.name || "Khách sạn Sen Việt";
 
                 const qtyPrefix = m.state.roomQty && m.state.roomQty > 1 ? `${m.state.roomQty} x ` : "";
 

@@ -28,9 +28,11 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
           <div className="absolute left-4 top-4 rounded-full bg-background/90 px-3 py-1 text-xs font-semibold text-primary backdrop-blur shadow-xs">
             Sen Việt
           </div>
-          <div className="absolute bottom-4 right-4 flex items-center gap-1 rounded-full bg-primary/95 px-2.5 py-1 text-xs font-semibold text-primary-foreground backdrop-blur-xs shadow-md">
-            <Star className="h-3.5 w-3.5 fill-gold text-gold" /> {hotel.rating}
-          </div>
+          {hotel.rating > 0 && (
+            <div className="absolute bottom-4 right-4 flex items-center gap-1 rounded-full bg-primary/95 px-2.5 py-1 text-xs font-semibold text-primary-foreground backdrop-blur-xs shadow-md">
+              <Star className="h-3.5 w-3.5 fill-gold text-gold" /> {hotel.rating.toFixed(1)}
+            </div>
+          )}
         </div>
 
         <div className="p-5">

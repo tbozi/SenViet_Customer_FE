@@ -11,6 +11,28 @@ export interface PublicHotel {
   imageUrls: string[];
 }
 
+export function inferVietnamRegion(
+  provinceName?: string | null,
+  address?: string | null
+): "north" | "central" | "south" {
+  const text = `${provinceName || ""} ${address || ""}`.toLowerCase();
+  if (
+    /hà nội|ha noi|hải phòng|hai phong|quảng ninh|hạ long|sapa|sa pa|lào cai|ninh bình|hòa bình|vĩnh phúc|bắc ninh|thái nguyên|phú thọ|lạng sơn/.test(
+      text
+    )
+  ) {
+    return "north";
+  }
+  if (
+    /hồ chí minh|ho chi minh|sài gòn|sai gon|tiền giang|gò công|cần thơ|can tho|phú quốc|phu quoc|kiên giang|vũng tàu|bà rịa|đồng nai|bình dương|long an|bến tre|an giang|cà mau|tây ninh/.test(
+      text
+    )
+  ) {
+    return "south";
+  }
+  return "central";
+}
+
 export interface PublicProvince {
   id: string;
   name: string;

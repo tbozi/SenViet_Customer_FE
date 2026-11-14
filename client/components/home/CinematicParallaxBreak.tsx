@@ -5,6 +5,7 @@ import { Flower2, Play, Sparkles, X, Compass, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLanguage } from "@/lib/i18n";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 
 /**
  * CinematicParallaxBreak - Full-bleed Cinematic Visual Breather
@@ -14,6 +15,7 @@ export function CinematicParallaxBreak() {
   const { language } = useLanguage();
   const isEn = language === "en";
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const { data: publicHotels = [] } = useGetPublicHotelsQuery();
 
   return (
     <>
@@ -116,17 +118,42 @@ export function CinematicParallaxBreak() {
         </div>
       </section>
 
-      {/* 360 Experience Virtual Tour Modal */}
+      {/* 360 Experience / Real Hotel Showcase Modal */}
       <Dialog open={showVideoModal} onOpenChange={setShowVideoModal}>
         <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-3xl border-slate-800 bg-slate-950 text-white">
-          <div className="relative aspect-video w-full bg-slate-900">
-            <iframe
-              className="h-full w-full object-cover"
-              src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=0"
-              title="Sen Viet Heritage 360 Tour"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+          <div className="p-6 max-h-[65vh] overflow-y-auto bg-slate-900/90">
+            {publicHotels.length === 0 ? (
+              <div className="py-12 text-center text-sm text-slate-300">
+                {isEn ? "Loading Sen Việt branches..." : "Đang tải hình ảnh các chi nhánh Sen Việt..."}
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {publicHotels.map((h) => (
+                  <Link
+                    key={h.id}
+                    to={`/hotels/${h.id}/details`}
+                    onClick={() => setShowVideoModal(false)}
+                    className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-950"
+                  >
+                    <img
+                      src={
+                        h.imageUrls?.[0] ||
+                        "https://images.unsplash.com/photo-1571896349842-33c89424de2d?q=80&w=1200&auto=format&fit=crop"
+                      }
+                      alt={h.name}
+                      className="h-44 w-full object-cover transition duration-500 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <div className="font-display text-base font-bold text-white">{h.name}</div>
+                      <div className="text-xs text-slate-300 truncate">
+                        {[h.address, h.provinceName].filter(Boolean).join(", ")}
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
           <div className="p-6 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>

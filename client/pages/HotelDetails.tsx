@@ -85,7 +85,7 @@ import { rooms as fallbackRooms, type RoomType } from "@/data/rooms";
 import { fetchRoomsByHotel } from "@/services/roomApi";
 
 import { fetchHotelReviews, type HotelReviewSummary } from "@/services/reviewApi";
-import { useGetPublicHotelsQuery } from "@/services/hotelApi";
+import { inferVietnamRegion, useGetPublicHotelsQuery } from "@/services/hotelApi";
 
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -1075,7 +1075,8 @@ export default function HotelDetails() {
         name: beMatch.name,
         city: beMatch.address || beMatch.provinceName || "Việt Nam",
         province: beMatch.provinceName || "Việt Nam",
-        region: "central" as const,
+        region: inferVietnamRegion(beMatch.provinceName, beMatch.address),
+        phone: beMatch.phone || "",
         description: beMatch.address
           ? `Tọa lạc tại ${beMatch.address}${beMatch.provinceName ? `, ${beMatch.provinceName}` : ""}. Không gian lưu trú sang trọng chuẩn 5 sao cùng dịch vụ tận tâm 24/7 của hệ thống Sen Việt.`
           : "Không gian lưu trú sang trọng chuẩn 5 sao của hệ thống Sen Việt.",
@@ -1083,12 +1084,12 @@ export default function HotelDetails() {
           ? `Located at ${beMatch.address}${beMatch.provinceName ? `, ${beMatch.provinceName}` : ""}. Five-star hospitality and 24/7 service by Sen Việt.`
           : "Five-star hospitality by Sen Việt.",
         price: beMatch.startingPrice ?? 0,
-        rating: 5.0,
+        rating: Number((beMatch as any).averageRating ?? (beMatch as any).rating ?? 0),
         image:
           beMatch.imageUrls?.[0] ||
           "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
         imageUrls: beMatch.imageUrls || [],
-        amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+        amenities: Array.isArray((beMatch as any).amenities) ? (beMatch as any).amenities : [],
       };
     }
     if (hotelsLoading) return undefined;
@@ -1378,15 +1379,15 @@ export default function HotelDetails() {
           name: beH.name,
           city: beH.address || beH.provinceName || "Việt Nam",
           province: beH.provinceName || "Việt Nam",
-          region: "central" as const,
+          region: inferVietnamRegion(beH.provinceName, beH.address),
           description: beH.address || "",
           descriptionEn: beH.address || "",
           price: beH.startingPrice ?? 0,
-          rating: 4.8,
+          rating: Number((beH as any).averageRating ?? (beH as any).rating ?? 0),
           image:
             beH.imageUrls?.[0] ||
             "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
-          amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+          amenities: Array.isArray((beH as any).amenities) ? (beH as any).amenities : [],
         })),
     [beHotels, hotel.id],
   );
@@ -1547,7 +1548,7 @@ export default function HotelDetails() {
 
           <a
 
-            href="tel:18006888"
+            href={`tel:${((hotel as any)?.phone || "19006868").replace(/\s+/g, "")}`}
 
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-secondary/80 px-3.5 py-1.5 text-xs font-semibold text-primary transition hover:bg-secondary"
 
@@ -1555,7 +1556,9 @@ export default function HotelDetails() {
 
             <Phone className="h-3.5 w-3.5 text-gold" />
 
-            {isEn ? "Concierge Hotline: 1800 6888" : "Tổng đài: 1800 6888"}
+            {isEn
+              ? `Concierge Hotline: ${(hotel as any)?.phone || "1900 6868"}`
+              : `Tổng đài: ${(hotel as any)?.phone || "1900 6868"}`}
 
           </a>
 
@@ -3473,13 +3476,13 @@ export default function HotelDetails() {
 
               <a
 
-                href="tel:18006888"
+                href={`tel:${((hotel as any)?.phone || "19006868").replace(/\s+/g, "")}`}
 
                 className="font-bold text-primary underline underline-offset-2 hover:text-gold"
 
               >
 
-                📞 1800 6888
+                📞 {(hotel as any)?.phone || "1900 6868"}
 
               </a>
 

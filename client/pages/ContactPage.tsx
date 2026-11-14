@@ -413,8 +413,11 @@ export default function ContactPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <a href="tel:19006868" className="font-semibold text-primary hover:underline font-mono">
-                      1900 6868
+                    <a
+                      href={`tel:${(b.phone || "19006868").replace(/\s+/g, "")}`}
+                      className="font-semibold text-primary hover:underline font-mono"
+                    >
+                      {b.phone || "1900 6868"}
                     </a>
                   </div>
                   <div className="flex items-center gap-2">

@@ -12,8 +12,8 @@ import { SignatureExperiencesBento } from "@/components/home/SignatureExperience
 import { CinematicParallaxBreak } from "@/components/home/CinematicParallaxBreak";
 import { CuratedPromotions } from "@/components/home/CuratedPromotions";
 import { GuestTestimonials } from "@/components/home/GuestTestimonials";
-import { hotels as staticHotels, Hotel } from "@/data/hotels";
-import { useGetPublicHotelsQuery, useGetPublicProvincesQuery } from "@/services/hotelApi";
+import { Hotel } from "@/data/hotels";
+import { inferVietnamRegion, useGetPublicHotelsQuery, useGetPublicProvincesQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { openChatWidget } from "@/components/ChatWidget";
 
@@ -32,15 +32,15 @@ export default function Index() {
         name: beH.name,
         city: beH.address || beH.provinceName || "Việt Nam",
         province: beH.provinceName || "Việt Nam",
-        region: "central" as const,
+        region: inferVietnamRegion(beH.provinceName, beH.address),
         description: beH.address || "",
         descriptionEn: beH.address || "",
         price: beH.startingPrice ?? 0,
-        rating: 4.8,
+        rating: Number((beH as any).averageRating ?? (beH as any).rating ?? 0),
         image:
           beH.imageUrls?.[0] ||
           "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
-        amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+        amenities: Array.isArray((beH as any).amenities) ? (beH as any).amenities : [],
       }));
     }
     return [];

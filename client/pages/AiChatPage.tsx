@@ -23,7 +23,8 @@ import { useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/use-toast";
 import { formatStayDates } from "@/lib/dateTime";
-import { hotels, formatVnd } from "@/data/hotels";
+import { formatVnd } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
   useSendChatMessageMutation,
   useLazyGetChatHistoryQuery,
@@ -227,6 +228,7 @@ export default function AiChatPage() {
 
   const [sendChatMessage] = useSendChatMessageMutation();
   const [triggerGetHistory] = useLazyGetChatHistoryQuery();
+  const { data: publicHotels = [] } = useGetPublicHotelsQuery();
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -583,17 +585,21 @@ export default function AiChatPage() {
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                {isEn ? "Explore 8 Branches" : "Hệ thống 8 Chi nhánh"}
+                {isEn
+                  ? `Explore ${publicHotels.length} Branch${publicHotels.length === 1 ? "" : "es"}`
+                  : `Hệ thống ${publicHotels.length} Chi nhánh`}
               </p>
               <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                {hotels.map((h) => (
+                {publicHotels.map((h) => (
                   <button
                     key={h.id}
                     onClick={() => send(isEn ? `Check available rooms at ${h.name}` : `Kiểm tra phòng trống tại ${h.name}`)}
                     className="w-full text-left rounded-xl px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary/70 transition flex items-center justify-between gap-2 group"
                   >
                     <span className="truncate">{h.name}</span>
-                    <span className="text-[10px] text-muted-foreground group-hover:text-primary shrink-0">{h.city}</span>
+                    <span className="text-[10px] text-muted-foreground group-hover:text-primary shrink-0">
+                      {h.provinceName || h.address}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -725,7 +731,7 @@ export default function AiChatPage() {
                   const branchId = Number(m.state.branch?.id || m.state.hotelId || 1);
                   const rawName = m.state.branch?.name;
                   const hotelSlug = getSlugFromHotelName(rawName, branchId);
-                  const hotelName = rawName || hotels.find((h) => h.slug === hotelSlug)?.name || "Khách sạn Sen Việt";
+                  const hotelName = rawName || publicHotels.find((h) => Number(h.id) === branchId)?.name || "Khách sạn Sen Việt";
                   const qtyPrefix = m.state.roomQty && m.state.roomQty > 1 ? `${m.state.roomQty} x ` : "";
                   bookingCard = {
                     hotelName,

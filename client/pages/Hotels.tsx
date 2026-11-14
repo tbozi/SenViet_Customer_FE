@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Building2, MapPin, Search, SlidersHorizontal, X } from "lucide-react";
 import HotelCard from "@/components/HotelCard";
-import { hotels as staticHotels, Hotel } from "@/data/hotels";
-import { useGetPublicHotelsQuery } from "@/services/hotelApi";
+import { Hotel } from "@/data/hotels";
+import { inferVietnamRegion, useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { motion } from "framer-motion";
 import { MotionStaggerList } from "@/components/ui/animate-ui";
@@ -25,15 +25,15 @@ export default function Hotels() {
         name: beH.name,
         city: beH.address || beH.provinceName || "Việt Nam",
         province: beH.provinceName || "Việt Nam",
-        region: "central" as const,
+        region: inferVietnamRegion(beH.provinceName, beH.address),
         description: beH.address || "",
         descriptionEn: beH.address || "",
         price: beH.startingPrice ?? 0,
-        rating: 4.8,
+        rating: Number((beH as any).averageRating ?? (beH as any).rating ?? 0),
         image:
           beH.imageUrls?.[0] ||
           "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
-        amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+        amenities: Array.isArray((beH as any).amenities) ? (beH as any).amenities : [],
       }));
     }
     return [];
