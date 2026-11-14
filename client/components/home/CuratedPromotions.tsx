@@ -46,7 +46,11 @@ export function CuratedPromotions() {
         (isEn
           ? "Exclusive discount for direct bookings at Sen Việt Hotels & Resorts."
           : "Ưu đãi đặc biệt áp dụng cho khách hàng đặt phòng trực tiếp tại Sen Việt."),
-      validity: p.endDate ? `Đến ${p.endDate}` : "Đang áp dụng",
+      validity: p.endDate
+        ? `${isEn ? "Until" : "Đến"} ${new Date(p.endDate).toLocaleDateString(isEn ? "en-US" : "vi-VN")}`
+        : isEn
+          ? "Active"
+          : "Đang áp dụng",
       tag: (p as any).hotelName || p.type || "Ưu đãi",
       color: colors[idx % colors.length],
     };

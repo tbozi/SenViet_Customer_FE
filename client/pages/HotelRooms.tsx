@@ -53,7 +53,7 @@ import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 
 import { type RoomType } from "@/data/rooms";
 import { fetchRoomsByHotel, hotelSlugToIdMap, useGetBranchRoomDailyPricesQuery } from "@/services/roomApi";
-import { formatVnd } from "@/data/hotels";
+import { formatHotelLocation, formatVnd } from "@/data/hotels";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
 
@@ -615,7 +615,7 @@ function RoomDetailsModal({
 
                 <p className="mt-1 text-xs font-bold text-slate-800">
 
-                  {room.buildingName && `Tòa ${room.buildingName} · `}
+                  {room.buildingName && `${/^tòa\s/i.test(room.buildingName) ? room.buildingName : `Tòa ${room.buildingName}`} · `}
                   {room.floor > 0 && `Tầng ${room.floor}`}
                 </p>
 
@@ -653,7 +653,7 @@ function RoomDetailsModal({
 
               <span className="text-muted-foreground">
 
-                {room.buildingName && `Tòa ${room.buildingName} · `}
+                {room.buildingName && `${/^tòa\s/i.test(room.buildingName) ? room.buildingName : `Tòa ${room.buildingName}`} · `}
                 {room.floor > 0 && `Tầng ${room.floor} · `}
                 Giá cố định
               </span>
@@ -1736,7 +1736,7 @@ export default function HotelRooms() {
             </h1>
             <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
               <MapPin className="h-4 w-4" />
-              {[hotel?.address, hotel?.provinceName].filter(Boolean).join(", ")}
+              {formatHotelLocation({ city: hotel?.address, province: hotel?.provinceName || "" })}
             </p>
             {hotelListError && !hotel && (
               <p role="alert" className="mt-4 text-sm text-rose-600 dark:text-rose-400 font-medium">
@@ -2136,7 +2136,7 @@ export default function HotelRooms() {
 
                         <span className="text-muted-foreground">
 
-                          {item.buildingName && `${isEn ? "Building" : "Tòa"} ${item.buildingName} · `}
+                          {item.buildingName && `${isEn ? "Building" : (/^tòa\s/i.test(item.buildingName) ? "" : "Tòa")} ${item.buildingName} · `.replace(/\s+/g, " ").trimStart()}
                           {item.floor > 0 && `${isEn ? "Floor" : "Tầng"} ${item.floor} · `}
                           {hasDynamicPricing ? (isEn ? "Daily pricing" : "Giá theo ngày") : (isEn ? "Standard rate" : "Giá tiêu chuẩn")}
                         </span>

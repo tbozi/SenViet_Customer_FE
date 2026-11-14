@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { openChatWidget } from "@/components/ChatWidget";
+import { formatHotelLocation } from "@/data/hotels";
 
 export default function ContactPage() {
   const { language } = useLanguage();
@@ -364,7 +365,7 @@ export default function ContactPage() {
                 <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex items-start gap-2">
                     <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span>{[b.address, b.provinceName].filter(Boolean).join(", ")}</span>
+                    <span>{formatHotelLocation({ city: b.address, province: b.provinceName || "" })}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />

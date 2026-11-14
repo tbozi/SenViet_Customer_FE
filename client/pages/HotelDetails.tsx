@@ -1299,6 +1299,30 @@ export default function HotelDetails() {
 
 
 
+  const similarHotels = useMemo(
+    () =>
+      beHotels
+        .filter((b) => String(b.id) !== String(hotel?.id))
+        .slice(0, 3)
+        .map((beH) => ({
+          id: beH.id,
+          slug: String(beH.id),
+          name: beH.name,
+          city: beH.address || beH.provinceName || "Việt Nam",
+          province: beH.provinceName || "Việt Nam",
+          region: inferVietnamRegion(beH.provinceName, beH.address),
+          description: beH.address || "",
+          descriptionEn: beH.address || "",
+          price: beH.startingPrice ?? 0,
+          rating: Number((beH as any).averageRating ?? (beH as any).rating ?? 0),
+          image:
+            beH.imageUrls?.[0] ||
+            "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
+          amenities: Array.isArray((beH as any).amenities) ? (beH as any).amenities : [],
+        })),
+    [beHotels, hotel?.id],
+  );
+
   if (!hotel) {
 
     return (
@@ -1364,32 +1388,6 @@ export default function HotelDetails() {
   }).toString();
 
   const bookingHref = `/hotels/${hotel.id || hotel.slug}?${bookingQuery}`;
-
-  const similarHotels = useMemo(
-    () =>
-      beHotels
-        .filter((b) => String(b.id) !== String(hotel.id))
-        .slice(0, 3)
-        .map((beH) => ({
-          id: beH.id,
-          slug: String(beH.id),
-          name: beH.name,
-          city: beH.address || beH.provinceName || "Việt Nam",
-          province: beH.provinceName || "Việt Nam",
-          region: inferVietnamRegion(beH.provinceName, beH.address),
-          description: beH.address || "",
-          descriptionEn: beH.address || "",
-          price: beH.startingPrice ?? 0,
-          rating: Number((beH as any).averageRating ?? (beH as any).rating ?? 0),
-          image:
-            beH.imageUrls?.[0] ||
-            "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
-          amenities: Array.isArray((beH as any).amenities) ? (beH as any).amenities : [],
-        })),
-    [beHotels, hotel.id],
-  );
-
-
 
   const handleShare = () => {
 
