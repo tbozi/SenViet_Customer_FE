@@ -1679,9 +1679,24 @@ export default function HotelRooms() {
 
         <div className="grid md:grid-cols-[1fr_1.2fr]">
 
-          <div className="relative min-h-64 overflow-hidden bg-secondary text-xl font-semibold text-primary">
-            {hotel?.imageUrls && hotel.imageUrls.length > 1 ? (
-              <div className="grid h-full min-h-64 grid-cols-3 grid-rows-2 gap-1.5 p-1.5">
+          <div className="relative h-64 md:h-72 overflow-hidden bg-secondary text-xl font-semibold text-primary">
+            {hotel?.imageUrls && hotel.imageUrls.length === 2 ? (
+              <div className="grid h-full grid-cols-2 gap-1.5 p-1.5">
+                {hotel.imageUrls.map((imgUrl, idx) => (
+                  <div key={imgUrl + idx} className="overflow-hidden rounded-xl">
+                    <img
+                      src={imgUrl}
+                      alt={`${hotel.name} ${idx + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ))}
+                <span className="absolute bottom-3 left-3 rounded-full bg-slate-950/75 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
+                  {isEn ? "2 photos" : "Tổng 2 ảnh"}
+                </span>
+              </div>
+            ) : hotel?.imageUrls && hotel.imageUrls.length >= 3 ? (
+              <div className="grid h-full grid-cols-3 grid-rows-2 gap-1.5 p-1.5">
                 <div className="col-span-2 row-span-2 overflow-hidden rounded-xl">
                   <img
                     src={hotel.imageUrls[0]}
@@ -2180,16 +2195,6 @@ export default function HotelRooms() {
                         </span>
 
                       </p>
-
-                      {hasDynamicPricing && (
-
-                        <p className="mt-0.5 text-[11px] font-medium text-emerald-700">
-
-                          {isEn ? "Calendar rate applied" : "Đã cập nhật theo lịch"}
-
-                        </p>
-
-                      )}
 
                       <label className="mt-4 block text-xs font-semibold text-primary">
 

@@ -85,54 +85,40 @@ export default function QuickSearch() {
         </select>
       </label>
 
-      <label className="flex flex-col justify-center rounded-xl bg-secondary/60 px-3 py-1.5 min-w-0">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
-          <input
-            type="date"
-            min={today}
-            value={checkIn}
-            onChange={(e) => {
-              const next = e.target.value;
-              setCheckIn(next);
-              if (checkOut && checkOut <= next) {
-                const nextDay = new Date(`${next}T00:00:00`);
-                nextDay.setDate(nextDay.getDate() + 1);
-                setCheckOut(toLocalDateStr(nextDay));
-              }
-              setError("");
-            }}
-            aria-label={t("hotels.searchCheckIn")}
-            className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none"
-          />
-        </div>
-        {checkIn && (
-          <span className="text-[10px] text-primary/80 font-medium pl-6">
-            {formatDisplayDate(checkIn, language)}
-          </span>
-        )}
+      <label className="flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2 min-w-0">
+        <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+        <input
+          type="date"
+          min={today}
+          value={checkIn}
+          onChange={(e) => {
+            const next = e.target.value;
+            setCheckIn(next);
+            if (checkOut && checkOut <= next) {
+              const nextDay = new Date(`${next}T00:00:00`);
+              nextDay.setDate(nextDay.getDate() + 1);
+              setCheckOut(toLocalDateStr(nextDay));
+            }
+            setError("");
+          }}
+          aria-label={t("hotels.searchCheckIn")}
+          className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none"
+        />
       </label>
 
-      <label className="flex flex-col justify-center rounded-xl bg-secondary/60 px-3 py-1.5 min-w-0">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
-          <input
-            type="date"
-            min={checkIn || today}
-            value={checkOut}
-            onChange={(e) => {
-              setCheckOut(e.target.value);
-              setError("");
-            }}
-            aria-label={t("hotels.searchCheckOut")}
-            className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none"
-          />
-        </div>
-        {checkOut && (
-          <span className="text-[10px] text-primary/80 font-medium pl-6">
-            {formatDisplayDate(checkOut, language)}
-          </span>
-        )}
+      <label className="flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2 min-w-0">
+        <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+        <input
+          type="date"
+          min={checkIn || today}
+          value={checkOut}
+          onChange={(e) => {
+            setCheckOut(e.target.value);
+            setError("");
+          }}
+          aria-label={t("hotels.searchCheckOut")}
+          className="min-w-0 w-full bg-transparent text-sm text-foreground outline-none"
+        />
       </label>
 
       <label className="flex items-center gap-2 rounded-xl bg-secondary/60 px-3 py-2">
