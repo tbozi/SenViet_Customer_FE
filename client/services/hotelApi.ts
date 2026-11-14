@@ -1,5 +1,4 @@
 import { baseApi, type ApiResponse } from "./baseApi";
-import { hotels as staticHotels } from "@/data/hotels";
 
 export interface PublicHotel {
   id: number;
@@ -39,29 +38,6 @@ export interface PublicProvince {
   backgroundImageUrl: string | null;
 }
 
-const fallbackPublicHotels: PublicHotel[] = staticHotels.map((hotel, idx) => ({
-  id: hotel.id ?? idx + 1,
-  name: hotel.name,
-  address: hotel.city,
-  phone: "1900 6868",
-  provinceName: hotel.province,
-  startingPrice: hotel.price,
-  imageUrls: [hotel.image],
-}));
-
-const fallbackPublicProvinces: PublicProvince[] = Array.from(
-  new Map(
-    staticHotels.map((hotel) => [
-      hotel.province,
-      {
-        id: hotel.province.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-        name: hotel.province,
-        backgroundImageUrl: hotel.image,
-      },
-    ])
-  ).values()
-);
-
 export const hotelApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getPublicHotels: builder.query<PublicHotel[], void>({
@@ -72,7 +48,7 @@ export const hotelApi = baseApi.injectEndpoints({
             method: "GET",
           });
           if (result.error) {
-            return { data: fallbackPublicHotels };
+            return { data: [] };
           }
           const response = result.data as ApiResponse<PublicHotel[]>;
           if (!response || !Array.isArray(response.result) || response.result.length === 0) {
@@ -114,7 +90,7 @@ export const hotelApi = baseApi.injectEndpoints({
           );
           return { data: enrichedHotels };
         } catch {
-          return { data: fallbackPublicHotels };
+          return { data: [] };
         }
       },
       providesTags: ["Hotel"],
@@ -127,15 +103,15 @@ export const hotelApi = baseApi.injectEndpoints({
             method: "GET",
           });
           if (result.error) {
-            return { data: fallbackPublicProvinces };
+            return { data: [] };
           }
           const response = result.data as ApiResponse<PublicProvince[]>;
           if (!response || !Array.isArray(response.result) || response.result.length === 0) {
-            return { data: fallbackPublicProvinces };
+            return { data: [] };
           }
           return { data: response.result };
         } catch {
-          return { data: fallbackPublicProvinces };
+          return { data: [] };
         }
       },
       providesTags: ["Province"],

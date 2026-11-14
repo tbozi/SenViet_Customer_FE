@@ -53,9 +53,8 @@ import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 
 import { type RoomType } from "@/data/rooms";
 import { fetchRoomsByHotel, hotelSlugToIdMap, useGetBranchRoomDailyPricesQuery } from "@/services/roomApi";
-import { formatVnd, hotels } from "@/data/hotels";
-import { rooms as fallbackRooms } from "@/data/rooms";
-import { useGetPublicHotelsQuery, type PublicHotel } from "@/services/hotelApi";
+import { formatVnd } from "@/data/hotels";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
 
   calculateEarlyCheckInSurcharge,
@@ -759,20 +758,7 @@ export default function HotelRooms() {
   const routeHotelId = slug && /^\d+$/.test(slug)
     ? Number(slug)
     : hotelSlugToIdMap[slug || ""] || 0;
-  const staticFallback: PublicHotel | undefined = useMemo(() => {
-    const raw = hotels.find((item) => item.id === routeHotelId || item.slug === slug);
-    if (!raw) return undefined;
-    return {
-      id: raw.id || routeHotelId,
-      name: raw.name,
-      address: `${raw.city}, ${raw.province}`,
-      phone: "1900 8888",
-      provinceName: raw.province,
-      startingPrice: raw.price,
-      imageUrls: raw.image ? [raw.image] : [],
-    };
-  }, [routeHotelId, slug]);
-  const hotel = publicHotels.find((item) => item.id === routeHotelId) || staticFallback;
+  const hotel = publicHotels.find((item) => item.id === routeHotelId);
   const [rooms, setRooms] = useState<RoomType[]>([]);
   const [roomsLoadError, setRoomsLoadError] = useState("");
   const initializedSelectionKey = useRef<string | null>(null);
@@ -919,8 +905,13 @@ export default function HotelRooms() {
 
       }).catch((error: unknown) => {
         if (isMounted) {
-          console.warn("Backend offline or failed to load hotel rooms, using fallback catalogue:", error);
-          setRooms(fallbackRooms);
+          console.warn("Failed to load hotel rooms:", error);
+          setRooms([]);
+          setRoomsLoadError(
+            isEn
+              ? "Could not load rooms for this hotel."
+              : "Không thể tải danh sách phòng cho khách sạn này."
+          );
         }
       });
     } else {

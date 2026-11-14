@@ -80,7 +80,7 @@ import { formatHotelLocation, formatVnd, hotels, hotelSlugToId } from "@/data/ho
 
 import { toLocalDateStr } from "@/lib/utils";
 
-import { rooms as fallbackRooms, type RoomType } from "@/data/rooms";
+import { type RoomType } from "@/data/rooms";
 
 import { fetchRoomsByHotel } from "@/services/roomApi";
 
@@ -1092,10 +1092,7 @@ export default function HotelDetails() {
         amenities: Array.isArray((beMatch as any).amenities) ? (beMatch as any).amenities : [],
       };
     }
-    if (hotelsLoading) return undefined;
-    return hotels.find(
-      (item) => item.slug === slug || String(item.id) === String(slug),
-    );
+    return undefined;
   }, [slug, beHotels, hotelsLoading]);
 
 

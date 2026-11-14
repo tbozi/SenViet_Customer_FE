@@ -19,119 +19,27 @@ export interface HeroSlide {
   hotelLink: string;
 }
 
-/**
- * Hero Slides - Only featuring VERIFIED hotels in the Sen Việt system:
- * 1. Sen Việt Sài Gòn (123 Lê Lợi, Q.1, TP.HCM)
- * 2. Sen Việt Hà Nội (45 Tràng Tiền, Hoàn Kiếm, Hà Nội)
- * 3. Sen Việt Đà Nẵng (Võ Nguyên Giáp, Ngũ Hành Sơn, Đà Nẵng)
- * 4. Sen Việt Nha Trang (Trần Phú, Lộc Thọ, Nha Trang, Khánh Hòa)
- * 5. Sen Việt Đà Lạt (Trần Hưng Đạo, P.10, Đà Lạt, Lâm Đồng)
- */
 const HERO_SLIDES: HeroSlide[] = [
   {
-    id: "sen-viet-sai-gon",
+    id: "sen-viet-intro",
     image: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=2200&auto=format&fit=crop",
     tagline: {
-      vi: "SEN VIỆT SÀI GÒN • QUẬN 1",
-      en: "SEN VIỆT SAIGON • DISTRICT 1",
+      vi: "HỆ THỐNG KHÁCH SẠN & RESORT SEN VIỆT",
+      en: "SEN VIỆT HOTELS & RESORTS COLLECTION",
     },
     title: {
-      vi: "Nghỉ Dưỡng Thượng Lưu Giữa Trái Tim Hoa Lệ Sài Gòn",
-      en: "Bespoke Luxury Living in the Heart of Saigon",
+      vi: "Nghỉ Dưỡng Tinh Hoa Chuẩn 5 Sao Việt Nam",
+      en: "Timeless Five-Star Vietnamese Hospitality",
     },
     subtitle: {
-      vi: "Tọa lạc tại 123 Lê Lợi, Quận 1 với hồ bơi vô cực dát vàng trên tầng thượng, spa thảo dược hoa sen độc bản và nhà hàng fine-dining chuẩn quốc tế.",
-      en: "Located at 123 Le Loi, District 1 featuring a rooftop gold-accented infinity pool, signature lotus spa, and world-class fine dining.",
+      vi: "Khám phá không gian lưu trú sang trọng, dịch vụ tận tâm 24/7 và trải nghiệm văn hóa bản địa đặc sắc tại các chi nhánh Sen Việt.",
+      en: "Discover bespoke luxury accommodations, 24/7 dedicated hospitality, and authentic local experiences across Sen Việt destinations.",
     },
     location: {
-      vi: "123 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
-      en: "123 Le Loi, District 1, Ho Chi Minh City",
+      vi: "Việt Nam",
+      en: "Vietnam",
     },
-    hotelLink: "/hotels/sen-viet-sai-gon/details",
-  },
-  {
-    id: "sen-viet-ha-noi",
-    image: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?q=80&w=2200&auto=format&fit=crop",
-    tagline: {
-      vi: "SEN VIỆT HÀ NỘI • HOÀN KIẾM",
-      en: "SEN VIỆT HANOI • HOAN KIEM",
-    },
-    title: {
-      vi: "Kiệt Tác Kiến Trúc Đông Dương Kề Bên Hồ Gươm",
-      en: "Indochine Architectural Masterpiece by Hoan Kiem Lake",
-    },
-    subtitle: {
-      vi: "Tọa lạc tại 45 Tràng Tiền kề bên Hồ Gươm, tái hiện vẻ đẹp quý tộc hoàng gia Thăng Long xưa với ban công ngắm trọn tháp Rùa và trà thất cung đình.",
-      en: "Located at 45 Trang Tien beside Hoan Kiem Lake, reviving ancient Thang Long nobility with lakeview balconies and imperial tea lounge.",
-    },
-    location: {
-      vi: "45 Tràng Tiền, Hoàn Kiếm, Hà Nội",
-      en: "45 Trang Tien, Hoan Kiem, Hanoi",
-    },
-    hotelLink: "/hotels/sen-viet-ha-noi/details",
-  },
-  {
-    id: "sen-viet-da-nang",
-    image: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2200&auto=format&fit=crop",
-    tagline: {
-      vi: "SEN VIỆT ĐÀ NẴNG • BIỂN MỸ KHÊ",
-      en: "SEN VIỆT DA NANG • MY KHE BEACH",
-    },
-    title: {
-      vi: "Thiên Đường Nghỉ Dưỡng Nhiệt Đới Trên Bờ Biển Mỹ Khê",
-      en: "Tropical Beachfront Sanctuary on Iconic My Khe Beach",
-    },
-    subtitle: {
-      vi: "Tọa lạc trên đường Võ Nguyên Giáp, bãi biển cát trắng riêng biệt, hồ bơi nước mặn tràn bờ uốn lượn và trung tâm chăm sóc sức khỏe đá muối Himalaya.",
-      en: "Located on Vo Nguyen Giap street with a private white-sand beach, lagoon saltwater infinity pool, and Himalayan wellness sanctuary.",
-    },
-    location: {
-      vi: "Võ Nguyên Giáp, Ngũ Hành Sơn, Đà Nẵng",
-      en: "Vo Nguyen Giap, Ngu Hanh Son, Da Nang",
-    },
-    hotelLink: "/hotels/sen-viet-da-nang/details",
-  },
-  {
-    id: "sen-viet-nha-trang",
-    image: "https://images.unsplash.com/photo-1582719508461-905c673771fd?q=80&w=2200&auto=format&fit=crop",
-    tagline: {
-      vi: "SEN VIỆT NHA TRANG • ĐƯỜNG TRẦN PHÚ",
-      en: "SEN VIỆT NHA TRANG • TRAN PHU BOULEVARD",
-    },
-    title: {
-      vi: "Viên Ngọc Đại Dương Rực Rỡ Trên Vịnh Biển Nha Trang",
-      en: "Shimmering Oceanic Jewel on Magnificent Nha Trang Bay",
-    },
-    subtitle: {
-      vi: "Tọa lạc trên cung đường vàng Trần Phú, 100% phòng nghỉ sở hữu ban công kính tràn viền ôm trọn biển ngọc bích cùng Sky Bar ngắm hoàng hôn vịnh biển.",
-      en: "Located along golden Tran Phu boulevard, 100% rooms feature glass-front balconies facing turquoise waters and panoramic sunset Sky Bar.",
-    },
-    location: {
-      vi: "Trần Phú, Lộc Thọ, Nha Trang, Khánh Hòa",
-      en: "Tran Phu, Loc Tho, Nha Trang, Khanh Hoa",
-    },
-    hotelLink: "/hotels/sen-viet-nha-trang/details",
-  },
-  {
-    id: "sen-viet-da-lat",
-    image: "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?q=80&w=2200&auto=format&fit=crop",
-    tagline: {
-      vi: "SEN VIỆT ĐÀ LẠT • CAO NGUYÊN THÔNG REO",
-      en: "SEN VIỆT DA LAT • PINE HIGHLANDS",
-    },
-    title: {
-      vi: "Không Gian Cổ Tích Lãng Mạn Giữa Ngàn Thông & Sương Mây",
-      en: "French Heritage Romance Amidst Misty Pine Hills",
-    },
-    subtitle: {
-      vi: "Tọa lạc tại Trần Hưng Đạo giữa ngàn thông reo, lò sưởi ấm cúng trong từng gian phòng, ban công ngắm hồ sương mù và trà chiều quý tộc Pháp thanh khiết.",
-      en: "Located on Tran Hung Dao amongst whispering pines, featuring fireplaces in every room, misty valley balconies, and refined afternoon tea.",
-    },
-    location: {
-      vi: "Trần Hưng Đạo, Phường 10, Đà Lạt, Lâm Đồng",
-      en: "Tran Hung Dao, Ward 10, Da Lat, Lam Dong",
-    },
-    hotelLink: "/hotels/sen-viet-da-lat/details",
+    hotelLink: "/hotels",
   },
 ];
 

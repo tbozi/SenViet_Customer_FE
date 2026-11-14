@@ -6,7 +6,6 @@ import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 import { formatVnd } from "@/data/hotels";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
-  services,
   serviceTabs,
   type ServiceCatalogItem,
 } from "@/data/services";
@@ -167,7 +166,7 @@ export default function BookingServices() {
         unit: bs.unit || "lượt",
       }));
     }
-    return services;
+    return [];
   }, [backendServices, hotel?.id]);
 
   const concreteStays = useMemo<ConcreteStay[]>(

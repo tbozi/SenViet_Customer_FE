@@ -118,57 +118,18 @@ export async function fetchHotelReviews(hotelId: number): Promise<HotelReviewSum
     const res = await axiosInstance.get(`/reviews/hotels/${hotelId}`);
     return res.data.result;
   } catch {
-    return (
-      FALLBACK_REVIEWS[hotelId] || {
-        hotelId,
-        hotelName: "Sen Việt Hotel & Resort",
-        averageRating: 4.8,
-        totalReviews: 2,
-        avgCleanliness: 4.9,
-        avgService: 4.8,
-        avgFacilities: 4.7,
-        avgLocation: 4.9,
-        starCounts: { 5: 2, 4: 0, 3: 0, 2: 0, 1: 0 },
-        reviews: [
-          {
-            id: 101,
-            bookingId: 991,
-            customerId: 201,
-            customerName: "Huỳnh Văn Hiếu",
-            hotelId,
-            hotelName: "Sen Việt Hotel & Resort",
-            roomTypeName: "Phòng Suite Hạng Sang",
-            rating: 5,
-            cleanlinessRating: 5,
-            serviceRating: 5,
-            facilitiesRating: 5,
-            locationRating: 5,
-            title: "Dịch vụ xuất sắc, không gian đẳng cấp 5 sao",
-            comment:
-              "Kỳ nghỉ rất tuyệt vời, không gian yên tĩnh, nhân viên niềm nở thân thiện. Bữa sáng tại nhà hàng rất ngon miệng và đa dạng.",
-            createdAt: "12/09/2026 11:20",
-          },
-          {
-            id: 102,
-            bookingId: 992,
-            customerId: 203,
-            customerName: "Trần Thị Bích",
-            hotelId,
-            hotelName: "Sen Việt Hotel & Resort",
-            roomTypeName: "Phòng Deluxe",
-            rating: 5,
-            cleanlinessRating: 5,
-            serviceRating: 5,
-            facilitiesRating: 4,
-            locationRating: 5,
-            title: "Trải nghiệm lưu trú hoàn hảo",
-            comment:
-              "Khách sạn nằm ở vị trí thuận tiện, phòng ốc sạch sẽ tinh tươm. Tôi sẽ tiếp tục ủng hộ hệ thống Sen Việt trong các chuyến đi tới.",
-            createdAt: "16/09/2026 15:45",
-          },
-        ],
-      }
-    );
+    return {
+      hotelId,
+      hotelName: "",
+      averageRating: 0,
+      totalReviews: 0,
+      avgCleanliness: 0,
+      avgService: 0,
+      avgFacilities: 0,
+      avgLocation: 0,
+      starCounts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      reviews: [],
+    };
   }
 }
 
