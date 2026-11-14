@@ -126,15 +126,22 @@ export default function AboutPage() {
         <div className="container px-4">
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 text-center">
             <div className="space-y-1">
-              <div className="font-display text-3xl sm:text-4xl font-bold text-primary">07</div>
+              <div className="font-display text-3xl sm:text-4xl font-bold text-primary">
+                {String(hotels.length).padStart(2, "0")}
+              </div>
               <div className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 {isEn ? "Hotels & Resorts" : "Khách sạn & Khu nghỉ"}
               </div>
             </div>
             <div className="space-y-1">
-              <div className="font-display text-3xl sm:text-4xl font-bold text-primary">07</div>
+              <div className="font-display text-3xl sm:text-4xl font-bold text-primary">
+                {String(
+                  new Set(hotels.map((h) => h.provinceName).filter(Boolean)).size ||
+                    hotels.length,
+                ).padStart(2, "0")}
+              </div>
               <div className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {isEn ? "Prime Destinations" : "Tỉnh thành trọng điểm"}
+                {isEn ? "Prime Destinations" : "Tỉnh thành hoạt động"}
               </div>
             </div>
             <div className="space-y-1">
@@ -296,8 +303,16 @@ export default function AboutPage() {
               key={hotel.id}
               className="group overflow-hidden rounded-2xl border border-border bg-card shadow-xs hover:shadow-lg transition"
             >
-              <div className="relative flex h-32 items-center justify-center bg-secondary/60 text-primary">
-                <Building2 className="h-10 w-10" />
+              <div className="relative flex h-40 items-center justify-center overflow-hidden bg-secondary/60 text-primary">
+                {hotel.imageUrls?.[0] ? (
+                  <img
+                    src={hotel.imageUrls[0]}
+                    alt={hotel.name}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <Building2 className="h-10 w-10" />
+                )}
                 <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-primary flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-gold" />
                   {hotel.provinceName || hotel.address}
@@ -325,7 +340,7 @@ export default function AboutPage() {
                     {isEn ? "View Rooms & Book →" : "Chọn phòng & Đặt ngay →"}
                   </Link>
                   <Link 
-                    to={`/hotels/${hotel.id}`}
+                    to={`/hotels/${hotel.id}/details`}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
                     {isEn ? "Details" : "Chi tiết"}

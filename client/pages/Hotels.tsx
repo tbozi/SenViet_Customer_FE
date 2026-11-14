@@ -16,41 +16,27 @@ export default function Hotels() {
   // Queries & API
   const { data: beHotels = [], isLoading } = useGetPublicHotelsQuery();
 
-  // Merge backend data with rich static data
+  // Map directly from backend hotels (100% real DB data)
   const allHotels: Hotel[] = useMemo(() => {
     if (beHotels && beHotels.length > 0) {
-      return beHotels.map((beH) => {
-        const found = staticHotels.find(
-          (s) => s.id === beH.id || s.name.toLowerCase().includes(beH.name.toLowerCase()),
-        );
-        if (found) {
-          return {
-            ...found,
-            name: beH.name || found.name,
-            city: beH.provinceName || found.city,
-            province: beH.provinceName || found.province,
-            description: beH.address || found.description,
-            price: beH.startingPrice && beH.startingPrice >= 1000 ? beH.startingPrice : found.price,
-            image: beH.imageUrls?.[0] || found.image,
-          };
-        }
-        return {
-          id: beH.id,
-          slug: String(beH.id),
-          name: beH.name,
-          city: beH.provinceName || "Việt Nam",
-          province: beH.provinceName || "Việt Nam",
-          region: "central" as const,
-          description: beH.address || "",
-          descriptionEn: beH.address || "",
-          price: beH.startingPrice && beH.startingPrice >= 1000 ? beH.startingPrice : 200000,
-          rating: 4.8,
-          image: beH.imageUrls?.[0] || "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
-          amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
-        };
-      });
+      return beHotels.map((beH) => ({
+        id: beH.id,
+        slug: String(beH.id),
+        name: beH.name,
+        city: beH.address || beH.provinceName || "Việt Nam",
+        province: beH.provinceName || "Việt Nam",
+        region: "central" as const,
+        description: beH.address || "",
+        descriptionEn: beH.address || "",
+        price: beH.startingPrice ?? 0,
+        rating: 4.8,
+        image:
+          beH.imageUrls?.[0] ||
+          "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
+        amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+      }));
     }
-    return staticHotels;
+    return [];
   }, [beHotels]);
 
   // Filters State

@@ -580,9 +580,6 @@ export default function Checkout() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (remainingSeconds <= 0) {
-      return setError(isEn ? "The 5-minute reservation hold has expired. Please click 'Renew Hold' to continue." : "Đã hết 5 phút giữ phòng tạm thời. Quý khách vui lòng bấm 'Tải lại giữ phòng' để tiếp tục thanh toán.");
-    }
     if (promo && promoAlreadyUsed) {
       return setError(isEn ? "This promo code has already been used by your account. Please clear or choose a different code." : "Mã ưu đãi này đã được tài khoản của bạn sử dụng ở đơn trước. Vui lòng xóa mã hoặc chọn mã khác.");
     }
@@ -803,73 +800,6 @@ export default function Checkout() {
             : "Thông tin người đại diện chỉ cần nhập một lần. Từng phòng cụ thể, khoảng ngày, dịch vụ và phụ phí được liệt kê riêng bên dưới."}
         </p>
 
-        {/* BỘ ĐẾM THỜI GIAN GIỮ PHÒNG 5 PHÚT */}
-        <div
-          className={`mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 rounded-2xl border px-4 py-3.5 sm:px-5 sm:py-4 transition shadow-xs ${
-            remainingSeconds > 60
-              ? "border-amber-300/90 bg-amber-50/90 dark:border-amber-600/50 dark:bg-amber-950/40 text-amber-950 dark:text-amber-200"
-              : remainingSeconds > 0
-                ? "border-rose-400/90 bg-rose-50/90 dark:border-rose-600/50 dark:bg-rose-950/40 text-rose-950 dark:text-rose-200 animate-pulse"
-                : "border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <span
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                remainingSeconds > 60
-                  ? "bg-amber-500/20 text-amber-800 dark:text-amber-300"
-                  : remainingSeconds > 0
-                    ? "bg-rose-500/20 text-rose-800 dark:text-rose-300"
-                    : "bg-slate-300/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-              }`}
-            >
-              <Clock className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-sm font-bold leading-tight">
-                {remainingSeconds > 0
-                  ? (isEn ? "Room Reserved Exclusively for You" : "Hệ thống đang tạm giữ phòng cho quý khách")
-                  : (isEn ? "Reservation Hold Expired" : "Hết thời gian tạm giữ phòng")}
-              </p>
-              <p className="text-xs opacity-85 mt-0.5">
-                {remainingSeconds > 0
-                  ? (isEn
-                      ? "Complete booking within 5 minutes to guarantee your rate and room."
-                      : "Vui lòng hoàn tất trong vòng 5 phút để đảm bảo phòng không bị mở bán lại cho khách khác.")
-                  : (isEn
-                      ? "The 5-minute hold window has ended. Please refresh to renew hold."
-                      : "Đã quá 5 phút giữ phòng. Vui lòng làm mới trang để tiếp tục giữ phòng.")}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-            {remainingSeconds > 0 ? (
-              <div className="flex items-center gap-1.5 rounded-xl bg-white/95 dark:bg-slate-800/95 border border-current/25 px-3 py-1.5 shadow-2xs font-mono font-bold text-base">
-                <span className="text-xs uppercase tracking-wider opacity-70 font-sans mr-0.5">
-                  {isEn ? "Left:" : "Còn lại:"}
-                </span>
-                <span>{formatCountdown(remainingSeconds)}</span>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const key = `senviet_checkout_timer_${params.get("hotel") || "draft"}`;
-                  try { sessionStorage.setItem(key, String(Date.now())); } catch {}
-                  setRemainingSeconds(300);
-                  setError("");
-                }}
-                className="rounded-full text-xs gap-1.5 border-current hover:bg-current/10"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>{isEn ? "Renew Hold" : "Tải lại giữ phòng"}</span>
-              </Button>
-            )}
-          </div>
-        </div>
         <form
           onSubmit={submit}
           className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]"
@@ -1055,7 +985,7 @@ export default function Checkout() {
               <div className="space-y-2.5">
                 <Button
                   type="submit"
-                  disabled={paymentState === "processing" || remainingSeconds <= 0}
+                  disabled={paymentState === "processing"}
                   className="w-full rounded-xl"
                 >
                   {paymentState === "processing"

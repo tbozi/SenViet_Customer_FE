@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Sparkles, ArrowRight, MapPin } from "lucide-react";
@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ShinyBadge, CountUp } from "@/components/ui/TextAnimations";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
+import type { Hotel } from "@/data/hotels";
 
 export interface HeroSlide {
   id: string;
@@ -136,36 +138,97 @@ const HERO_SLIDES: HeroSlide[] = [
 const SLIDE_DURATION = 6500; // 6.5s per slide
 
 export function HeroCinematicSlider({
-  hotelCount = 7,
-  provinceCount = 7,
+  hotelCount = 1,
+  provinceCount = 1,
+  hotels = [],
 }: {
   hotelCount?: number;
   provinceCount?: number;
+  hotels?: Hotel[];
 }) {
   const { language } = useLanguage();
   const isEn = language === "en";
+  const { data: beHotels = [] } = useGetPublicHotelsQuery();
+
+  const slides: HeroSlide[] = useMemo(() => {
+    if (beHotels && beHotels.length > 0) {
+      return beHotels.map((h) => ({
+        id: String(h.id),
+        image:
+          h.imageUrls?.[0] ||
+          "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=2200&auto=format&fit=crop",
+        tagline: {
+          vi: `${h.name.toUpperCase()}${h.provinceName ? ` • ${h.provinceName.toUpperCase()}` : ""}`,
+          en: `${h.name.toUpperCase()}${h.provinceName ? ` • ${h.provinceName.toUpperCase()}` : ""}`,
+        },
+        title: {
+          vi: h.name,
+          en: h.name,
+        },
+        subtitle: {
+          vi: h.address
+            ? `Tọa lạc tại ${h.address}${h.provinceName ? `, ${h.provinceName}` : ""}. Không gian lưu trú sang trọng chuẩn 5 sao cùng dịch vụ tận tâm 24/7 của hệ thống Sen Việt.`
+            : "Không gian lưu trú sang trọng chuẩn 5 sao cùng dịch vụ tận tâm 24/7 của hệ thống Sen Việt.",
+          en: h.address
+            ? `Located at ${h.address}${h.provinceName ? `, ${h.provinceName}` : ""}. Five-star hospitality and 24/7 dedicated service by Sen Việt.`
+            : "Five-star hospitality and 24/7 dedicated service by Sen Việt.",
+        },
+        location: {
+          vi: [h.address, h.provinceName].filter(Boolean).join(", ") || "Việt Nam",
+          en: [h.address, h.provinceName].filter(Boolean).join(", ") || "Vietnam",
+        },
+        hotelLink: `/hotels/${h.id}/details`,
+      }));
+    }
+    if (hotels && hotels.length > 0) {
+      return hotels.map((h) => ({
+        id: String(h.id || h.slug),
+        image: h.image,
+        tagline: {
+          vi: `${h.name.toUpperCase()}${h.province ? ` • ${h.province.toUpperCase()}` : ""}`,
+          en: `${h.name.toUpperCase()}${h.province ? ` • ${h.province.toUpperCase()}` : ""}`,
+        },
+        title: {
+          vi: h.name,
+          en: h.name,
+        },
+        subtitle: {
+          vi: h.description || "Không gian nghỉ dưỡng chuẩn 5 sao Sen Việt.",
+          en: h.descriptionEn || h.description || "Five-star hospitality by Sen Việt.",
+        },
+        location: {
+          vi: [h.city, h.province].filter(Boolean).join(", "),
+          en: [h.city, h.province].filter(Boolean).join(", "),
+        },
+        hotelLink: `/hotels/${h.id || h.slug}/details`,
+      }));
+    }
+    return HERO_SLIDES;
+  }, [beHotels, hotels]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
+  const safeIndex = slides.length > 0 ? currentIndex % slides.length : 0;
+
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % HERO_SLIDES.length);
-  }, []);
+    setCurrentIndex((prev) => (prev + 1) % Math.max(1, slides.length));
+  }, [slides.length]);
 
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
-  }, []);
+    setCurrentIndex((prev) => (prev - 1 + Math.max(1, slides.length)) % Math.max(1, slides.length));
+  }, [slides.length]);
 
   // Auto-play timer
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || slides.length <= 1) return;
     const timer = setInterval(() => {
       nextSlide();
     }, SLIDE_DURATION);
     return () => clearInterval(timer);
-  }, [isPaused, nextSlide]);
+  }, [isPaused, nextSlide, slides.length]);
 
-  const activeSlide = HERO_SLIDES[currentIndex];
+  const activeSlide = slides[safeIndex] || HERO_SLIDES[0];
 
   return (
     <section
@@ -319,21 +382,21 @@ export function HeroCinematicSlider({
       <div className="absolute bottom-10 right-6 sm:right-12 z-20 flex items-center gap-4 bg-slate-950/60 border border-white/20 backdrop-blur-xl px-4 py-2.5 rounded-full shadow-2xl">
         {/* Slide Counter (e.g. 01 / 05) */}
         <div className="font-mono text-xs font-bold tracking-wider text-amber-400">
-          <span>{String(currentIndex + 1).padStart(2, "0")}</span>
+          <span>{String(safeIndex + 1).padStart(2, "0")}</span>
           <span className="text-white/40 mx-1">/</span>
-          <span className="text-white/60">{String(HERO_SLIDES.length).padStart(2, "0")}</span>
+          <span className="text-white/60">{String(slides.length).padStart(2, "0")}</span>
         </div>
 
         {/* Slide Indicator Dots with Progress */}
         <div className="flex items-center gap-1.5">
-          {HERO_SLIDES.map((slide, idx) => (
+          {slides.map((slide, idx) => (
             <button
               key={slide.id}
               onClick={() => setCurrentIndex(idx)}
               aria-label={`Go to slide ${idx + 1}`}
               className={cn(
                 "h-2 rounded-full transition-all duration-300",
-                currentIndex === idx
+                safeIndex === idx
                   ? "w-7 bg-amber-400 shadow-xs shadow-amber-400/50"
                   : "w-2 bg-white/30 hover:bg-white/60"
               )}

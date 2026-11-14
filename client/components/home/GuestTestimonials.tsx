@@ -1,51 +1,82 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Star, Quote, Sparkles, CheckCircle2 } from "lucide-react";
+import { Star, Quote, Sparkles } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
+import { fetchHotelReviews } from "@/services/reviewApi";
 
-/**
- * GuestTestimonials - Editorial Social Proof & Luxury Guest Reviews
- * Delivers emotional trust, prestigious social proof, and authentic 5-star feedback
- */
+interface DisplayReview {
+  id: string;
+  quote: string;
+  author: string;
+  role: string;
+  stay: string;
+  rating: number;
+}
+
 export function GuestTestimonials() {
   const { language } = useLanguage();
   const isEn = language === "en";
+  const { data: beHotels = [] } = useGetPublicHotelsQuery();
+  const [reviews, setReviews] = useState<DisplayReview[]>([]);
+  const [totalReviewsCount, setTotalReviewsCount] = useState(0);
+  const [averageRating, setAverageRating] = useState(5.0);
 
-  const reviews = [
-    {
-      id: 1,
-      quote: isEn
-        ? "From the scent of white lotus upon arrival to the flawless private butler service, Sen Việt embodies the true essence of Vietnamese elegance. An unforgettable weekend retreat."
-        : "Từ hương sen trắng thoảng nhẹ khi vừa bước chân vào sảnh đến dịch vụ quản gia riêng chu đáo đến từng chi tiết nhỏ nhất. Sen Việt chính là đỉnh cao của lòng hiếu khách Việt Nam.",
-      author: "Trần Minh Quân",
-      role: isEn ? "Managing Director & Art Collector" : "Tổng Giám đốc & Nhà Sưu Tập Nghệ Thuật",
-      stay: isEn ? "Stayed at Lotus Presidential Suite — Sen Việt Sài Gòn" : "Nghỉ tại Lotus Presidential Suite — Sen Việt Sài Gòn",
-      avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80",
-      rating: 5,
-    },
-    {
-      id: 2,
-      quote: isEn
-        ? "The ocean panorama suite in Nha Trang surpassed all our expectations. Dining beside the waves at sunset while savoring fresh seafood and royal flavors was the highlight of our journey."
-        : "Căn phòng hướng trọn vịnh biển tại Nha Trang vượt xa mọi kỳ vọng của vợ chồng tôi. Thưởng thức bữa tối hoàng hôn trên cung đường Trần Phú bên tiếng sóng biển là kỷ niệm đẹp nhất năm nay.",
-      author: "Elizabeth & Marcus Vance",
-      role: isEn ? "Architects from London, UK" : "Kiến Trúc Sư — London, Vương Quốc Anh",
-      stay: isEn ? "Stayed at Ocean Panorama Suite — Sen Việt Nha Trang" : "Nghỉ tại Ocean Panorama Suite — Sen Việt Nha Trang",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&q=80",
-      rating: 5,
-    },
-    {
-      id: 3,
-      quote: isEn
-        ? "The Lotus Spa therapy and mineral onsen baths restored both my mind and energy. The balance between ancient architecture and modern high-tech convenience is truly world-class."
-        : "Liệu trình trị liệu spa hoa sen và hồ khoáng nóng onsen đã hồi sinh trọn vẹn năng lượng cho tôi. Sự hòa quyện giữa kiến trúc cổ điển và tiện nghi thông minh thực sự đạt đẳng cấp quốc tế.",
-      author: "Vũ Thu Trang",
-      role: isEn ? "Fashion Designer & Wellness Author" : "Nhà Thiết Kế Thời Trang & Tác Giả Sách",
-      stay: isEn ? "Stayed at Heritage Garden Villa — Sen Việt Đà Nẵng" : "Nghỉ tại Heritage Garden Villa — Sen Việt Đà Nẵng",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&q=80",
-      rating: 5,
-    },
-  ];
+  useEffect(() => {
+    let active = true;
+    if (!beHotels || beHotels.length === 0) return;
+
+    Promise.all(
+      beHotels.map(async (h) => {
+        try {
+          const summary = await fetchHotelReviews(h.id);
+          return { hotel: h, summary };
+        } catch {
+          return { hotel: h, summary: null };
+        }
+      }),
+    ).then((results) => {
+      if (!active) return;
+      const allRevs: DisplayReview[] = [];
+      let totalCount = 0;
+      let weightedSum = 0;
+
+      for (const { hotel, summary } of results) {
+        if (!summary || !Array.isArray(summary.reviews)) continue;
+        const count = summary.totalReviews || summary.reviews.length;
+        totalCount += count;
+        weightedSum += (summary.averageRating || 5) * count;
+        for (const r of summary.reviews) {
+          allRevs.push({
+            id: `${hotel.id}-${r.id}`,
+            quote:
+              r.comment ||
+              (isEn
+                ? "Great stay and attentive service."
+                : "Trải nghiệm lưu trú tuyệt vời, dịch vụ chu đáo."),
+            author: r.customerName || (isEn ? "Verified Guest" : "Khách hàng xác thực"),
+            role: r.createdAt
+              ? new Date(r.createdAt).toLocaleDateString(isEn ? "en-US" : "vi-VN")
+              : isEn
+                ? "Verified Booking"
+                : "Đặt phòng xác thực",
+            stay: [r.roomTypeName, hotel.name].filter(Boolean).join(" — "),
+            rating: Math.max(1, Math.min(5, Math.round(r.rating || 5))),
+          });
+        }
+      }
+
+      setReviews(allRevs.slice(0, 6));
+      setTotalReviewsCount(totalCount);
+      setAverageRating(
+        totalCount > 0 ? Number((weightedSum / totalCount).toFixed(1)) : 5.0,
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [beHotels, isEn]);
 
   return (
     <section className="bg-stone-50/70 py-24 border-t border-border/50">
@@ -74,14 +105,23 @@ export function GuestTestimonials() {
                 <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
               ))}
             </div>
-            <span className="text-xs font-bold text-primary">4.92 / 5.0</span>
+            <span className="text-xs font-bold text-primary">{averageRating} / 5.0</span>
             <span className="text-xs text-muted-foreground border-l border-border/60 pl-2">
-              {isEn ? "+2,400 Verified Reviews" : "+2.400 Đánh giá xác thực"}
+              {isEn
+                ? `${totalReviewsCount} Verified Reviews`
+                : `${totalReviewsCount} Đánh giá xác thực từ hệ thống`}
             </span>
           </div>
         </div>
 
-        {/* 3 Editorial Cards */}
+        {/* Editorial Cards from DB */}
+        {reviews.length === 0 ? (
+          <div className="mt-12 rounded-2xl border border-dashed border-border bg-white/70 p-8 text-center text-sm text-muted-foreground">
+            {isEn
+              ? "No guest reviews have been submitted yet."
+              : "Chưa có đánh giá nào được gửi trên hệ thống."}
+          </div>
+        ) : (
         <div className="mt-16 grid gap-8 md:grid-cols-3">
           {reviews.map((rev, idx) => (
             <motion.div
@@ -116,11 +156,9 @@ export function GuestTestimonials() {
 
                 {/* Author Info */}
                 <div className="mt-4 flex items-center gap-3">
-                  <img
-                    src={rev.avatar}
-                    alt={rev.author}
-                    className="h-11 w-11 rounded-full object-cover ring-2 ring-amber-500/30"
-                  />
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary ring-2 ring-amber-500/30">
+                    {(rev.author || "K").charAt(0).toUpperCase()}
+                  </div>
                   <div>
                     <h4 className="font-display text-sm font-bold text-primary">
                       {rev.author}
@@ -132,6 +170,7 @@ export function GuestTestimonials() {
             </motion.div>
           ))}
         </div>
+        )}
       </div>
     </section>
   );

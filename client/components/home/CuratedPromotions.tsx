@@ -62,27 +62,35 @@ export function CuratedPromotions() {
     },
   ];
 
-  // Display backend promos if available, else fallback
-  const displayOffers =
-    activePromos.length >= 2
-      ? activePromos.slice(0, 3).map((p, idx) => ({
-          id: String(p.id),
-          code: p.code,
-          name: p.name,
-          discountBadge:
-            p.discountType === "PERCENTAGE" || p.type === "PERCENTAGE"
-              ? `GIẢM ${p.discountValue}%`
-              : `GIẢM ${Number(p.discountValue).toLocaleString("vi-VN")}₫`,
-          description:
-            p.description ||
-            (isEn
-              ? "Exclusive seasonal discount for direct bookings at Sen Việt Hotels & Resorts."
-              : "Ưu đãi mùa đặc biệt áp dụng cho khách hàng đặt phòng trực tiếp tại Sen Việt."),
-          validity: p.endDate ? `Đến ${p.endDate}` : "Đang áp dụng",
-          tag: p.type || "Ưu đãi",
-          color: idx === 0 ? "from-amber-500/20 to-amber-600/10 border-amber-500/30" : "from-slate-500/20 to-slate-600/10 border-slate-500/30",
-        }))
-      : fallbackOffers;
+  // Display real backend promos from Database (no fake hardcoded vouchers)
+  const displayOffers = activePromos.slice(0, 6).map((p, idx) => {
+    const isPercent =
+      p.discountType === "PERCENTAGE" ||
+      (p as any).promotionDiscountType === "PERCENTAGE" ||
+      p.type === "PERCENTAGE" ||
+      Number(p.discountValue) <= 100;
+    const colors = [
+      "from-amber-500/20 to-amber-600/10 border-amber-500/30",
+      "from-rose-500/20 to-rose-600/10 border-rose-500/30",
+      "from-emerald-500/20 to-emerald-600/10 border-emerald-500/30",
+    ];
+    return {
+      id: String(p.id),
+      code: p.code,
+      name: p.name,
+      discountBadge: isPercent
+        ? `GIẢM ${p.discountValue}%`
+        : `GIẢM ${Number(p.discountValue).toLocaleString("vi-VN")}₫`,
+      description:
+        p.description ||
+        (isEn
+          ? "Exclusive discount for direct bookings at Sen Việt Hotels & Resorts."
+          : "Ưu đãi đặc biệt áp dụng cho khách hàng đặt phòng trực tiếp tại Sen Việt."),
+      validity: p.endDate ? `Đến ${p.endDate}` : "Đang áp dụng",
+      tag: (p as any).hotelName || p.type || "Ưu đãi",
+      color: colors[idx % colors.length],
+    };
+  });
 
   return (
     <section className="container py-24 border-t border-border/60">
@@ -103,7 +111,7 @@ export function CuratedPromotions() {
         </div>
 
         <Link
-          to="/promotions"
+          to="/offers"
           className="group inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-gold shrink-0"
         >
           <span>{isEn ? "View All Promotions" : "Xem tất cả ưu đãi"}</span>
@@ -111,7 +119,14 @@ export function CuratedPromotions() {
         </Link>
       </div>
 
-      {/* Grid of 3 Curated Offers */}
+      {/* Grid of Curated Offers from DB */}
+      {displayOffers.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-secondary/20 p-10 text-center text-sm text-muted-foreground">
+          {isEn
+            ? "No active promotions in the system right now."
+            : "Hiện chưa có chương trình khuyến mãi đang áp dụng trong hệ thống."}
+        </div>
+      ) : (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {displayOffers.map((offer, idx) => (
           <motion.div
@@ -180,7 +195,7 @@ export function CuratedPromotions() {
                   {offer.validity}
                 </span>
                 <Link
-                  to="/hotels"
+                  to={`/hotels?promo=${encodeURIComponent(offer.code)}`}
                   className="font-semibold text-primary hover:text-gold transition-colors inline-flex items-center gap-1"
                 >
                   {isEn ? "Book Now" : "Đặt phòng ngay"} &rarr;
@@ -190,6 +205,7 @@ export function CuratedPromotions() {
           </motion.div>
         ))}
       </div>
+      )}
     </section>
   );
 }

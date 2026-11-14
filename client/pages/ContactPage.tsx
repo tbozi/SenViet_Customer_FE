@@ -374,7 +374,7 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* ================= DIRECTORY OF 7 BRANCHES ================= */}
+      {/* ================= DIRECTORY OF BRANCHES FROM DB ================= */}
       <section className="bg-secondary/40 py-16 border-t border-border/60">
         <div className="container px-4">
           <div className="text-center max-w-2xl mx-auto mb-12">
@@ -382,7 +382,9 @@ export default function ContactPage() {
               {isEn ? "Branch Directory" : "Danh bạ chi nhánh"}
             </span>
             <h2 className="mt-2 font-display text-2xl sm:text-3xl font-bold text-primary">
-              {isEn ? "Direct Contact for 7 Hotels" : "Hotline & Địa Chỉ Trực Tiếp 7 Chi Nhánh"}
+              {isEn
+                ? `Direct Contact for ${hotels.length} Hotel Branch${hotels.length === 1 ? "" : "es"}`
+                : `Hotline & Địa Chỉ Trực Tiếp ${hotels.length} Chi Nhánh`}
             </h2>
             <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
               {isEn
@@ -392,9 +394,9 @@ export default function ContactPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {branchContacts.map((b, idx) => (
+            {hotels.map((b) => (
               <div 
-                key={idx} 
+                key={b.id} 
                 className="rounded-2xl border border-border bg-card p-5 shadow-xs hover:border-primary/40 transition"
               >
                 <div className="flex items-center gap-2">
@@ -407,18 +409,18 @@ export default function ContactPage() {
                 <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex items-start gap-2">
                     <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
-                    <span>{b.address}</span>
+                    <span>{[b.address, b.provinceName].filter(Boolean).join(", ")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <a href={`tel:${b.phone.replace(/[^0-9+]/g, '')}`} className="font-semibold text-primary hover:underline font-mono">
-                      {b.phone}
+                    <a href="tel:19006868" className="font-semibold text-primary hover:underline font-mono">
+                      1900 6868
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <a href={`mailto:${b.email}`} className="text-primary hover:underline">
-                      {b.email}
+                    <a href="mailto:contact@senviet.vn" className="text-primary hover:underline">
+                      contact@senviet.vn
                     </a>
                   </div>
                 </div>

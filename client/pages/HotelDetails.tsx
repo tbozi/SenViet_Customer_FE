@@ -1059,47 +1059,31 @@ export default function HotelDetails() {
 
   const isEn = language === "en";
 
-  const { data: beHotels = [] } = useGetPublicHotelsQuery();
+  const { data: beHotels = [], isLoading: hotelsLoading } = useGetPublicHotelsQuery();
 
   const hotel = useMemo(() => {
-    const staticMatch = hotels.find(
-      (item) => item.slug === slug || String(item.id) === String(slug),
-    );
-    const beMatch = beHotels.find(
-      (b) =>
-        String(b.id) === String(slug) ||
-        (staticMatch && b.id === staticMatch.id),
-    );
-    if (staticMatch && beMatch) {
-      return {
-        ...staticMatch,
-        name: beMatch.name || staticMatch.name,
-        city: beMatch.provinceName || staticMatch.city,
-        province: beMatch.provinceName || staticMatch.province,
-        description: beMatch.address || staticMatch.description,
-        price:
-          beMatch.startingPrice && beMatch.startingPrice >= 1000
-            ? beMatch.startingPrice
-            : staticMatch.price,
-        image: beMatch.imageUrls?.[0] || staticMatch.image,
-        imageUrls: beMatch.imageUrls || [],
-      };
-    }
+    const beMatch =
+      beHotels.find(
+        (b) =>
+          String(b.id) === String(slug) ||
+          (slug && hotelSlugToId[slug] && b.id === hotelSlugToId[slug]),
+      ) || beHotels[0];
     if (beMatch) {
       return {
         id: beMatch.id,
         slug: String(beMatch.id),
         name: beMatch.name,
-        city: beMatch.provinceName || "Việt Nam",
+        city: beMatch.address || beMatch.provinceName || "Việt Nam",
         province: beMatch.provinceName || "Việt Nam",
         region: "central" as const,
-        description: beMatch.address || "",
-        descriptionEn: beMatch.address || "",
-        price:
-          beMatch.startingPrice && beMatch.startingPrice >= 1000
-            ? beMatch.startingPrice
-            : 200000,
-        rating: 4.8,
+        description: beMatch.address
+          ? `Tọa lạc tại ${beMatch.address}${beMatch.provinceName ? `, ${beMatch.provinceName}` : ""}. Không gian lưu trú sang trọng chuẩn 5 sao cùng dịch vụ tận tâm 24/7 của hệ thống Sen Việt.`
+          : "Không gian lưu trú sang trọng chuẩn 5 sao của hệ thống Sen Việt.",
+        descriptionEn: beMatch.address
+          ? `Located at ${beMatch.address}${beMatch.provinceName ? `, ${beMatch.provinceName}` : ""}. Five-star hospitality and 24/7 service by Sen Việt.`
+          : "Five-star hospitality by Sen Việt.",
+        price: beMatch.startingPrice ?? 0,
+        rating: 5.0,
         image:
           beMatch.imageUrls?.[0] ||
           "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
@@ -1107,8 +1091,11 @@ export default function HotelDetails() {
         amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
       };
     }
-    return staticMatch;
-  }, [slug, beHotels]);
+    if (hotelsLoading) return undefined;
+    return hotels.find(
+      (item) => item.slug === slug || String(item.id) === String(slug),
+    );
+  }, [slug, beHotels, hotelsLoading]);
 
 
 
@@ -1144,33 +1131,26 @@ export default function HotelDetails() {
 
 
 
-  const [roomList, setRoomList] = useState<RoomType[]>(fallbackRooms);
-
-
+  const [roomList, setRoomList] = useState<RoomType[]>([]);
 
   useEffect(() => {
-
     let isMounted = true;
-
-    if (slug) {
-      fetchRoomsByHotel(slug, checkIn, checkOut)
+    const targetHotelKey = String((hotel as any)?.id || slug || "");
+    if (targetHotelKey) {
+      fetchRoomsByHotel(targetHotelKey, checkIn, checkOut)
         .then((rooms) => {
-          if (isMounted && rooms && rooms.length > 0) {
+          if (isMounted && rooms) {
             setRoomList(rooms);
           }
         })
         .catch((err) => {
-          console.warn("Không thể tải danh sách phòng từ backend, dùng dữ liệu dự phòng:", err);
+          console.warn("Không thể tải danh sách phòng từ backend:", err);
         });
     }
-
     return () => {
-
       isMounted = false;
-
     };
-
-  }, [slug, checkIn, checkOut]);
+  }, [slug, hotel, checkIn, checkOut]);
 
 
 
@@ -1207,51 +1187,60 @@ export default function HotelDetails() {
 
 
   const branchConfig = useMemo(() => {
-
-    if (!slug) return defaultBranchConfig;
-
-    return branchConfigs[slug] || defaultBranchConfig;
-
-  }, [slug]);
-
-
+    if (!hotel) return defaultBranchConfig;
+    return {
+      ...defaultBranchConfig,
+      storyVi:
+        hotel.description ||
+        defaultBranchConfig.storyVi,
+      storyEn:
+        hotel.descriptionEn ||
+        defaultBranchConfig.storyEn,
+    };
+  }, [hotel]);
 
   const allGalleryItems = useMemo(() => {
-
-    const list = [...branchConfig.curatedGallery];
-
+    const list: BranchDetailConfig["curatedGallery"] = [];
     const extraUrls: string[] = (hotel as any)?.imageUrls || [];
-    for (let i = extraUrls.length - 1; i >= 0; i--) {
-      const url = extraUrls[i];
+    extraUrls.forEach((url, idx) => {
       if (url && !list.some((item) => item.url === url)) {
-        list.unshift({
+        list.push({
           url,
-          captionVi: `${hotel?.name || "Sen Việt"} - Ảnh ${i + 1}`,
-          captionEn: `${hotel?.name || "Sen Viet"} - Photo ${i + 1}`,
+          captionVi: `${hotel?.name || "Sen Việt"} - Ảnh chi nhánh ${idx + 1}`,
+          captionEn: `${hotel?.name || "Sen Viet"} - Branch Photo ${idx + 1}`,
           category: "architecture",
         });
       }
-    }
+    });
 
-    if (hotel?.image && !list.some((item) => item.url === hotel.image)) {
-
-      list.unshift({
-
-        url: hotel.image,
-
-        captionVi: `Toàn cảnh khách sạn ${hotel.name}`,
-
-        captionEn: `Panoramic view of ${hotel.name}`,
-
-        category: "architecture",
-
+    roomList.forEach((rm) => {
+      const rmImgs = rm.images && rm.images.length > 0 ? rm.images : rm.image ? [rm.image] : [];
+      rmImgs.forEach((url) => {
+        if (url && !list.some((item) => item.url === url)) {
+          list.push({
+            url,
+            captionVi: `${rm.nameVi || rm.name} - ${hotel?.name || "Sen Việt"}`,
+            captionEn: `${rm.name || rm.nameVi} - ${hotel?.name || "Sen Viet"}`,
+            category: "rooms",
+          });
+        }
       });
+    });
 
+    if (list.length < 5) {
+      for (const item of defaultBranchConfig.curatedGallery) {
+        if (!list.some((existing) => existing.url === item.url)) {
+          list.push({
+            ...item,
+            captionVi: `${item.captionVi} - ${hotel?.name || "Sen Việt"}`,
+            captionEn: `${item.captionEn} - ${hotel?.name || "Sen Viet"}`,
+          });
+        }
+      }
     }
 
     return list;
-
-  }, [branchConfig, hotel]);
+  }, [hotel, roomList]);
 
 
 
@@ -1377,9 +1366,31 @@ export default function HotelDetails() {
 
   }).toString();
 
-  const bookingHref = `/hotels/${hotel.slug}?${bookingQuery}`;
+  const bookingHref = `/hotels/${hotel.id || hotel.slug}?${bookingQuery}`;
 
-  const similarHotels = hotels.filter((item) => item.slug !== hotel.slug).slice(0, 3);
+  const similarHotels = useMemo(
+    () =>
+      beHotels
+        .filter((b) => String(b.id) !== String(hotel.id))
+        .slice(0, 3)
+        .map((beH) => ({
+          id: beH.id,
+          slug: String(beH.id),
+          name: beH.name,
+          city: beH.address || beH.provinceName || "Việt Nam",
+          province: beH.provinceName || "Việt Nam",
+          region: "central" as const,
+          description: beH.address || "",
+          descriptionEn: beH.address || "",
+          price: beH.startingPrice ?? 0,
+          rating: 4.8,
+          image:
+            beH.imageUrls?.[0] ||
+            "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
+          amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+        })),
+    [beHotels, hotel.id],
+  );
 
 
 
@@ -1617,7 +1628,11 @@ export default function HotelDetails() {
 
             <div className="flex items-baseline gap-1">
 
-              <span className="text-xl font-extrabold text-primary">{hotel.rating}</span>
+              <span className="text-xl font-extrabold text-primary">
+                {reviewSummary?.totalReviews
+                  ? reviewSummary.averageRating.toFixed(1)
+                  : "5.0"}
+              </span>
 
               <span className="text-xs font-medium text-muted-foreground">/ 5</span>
 
@@ -1625,7 +1640,13 @@ export default function HotelDetails() {
 
             <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
 
-              {isEn ? "Exceptional" : "Tuyệt hảo (98% hài lòng)"}
+              {reviewSummary?.totalReviews
+                ? isEn
+                  ? `${reviewSummary.totalReviews} verified reviews`
+                  : `${reviewSummary.totalReviews} đánh giá xác thực`
+                : isEn
+                  ? "Verified Branch"
+                  : "Chi nhánh xác thực"}
 
             </span>
 
@@ -3511,17 +3532,19 @@ export default function HotelDetails() {
 
 
 
-        <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-
-          {similarHotels.map((item) => (
-
-            <HotelCard hotel={item} key={item.slug} />
-
-          ))}
-
-        </div>
-
-
+        {similarHotels.length > 0 ? (
+          <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {similarHotels.map((item) => (
+              <HotelCard hotel={item} key={item.slug} />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-6 text-sm text-muted-foreground">
+            {isEn
+              ? "Currently displaying the active hotel branch in the system."
+              : "Hiện tại đây là chi nhánh khách sạn đang hoạt động trên hệ thống."}
+          </p>
+        )}
 
         <div className="mt-8 text-center">
 
@@ -3533,7 +3556,9 @@ export default function HotelDetails() {
 
           >
 
-            {isEn ? "Explore all 7 hotels" : "Xem toàn bộ 7 chi nhánh Sen Việt"}
+            {isEn
+              ? `Explore all ${beHotels.length || 1} hotel branches`
+              : `Xem danh sách chi nhánh (${beHotels.length || 1})`}
 
             <ArrowRight className="h-3.5 w-3.5" />
 

@@ -23,73 +23,55 @@ export default function Index() {
   const { data: hotels = [] } = useGetPublicHotelsQuery();
   const { data: provinces = [] } = useGetPublicProvincesQuery();
 
-  // Merge backend data with verified static hotels
+  // Map directly from backend hotels (100% real DB data)
   const effectiveHotels: Hotel[] = useMemo(() => {
     if (hotels && hotels.length > 0) {
-      return hotels.map((beH) => {
-        const found = staticHotels.find(
-          (s) => s.id === beH.id || s.name.toLowerCase().includes(beH.name.toLowerCase()),
-        );
-        if (found) {
-          return {
-            ...found,
-            name: beH.name || found.name,
-            city: beH.provinceName || found.city,
-            province: beH.provinceName || found.province,
-            description: beH.address || found.description,
-            price: beH.startingPrice && beH.startingPrice >= 1000 ? beH.startingPrice : found.price,
-            image: beH.imageUrls?.[0] || found.image,
-          };
-        }
-        return {
-          id: beH.id,
-          slug: String(beH.id),
-          name: beH.name,
-          city: beH.provinceName || "Việt Nam",
-          province: beH.provinceName || "Việt Nam",
-          region: "central" as const,
-          description: beH.address || "",
-          descriptionEn: beH.address || "",
-          price: beH.startingPrice && beH.startingPrice >= 1000 ? beH.startingPrice : 200000,
-          rating: 4.8,
-          image: beH.imageUrls?.[0] || "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
-          amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
-        };
-      });
+      return hotels.map((beH) => ({
+        id: beH.id,
+        slug: String(beH.id),
+        name: beH.name,
+        city: beH.address || beH.provinceName || "Việt Nam",
+        province: beH.provinceName || "Việt Nam",
+        region: "central" as const,
+        description: beH.address || "",
+        descriptionEn: beH.address || "",
+        price: beH.startingPrice ?? 0,
+        rating: 4.8,
+        image:
+          beH.imageUrls?.[0] ||
+          "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
+        amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+      }));
     }
-    return staticHotels;
+    return [];
   }, [hotels]);
 
-  // Group destinations by province dynamically
+  // Group destinations by province dynamically (only provinces that actually have hotels in DB)
   const provinceDestinations = useMemo(() => {
-    if (provinces && provinces.length > 0) {
-      return provinces.map((p) => {
-        const count = effectiveHotels.filter((h) =>
-          (h.province || "").toLowerCase().includes(p.name.toLowerCase()),
-        ).length;
-        const validBackendImg =
-          p.backgroundImageUrl && !p.backgroundImageUrl.includes("example.com")
-            ? p.backgroundImageUrl
-            : null;
-        return {
-          id: String(p.id),
-          name: p.name,
-          count: count > 0 ? count : 1,
-          image:
-            validBackendImg ||
-            PROVINCE_FALLBACKS[p.name] ||
-            "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=1200",
-        };
-      });
-    }
     const provMap = new Map<string, { count: number; image: string }>();
     effectiveHotels.forEach((h) => {
-      const p = h.province || "Việt Nam";
-      const existing = provMap.get(p);
+      const pName = (h.province || "").trim();
+      if (!pName) return;
+      const matchedProv = provinces.find(
+        (p) => p.name.toLowerCase() === pName.toLowerCase(),
+      );
+      const validBackendImg =
+        matchedProv?.backgroundImageUrl &&
+        !matchedProv.backgroundImageUrl.includes("example.com")
+          ? matchedProv.backgroundImageUrl
+          : null;
+      const existing = provMap.get(pName);
       if (existing) {
         existing.count += 1;
       } else {
-        provMap.set(p, { count: 1, image: h.image });
+        provMap.set(pName, {
+          count: 1,
+          image:
+            validBackendImg ||
+            h.image ||
+            PROVINCE_FALLBACKS[pName] ||
+            "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=1200",
+        });
       }
     });
     return Array.from(provMap.entries()).map(([name, data], idx) => ({
@@ -100,8 +82,8 @@ export default function Index() {
     }));
   }, [provinces, effectiveHotels]);
 
-  const hotelCountNumber = effectiveHotels.length || 6;
-  const provinceCountNumber = provinceDestinations.length || 6;
+  const hotelCountNumber = effectiveHotels.length;
+  const provinceCountNumber = provinceDestinations.length;
 
   const benefits = [
     { icon: Sparkles, title: t("ai.point1Title"), desc: t("ai.point1Desc") },
@@ -115,6 +97,7 @@ export default function Index() {
       <HeroCinematicSlider
         hotelCount={hotelCountNumber}
         provinceCount={provinceCountNumber}
+        hotels={effectiveHotels}
       />
 
       {/* 2. Quick Search Section */}

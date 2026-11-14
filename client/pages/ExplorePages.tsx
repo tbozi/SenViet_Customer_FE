@@ -251,7 +251,7 @@ export function Offers() {
           accent: accents[idx % accents.length],
         };
       })
-    : offers;
+    : [];
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");

@@ -96,63 +96,141 @@ export default function RoomAvailabilityCalendar({
         new Date(current.getFullYear(), current.getMonth() + amount, 1, 12),
     );
 
-  const selectDate = (date: CalendarDay, available: boolean) => {
-    if (!available) return;
-    const clicked = date.date;
-    const nextDay = addDaysStr(clicked, 1);
+  const [dragSelection, setDragSelection] = useState<{
+    startDate: string;
+    currentDate: string;
+  } | null>(null);
 
-    // Chưa có khoảng ngày hợp lệ -> chọn 1 đêm (nhận ngày clicked, trả ngày kế tiếp)
-    if (
-      !selectedStartDate ||
-      !selectedEndDate ||
-      selectedEndDate <= selectedStartDate
-    ) {
-      setRangeStart(clicked);
-      onSelectRange(clicked, nextDay);
-      return;
-    }
-
-    const isSelectedStayNight =
-      clicked >= selectedStartDate && clicked < selectedEndDate;
-
-    if (isSelectedStayNight) {
-      // Nếu chỉ đang chọn đúng 1 đêm và bấm lại vào chính đêm đó -> bỏ chọn
-      if (selectedEndDate === addDaysStr(selectedStartDate, 1)) {
-        setRangeStart("");
-        onSelectRange("", "");
-        return;
-      }
-      // Nếu bấm vào đêm đầu tiên -> bỏ đêm đầu tiên, giữ các đêm còn lại
-      if (clicked === selectedStartDate) {
-        const nextStart = addDaysStr(clicked, 1);
-        setRangeStart(nextStart);
-        onSelectRange(nextStart, selectedEndDate);
-        return;
-      }
-      // Nếu bấm vào đêm cuối cùng (hoặc đêm ở giữa) -> thu gọn ngày trả về đúng ngày bấm
-      setRangeStart(selectedStartDate);
-      onSelectRange(selectedStartDate, clicked);
-      return;
-    }
-
-    // Nếu bấm vào ngày trước ngày nhận phòng hiện tại -> đặt lại thành 1 đêm tại ngày mới
-    if (clicked < selectedStartDate) {
-      setRangeStart(clicked);
-      onSelectRange(clicked, nextDay);
-      return;
-    }
-
-    // Nếu bấm vào ngày từ selectedEndDate trở đi -> nối tiếp chuỗi đêm lưu trú đến hết đêm vừa bấm
-    setRangeStart(selectedStartDate);
-    onSelectRange(selectedStartDate, nextDay);
+  const isDateAvailable = (dateStr: string) => {
+    if (dateStr < today) return false;
+    return getDailyRoomAvailability(
+      roomIndex,
+      dateStr,
+      requestedRooms,
+      availableCount,
+      { id: roomId, codes: roomCodes },
+    ).available;
   };
 
+  const isRangeAvailable = (start: string, endExclusive: string) => {
+    if (!start || !endExclusive || start >= endExclusive) return false;
+    for (let d = start; d < endExclusive; d = addDaysStr(d, 1)) {
+      if (!isDateAvailable(d)) return false;
+    }
+    return true;
+  };
+
+  const applySingleClickDate = (clickedDate: string) => {
+    if (!isDateAvailable(clickedDate)) return;
+    const hasCurrentRange = Boolean(
+      selectedStartDate &&
+        selectedEndDate &&
+        selectedStartDate < selectedEndDate,
+    );
+
+    if (hasCurrentRange) {
+      const checkInDate = selectedStartDate;
+      const lastNightDate = addDaysStr(selectedEndDate, -1);
+
+      // 1. Giống hệt Web Nhân Viên: Bấm vào ngày liền kề trước ngày nhận hoặc đúng ngày trả -> nối thêm 1 đêm
+      if (
+        clickedDate === addDaysStr(checkInDate, -1) ||
+        clickedDate === selectedEndDate
+      ) {
+        const newCheckIn =
+          clickedDate < checkInDate ? clickedDate : checkInDate;
+        const newCheckOut =
+          clickedDate > lastNightDate
+            ? addDaysStr(clickedDate, 1)
+            : selectedEndDate;
+        if (isRangeAvailable(newCheckIn, newCheckOut)) {
+          onSelectRange(newCheckIn, newCheckOut);
+          return;
+        }
+      }
+
+      // 2. Giống hệt Web Nhân Viên: Bấm lại vào đêm đầu tiên hoặc đêm cuối cùng -> bỏ chọn đêm đó (nếu chỉ có 1 đêm thì bỏ chọn hết)
+      if (clickedDate === checkInDate || clickedDate === lastNightDate) {
+        const isSingleNight = checkInDate === lastNightDate;
+        if (isSingleNight) {
+          onSelectRange("", "");
+          return;
+        }
+        let newCheckIn = checkInDate;
+        let newCheckOut = selectedEndDate;
+        if (clickedDate === checkInDate) {
+          newCheckIn = addDaysStr(checkInDate, 1);
+        } else if (clickedDate === lastNightDate) {
+          newCheckOut = lastNightDate;
+        }
+        onSelectRange(newCheckIn, newCheckOut);
+        return;
+      }
+    }
+
+    // 3. Giống hệt Web Nhân Viên: Bấm vào một ngày khác không liền kề -> chọn mới 1 đêm tại ngày đó
+    const nextDay = addDaysStr(clickedDate, 1);
+    if (isRangeAvailable(clickedDate, nextDay)) {
+      onSelectRange(clickedDate, nextDay);
+    }
+  };
+
+  const handlePointerDown = (dateStr: string, available: boolean) => {
+    if (!available) return;
+    setDragSelection({ startDate: dateStr, currentDate: dateStr });
+  };
+
+  const handlePointerEnter = (dateStr: string, available: boolean) => {
+    if (!dragSelection || !available) return;
+    setDragSelection((prev) =>
+      prev ? { ...prev, currentDate: dateStr } : null,
+    );
+  };
+
+  const commitDragSelection = () => {
+    if (!dragSelection) return;
+    const { startDate, currentDate } = dragSelection;
+    setDragSelection(null);
+
+    if (startDate === currentDate) {
+      applySingleClickDate(startDate);
+      return;
+    }
+
+    const minDate = startDate < currentDate ? startDate : currentDate;
+    const maxDate = startDate > currentDate ? startDate : currentDate;
+    const newCheckOut = addDaysStr(maxDate, 1);
+    if (isRangeAvailable(minDate, newCheckOut)) {
+      onSelectRange(minDate, newCheckOut);
+    }
+  };
+
+  useEffect(() => {
+    if (!dragSelection) return;
+    const onGlobalPointerUp = () => commitDragSelection();
+    window.addEventListener("pointerup", onGlobalPointerUp);
+    return () => window.removeEventListener("pointerup", onGlobalPointerUp);
+  });
+
+  const dragMin =
+    dragSelection && dragSelection.startDate !== dragSelection.currentDate
+      ? dragSelection.startDate < dragSelection.currentDate
+        ? dragSelection.startDate
+        : dragSelection.currentDate
+      : "";
+  const dragMax =
+    dragSelection && dragSelection.startDate !== dragSelection.currentDate
+      ? dragSelection.startDate > dragSelection.currentDate
+        ? dragSelection.startDate
+        : dragSelection.currentDate
+      : "";
+
   return (
-    <div className="mt-4 w-full rounded-xl border border-primary/15 bg-primary/[.03] p-3 sm:p-5">
+    <div className="mt-4 w-full rounded-xl border border-primary/15 bg-primary/[.03] p-3 sm:p-5 select-none">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-primary sm:text-sm">
           <CalendarDays className="h-4 w-4" />
-          <span>Chọn các đêm lưu trú (bấm từng ngày để chọn nối tiếp hoặc bấm lại để bỏ chọn)</span>
+          <span>Chọn đêm lưu trú (kéo thả hoặc bấm ngày liền kề để nối đêm, bấm lại đầu/cuối để bỏ chọn)</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -197,15 +275,25 @@ export default function RoomAvailabilityCalendar({
           const price = getDailyRoomPrice(basePrice, roomIndex, date);
           const past = date < today;
           const available = availability.available && !past;
-          const isStayNight = Boolean(
-            selectedStartDate &&
-              selectedEndDate &&
-              date >= selectedStartDate &&
-              date < selectedEndDate,
+          const isDraggingOver = Boolean(
+            dragMin && dragMax && date >= dragMin && date <= dragMax,
           );
-          const start = isStayNight && date === selectedStartDate;
+          const isStayNight =
+            isDraggingOver ||
+            Boolean(
+              selectedStartDate &&
+                selectedEndDate &&
+                date >= selectedStartDate &&
+                date < selectedEndDate,
+            );
+          const start =
+            isStayNight &&
+            (isDraggingOver ? date === dragMin : date === selectedStartDate);
           const end =
-            isStayNight && addDaysStr(date, 1) === selectedEndDate;
+            isStayNight &&
+            (isDraggingOver
+              ? date === dragMax
+              : addDaysStr(date, 1) === selectedEndDate);
           const inRange = isStayNight && !start && !end;
           const unavailableLabel = past ? "Đã qua" : "Hết phòng";
           const monthLabel = `T${parseDate(date).getMonth() + 1}`;
@@ -214,7 +302,14 @@ export default function RoomAvailabilityCalendar({
             <button
               type="button"
               key={date}
-              onClick={() => selectDate(day, available)}
+              onPointerDown={() => handlePointerDown(date, available)}
+              onPointerEnter={() => handlePointerEnter(date, available)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  applySingleClickDate(date);
+                }
+              }}
               disabled={!available}
               aria-label={`${date}${available ? " - còn phòng" : ` - ${unavailableLabel.toLowerCase()}`}`}
               className={`min-h-20 rounded-lg border p-1.5 text-left transition sm:min-h-24 sm:p-2 ${
