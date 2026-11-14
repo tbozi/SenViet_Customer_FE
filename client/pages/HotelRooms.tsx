@@ -1223,7 +1223,13 @@ export default function HotelRooms() {
 
           }
 
-        : { ...existing, checkOut: value };
+        : {
+            ...existing,
+            checkOut:
+              value && existing.checkIn && value <= existing.checkIn
+                ? nextDate(existing.checkIn)
+                : value,
+          };
 
     setRoomStays((current) => ({
 
@@ -1570,31 +1576,31 @@ export default function HotelRooms() {
 
 
   const goCheckout = () => {
+    const failWithToast = (msg: string) => {
+      setError(msg);
+      toast({
+        title: isEn ? "Incomplete Room Selection" : "Chưa đủ thông tin đặt phòng",
+        description: msg,
+        variant: "destructive",
+      });
+    };
+
     if (!selections.length)
-      return setError(isEn ? "Please select at least one room type." : "Vui lòng chọn ít nhất một loại phòng.");
+      return failWithToast(isEn ? "Please select at least one room type." : "Vui lòng chọn ít nhất một loại phòng.");
 
     if (!allGuestsComplete)
-
-      return setError("Vui lòng hoàn tất số lượng khách cho từng phòng.");
+      return failWithToast("Vui lòng hoàn tất số lượng khách cho từng phòng.");
 
     if (
-
       selections.some((selection) =>
-
         (selection.stays || []).some((stay) => stay.nights < 1),
-
       )
-
     )
-
-      return setError("Ngày trả phòng phải sau ngày nhận phòng ở từng phòng.");
+      return failWithToast("Vui lòng chọn ít nhất 1 đêm lưu trú (ngày trả phòng phải sau ngày nhận phòng).");
 
     if (selectedAvailabilities.some((availability) => !availability.available))
-
-      return setError(
-
+      return failWithToast(
         "Một phòng đã hết phòng trong khoảng ngày bạn chọn. Vui lòng chọn ngày khác.",
-
       );
 
     setError("");
@@ -2421,7 +2427,7 @@ export default function HotelRooms() {
 
                                     type="date"
 
-                                    min={stayDates.checkIn}
+                                    min={stayDates.checkIn ? nextDate(stayDates.checkIn) : dateValue(today)}
 
                                     value={stayDates.checkOut}
 

@@ -30,6 +30,11 @@ type CalendarDay = {
 
 const formatDate = (date: Date) => toLocalDateStr(date);
 const parseDate = (date: string) => new Date(`${date}T12:00:00`);
+const addDaysStr = (dateStr: string, days: number) => {
+  const d = parseDate(dateStr);
+  d.setDate(d.getDate() + days);
+  return formatDate(d);
+};
 const today = formatDate(new Date());
 const weekdays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 const formatMonth = (date: Date) =>
@@ -93,18 +98,53 @@ export default function RoomAvailabilityCalendar({
 
   const selectDate = (date: CalendarDay, available: boolean) => {
     if (!available) return;
-    if (!rangeStart || (selectedStartDate && selectedEndDate)) {
-      setRangeStart(date.date);
-      onSelectRange(date.date, "");
+    const clicked = date.date;
+    const nextDay = addDaysStr(clicked, 1);
+
+    // Chưa có khoảng ngày hợp lệ -> chọn 1 đêm (nhận ngày clicked, trả ngày kế tiếp)
+    if (
+      !selectedStartDate ||
+      !selectedEndDate ||
+      selectedEndDate <= selectedStartDate
+    ) {
+      setRangeStart(clicked);
+      onSelectRange(clicked, nextDay);
       return;
     }
-    if (date.date < rangeStart) {
-      setRangeStart(date.date);
-      onSelectRange(date.date, "");
+
+    const isSelectedStayNight =
+      clicked >= selectedStartDate && clicked < selectedEndDate;
+
+    if (isSelectedStayNight) {
+      // Nếu chỉ đang chọn đúng 1 đêm và bấm lại vào chính đêm đó -> bỏ chọn
+      if (selectedEndDate === addDaysStr(selectedStartDate, 1)) {
+        setRangeStart("");
+        onSelectRange("", "");
+        return;
+      }
+      // Nếu bấm vào đêm đầu tiên -> bỏ đêm đầu tiên, giữ các đêm còn lại
+      if (clicked === selectedStartDate) {
+        const nextStart = addDaysStr(clicked, 1);
+        setRangeStart(nextStart);
+        onSelectRange(nextStart, selectedEndDate);
+        return;
+      }
+      // Nếu bấm vào đêm cuối cùng (hoặc đêm ở giữa) -> thu gọn ngày trả về đúng ngày bấm
+      setRangeStart(selectedStartDate);
+      onSelectRange(selectedStartDate, clicked);
       return;
     }
-    setRangeStart("");
-    onSelectRange(rangeStart, date.date);
+
+    // Nếu bấm vào ngày trước ngày nhận phòng hiện tại -> đặt lại thành 1 đêm tại ngày mới
+    if (clicked < selectedStartDate) {
+      setRangeStart(clicked);
+      onSelectRange(clicked, nextDay);
+      return;
+    }
+
+    // Nếu bấm vào ngày từ selectedEndDate trở đi -> nối tiếp chuỗi đêm lưu trú đến hết đêm vừa bấm
+    setRangeStart(selectedStartDate);
+    onSelectRange(selectedStartDate, nextDay);
   };
 
   return (
@@ -112,7 +152,7 @@ export default function RoomAvailabilityCalendar({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs font-semibold text-primary sm:text-sm">
           <CalendarDays className="h-4 w-4" />
-          <span>Chọn khoảng ngày lưu trú</span>
+          <span>Chọn các đêm lưu trú (bấm từng ngày để chọn nối tiếp hoặc bấm lại để bỏ chọn)</span>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -157,14 +197,16 @@ export default function RoomAvailabilityCalendar({
           const price = getDailyRoomPrice(basePrice, roomIndex, date);
           const past = date < today;
           const available = availability.available && !past;
-          const start = date === selectedStartDate;
-          const end = date === selectedEndDate;
-          const inRange = Boolean(
+          const isStayNight = Boolean(
             selectedStartDate &&
               selectedEndDate &&
-              date > selectedStartDate &&
+              date >= selectedStartDate &&
               date < selectedEndDate,
           );
+          const start = isStayNight && date === selectedStartDate;
+          const end =
+            isStayNight && addDaysStr(date, 1) === selectedEndDate;
+          const inRange = isStayNight && !start && !end;
           const unavailableLabel = past ? "Đã qua" : "Hết phòng";
           const monthLabel = `T${parseDate(date).getMonth() + 1}`;
 

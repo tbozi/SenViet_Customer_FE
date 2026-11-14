@@ -26,7 +26,11 @@ export default function Hotels() {
         if (found) {
           return {
             ...found,
-            price: beH.startingPrice || found.price,
+            name: beH.name || found.name,
+            city: beH.provinceName || found.city,
+            province: beH.provinceName || found.province,
+            description: beH.address || found.description,
+            price: beH.startingPrice && beH.startingPrice >= 1000 ? beH.startingPrice : found.price,
             image: beH.imageUrls?.[0] || found.image,
           };
         }
@@ -39,7 +43,7 @@ export default function Hotels() {
           region: "central" as const,
           description: beH.address || "",
           descriptionEn: beH.address || "",
-          price: beH.startingPrice || 1200000,
+          price: beH.startingPrice && beH.startingPrice >= 1000 ? beH.startingPrice : 200000,
           rating: 4.8,
           image: beH.imageUrls?.[0] || "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
           amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],

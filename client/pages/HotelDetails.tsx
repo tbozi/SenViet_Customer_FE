@@ -85,6 +85,7 @@ import { rooms as fallbackRooms, type RoomType } from "@/data/rooms";
 import { fetchRoomsByHotel } from "@/services/roomApi";
 
 import { fetchHotelReviews, type HotelReviewSummary } from "@/services/reviewApi";
+import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 
 import { useLanguage } from "@/lib/i18n";
 import {
@@ -1058,7 +1059,56 @@ export default function HotelDetails() {
 
   const isEn = language === "en";
 
-  const hotel = hotels.find((item) => item.slug === slug || String(item.id) === String(slug));
+  const { data: beHotels = [] } = useGetPublicHotelsQuery();
+
+  const hotel = useMemo(() => {
+    const staticMatch = hotels.find(
+      (item) => item.slug === slug || String(item.id) === String(slug),
+    );
+    const beMatch = beHotels.find(
+      (b) =>
+        String(b.id) === String(slug) ||
+        (staticMatch && b.id === staticMatch.id),
+    );
+    if (staticMatch && beMatch) {
+      return {
+        ...staticMatch,
+        name: beMatch.name || staticMatch.name,
+        city: beMatch.provinceName || staticMatch.city,
+        province: beMatch.provinceName || staticMatch.province,
+        description: beMatch.address || staticMatch.description,
+        price:
+          beMatch.startingPrice && beMatch.startingPrice >= 1000
+            ? beMatch.startingPrice
+            : staticMatch.price,
+        image: beMatch.imageUrls?.[0] || staticMatch.image,
+        imageUrls: beMatch.imageUrls || [],
+      };
+    }
+    if (beMatch) {
+      return {
+        id: beMatch.id,
+        slug: String(beMatch.id),
+        name: beMatch.name,
+        city: beMatch.provinceName || "Việt Nam",
+        province: beMatch.provinceName || "Việt Nam",
+        region: "central" as const,
+        description: beMatch.address || "",
+        descriptionEn: beMatch.address || "",
+        price:
+          beMatch.startingPrice && beMatch.startingPrice >= 1000
+            ? beMatch.startingPrice
+            : 200000,
+        rating: 4.8,
+        image:
+          beMatch.imageUrls?.[0] ||
+          "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=1200",
+        imageUrls: beMatch.imageUrls || [],
+        amenities: ["WiFi tốc độ cao", "Phục vụ 24/7", "Bữa sáng tiêu chuẩn"],
+      };
+    }
+    return staticMatch;
+  }, [slug, beHotels]);
 
 
 
@@ -1169,6 +1219,19 @@ export default function HotelDetails() {
   const allGalleryItems = useMemo(() => {
 
     const list = [...branchConfig.curatedGallery];
+
+    const extraUrls: string[] = (hotel as any)?.imageUrls || [];
+    for (let i = extraUrls.length - 1; i >= 0; i--) {
+      const url = extraUrls[i];
+      if (url && !list.some((item) => item.url === url)) {
+        list.unshift({
+          url,
+          captionVi: `${hotel?.name || "Sen Việt"} - Ảnh ${i + 1}`,
+          captionEn: `${hotel?.name || "Sen Viet"} - Photo ${i + 1}`,
+          category: "architecture",
+        });
+      }
+    }
 
     if (hotel?.image && !list.some((item) => item.url === hotel.image)) {
 

@@ -63,7 +63,7 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
             </span>
             <div className="font-semibold text-primary tabular-nums text-lg">
               {formatVnd(hotel.price)}
-              <span className="text-xs font-normal text-muted-foreground"> /{t("hotels.night")}</span>
+              <span className="text-xs font-normal text-muted-foreground"> {t("hotels.night")}</span>
             </div>
           </div>
           <Link

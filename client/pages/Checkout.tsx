@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import {
   Banknote,
+  ChevronLeft,
   Clock,
   CreditCard,
   LockKeyhole,
@@ -782,6 +783,14 @@ export default function Checkout() {
   return (
     <main className="container py-12">
       <div className="mx-auto max-w-5xl">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          {isEn ? "Back to previous step" : "Quay lại bước trước"}
+        </button>
         <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
           Sen Việt checkout
         </p>
@@ -931,12 +940,11 @@ export default function Checkout() {
               <h2 className="font-display text-2xl font-bold text-primary">
                 {isEn ? "Payment Method" : "Phương thức thanh toán"}
               </h2>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {(
                   [
-                    ["qr", isEn ? "Bank QR Code" : "Quét mã ngân hàng", QrCode],
+                    ["qr", isEn ? "Bank QR Code (PayOS)" : "Quét mã ngân hàng (PayOS)", QrCode],
                     ["cash", isEn ? "Pay at Front Desk" : "Tiền mặt tại lễ tân", Banknote],
-                    ["vnpay", isEn ? "VNPay / E-wallet" : "VNPay / ví điện tử", CreditCard],
                   ] as const
                 ).map(([value, label, Icon]) => (
                   <button
@@ -954,8 +962,8 @@ export default function Checkout() {
                 <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
                   <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
                   <div>
-                    <span className="font-semibold text-amber-950">{isEn ? "Demo Mode:" : "Chế độ Thử nghiệm (Demo):"}</span>{" "}
-                    {isEn ? "Reservation will be held in 'Pending payment at front desk' status." : 'Đơn đặt phòng sẽ được giữ chỗ ở trạng thái "Chờ thanh toán tại quầy".'}
+                    <span className="font-semibold text-amber-950">{isEn ? "Note:" : "Lưu ý:"}</span>{" "}
+                    {isEn ? "Your reservation will be held in 'Pending payment' status until confirmed at the front desk." : 'Đơn đặt phòng sẽ được giữ chỗ và lễ tân sẽ xác nhận thanh toán trực tiếp tại quầy khi quý khách nhận phòng.'}
                   </div>
                 </div>
               )}
@@ -1044,7 +1052,7 @@ export default function Checkout() {
             selectedPromotionCode={promo}
             onSelectPromotion={setPromo}
             cta={
-              <>
+              <div className="space-y-2.5">
                 <Button
                   type="submit"
                   disabled={paymentState === "processing" || remainingSeconds <= 0}
@@ -1054,10 +1062,19 @@ export default function Checkout() {
                     ? (isEn ? "Processing..." : "Đang tạo đơn...")
                     : (isEn ? "Confirm Booking" : "Xác nhận đặt phòng")}
                 </Button>
-                <p className="mt-3 text-center text-xs text-muted-foreground">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(-1)}
+                  className="w-full rounded-xl gap-1.5"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  {isEn ? "Back to previous step" : "Quay lại bước trước"}
+                </Button>
+                <p className="mt-2 text-center text-xs text-muted-foreground">
                   {isEn ? "Check-in 14:00 · Check-out 12:00 · Room held for 5 minutes." : "Nhận phòng từ 14:00 · Trả phòng trước 12:00 · Giữ phòng 5 phút."}
                 </p>
-              </>
+              </div>
             }
           />
         </form>

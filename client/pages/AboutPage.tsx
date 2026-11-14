@@ -391,7 +391,7 @@ export default function AboutPage() {
                   {isEn ? "Book Your Room" : "Đặt phòng ngay"}
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="rounded-full border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10">
+              <Button asChild size="lg" variant="outline" className="rounded-full border-white/70 bg-transparent px-8 font-semibold text-white hover:bg-white hover:text-primary">
                 <Link to="/contact">
                   {isEn ? "Contact Us" : "Liên hệ hợp tác"}
                 </Link>

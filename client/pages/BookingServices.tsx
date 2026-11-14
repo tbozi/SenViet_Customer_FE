@@ -134,13 +134,19 @@ export default function BookingServices() {
   >(serviceTabs[0][0]);
 
   const { data: backendServices } = useGetServicesQuery({
-    hotelId: hotel?.id ?? 0,
     activeOnly: true,
-  }, { skip: !hotel });
+  });
 
   const availableServices: ServiceCatalogItem[] = useMemo(() => {
     if (backendServices && backendServices.length > 0) {
-      return backendServices.map((bs) => ({
+      const branchFiltered = hotel?.id
+        ? backendServices.filter(
+            (bs) => !bs.hotelId || Number(bs.hotelId) === Number(hotel.id),
+          )
+        : backendServices;
+      const sourceList =
+        branchFiltered.length > 0 ? branchFiltered : backendServices;
+      return sourceList.map((bs) => ({
         id: String(bs.id),
         category:
           bs.category?.toLowerCase().includes("nhà hàng") ||
@@ -162,7 +168,7 @@ export default function BookingServices() {
       }));
     }
     return services;
-  }, [backendServices]);
+  }, [backendServices, hotel?.id]);
 
   const concreteStays = useMemo<ConcreteStay[]>(
     () =>
@@ -617,14 +623,25 @@ export default function BookingServices() {
             departureTime={departureTime}
             onRemoveRoom={handleRemoveRoom}
             cta={
-              <Button
-                type="button"
-                onClick={continueToCheckout}
-                className="w-full"
-                disabled={!selections.length}
-              >
-                Tiếp tục đến thanh toán
-              </Button>
+              <div className="space-y-2.5">
+                <Button
+                  type="button"
+                  onClick={continueToCheckout}
+                  className="w-full"
+                  disabled={!selections.length}
+                >
+                  Tiếp tục đến thanh toán
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(`/hotels/${hotel.id}?${params.toString()}`)}
+                  className="w-full gap-1.5"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Quay lại chọn phòng
+                </Button>
+              </div>
             }
           />
         </div>

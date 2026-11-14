@@ -154,11 +154,12 @@ export function updateBooking(id: string, patch: Partial<Booking>) {
 }
 
 export function calculateNights(checkIn: string, checkOut: string) {
-  return Math.round(
-    (new Date(`${checkOut}T12:00:00`).getTime() -
-      new Date(`${checkIn}T14:00:00`).getTime()) /
-      86400000,
-  );
+  if (!checkIn || !checkOut) return 0;
+  const start = new Date(`${checkIn}T14:00:00`).getTime();
+  const end = new Date(`${checkOut}T12:00:00`).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;
+  const nights = Math.round((end - start) / 86400000);
+  return nights > 0 ? nights : 0;
 }
 
 const roomInventory = [6, 6, 5, 4];
@@ -277,18 +278,21 @@ export function getCancellationSchedule(checkIn: string) {
 }
 
 export function getCancellationScheduleText(checkIn: string) {
+  if (!checkIn) {
+    return "Chính sách hoàn hủy: Hủy trước giờ nhận phòng từ 72 giờ (3 ngày) hoàn 100%; hủy từ 24 đến dưới 72 giờ hoàn 50%; hủy trong vòng 24 giờ trước nhận phòng không hoàn tiền.";
+  }
   const schedule = getCancellationSchedule(checkIn);
-  return `Hoàn 100% nếu hủy trước từ 72 giờ (3 ngày, đến hết ngày ${schedule.fullRefundUntil}); hoàn 50% từ 24 đến 72 giờ (${schedule.halfRefundFrom} đến ${schedule.halfRefundUntil}); dưới 24 giờ (${schedule.noRefundFrom}) không hoàn tiền.`;
+  return `Chính sách hoàn hủy: Hủy trước ngày ${schedule.fullRefundUntil} (từ 72 giờ trước nhận phòng) được hoàn 100%; hủy từ ${schedule.halfRefundFrom} đến ${schedule.halfRefundUntil} (24–72 giờ) hoàn 50%; hủy từ ngày ${schedule.noRefundFrom} (dưới 24 giờ) không hoàn tiền.`;
 }
 
 export function getCancellationNotice(checkIn: string, now = new Date(), isEn = false) {
   if (!checkIn) {
     return {
       type: "free" as const,
-      text: isEn ? "Free cancellation 72+ hours prior to check-in" : "Miễn phí hủy trước giờ nhận phòng 72 giờ (3 ngày)",
+      text: isEn ? "Free 100% cancellation up to 72 hours before check-in" : "Miễn phí hủy 100% khi báo trước từ 72 giờ (3 ngày)",
       badgeClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/60",
       statusText: isEn ? "100% Refund" : "Hoàn 100%",
-      detail: isEn ? "Cancel 72+ hours before check-in" : "Hủy trước 72 giờ nhận phòng",
+      detail: isEn ? "Cancel 72+ hours before check-in" : "Hủy trước giờ nhận phòng từ 72 giờ",
     };
   }
 
@@ -303,10 +307,10 @@ export function getCancellationNotice(checkIn: string, now = new Date(), isEn = 
     const format = (date: Date) => date.toLocaleDateString(isEn ? "en-US" : "vi-VN");
     return {
       type: "free" as const,
-      text: isEn ? `Free cancellation before ${format(fullRefundUntil)} (72h prior)` : `Miễn phí hủy trước ngày ${format(fullRefundUntil)} (trước 72h)`,
+      text: isEn ? `100% free cancellation until ${format(fullRefundUntil)} (72h prior to check-in)` : `Miễn phí hủy 100% đến hết ngày ${format(fullRefundUntil)} (trước 72 giờ nhận phòng)`,
       badgeClass: "text-emerald-700 bg-emerald-50/80 border-emerald-200/60",
       statusText: isEn ? "100% Refund" : "Hoàn 100%",
-      detail: isEn ? "Cancel 72+ hours before check-in" : "Hủy trước 72 giờ nhận phòng",
+      detail: isEn ? "Cancel 72+ hours before check-in" : "Hủy trước giờ nhận phòng từ 72 giờ",
     };
   }
 
@@ -314,20 +318,20 @@ export function getCancellationNotice(checkIn: string, now = new Date(), isEn = 
   if (diffHours >= 24) {
     return {
       type: "partial" as const,
-      text: isEn ? "Cancel 24-72 hours before check-in: 50% refund" : "Hủy từ 24 đến 72 giờ trước nhận phòng: hoàn 50%",
+      text: isEn ? "Cancellation 24–72h before check-in: 50% refund applies" : "Hủy phòng hiện tại (còn 24–72 giờ trước nhận phòng): hoàn 50% phí đặt phòng",
       badgeClass: "text-amber-700 bg-amber-50/80 border-amber-200/60",
       statusText: isEn ? "50% Refund" : "Hoàn 50%",
-      detail: isEn ? "Free 100% cancellation deadline passed (under 72h)" : "Đã quá hạn miễn phí 100% (dưới 72 giờ)",
+      detail: isEn ? "Free 100% cancellation window passed (under 72h)" : "Còn từ 24 đến dưới 72 giờ trước giờ nhận phòng",
     };
   }
 
   // TH3: Sát giờ nhận phòng (dưới 24h)
   return {
     type: "non-refundable" as const,
-    text: isEn ? "Non-refundable (under 24 hours)" : "Không hoàn tiền khi hủy (dưới 24 giờ)",
+    text: isEn ? "Non-refundable if cancelled (within 24h of check-in)" : "Đặt phòng sát ngày (dưới 24 giờ trước nhận phòng): không hoàn tiền nếu hủy",
     badgeClass: "text-rose-700 bg-rose-50/80 border-rose-200/60",
     statusText: isEn ? "Non-refundable" : "Không hoàn tiền",
-    detail: isEn ? "Cancel under 24 hours before check-in: 0% refund" : "Hủy dưới 24 giờ trước nhận phòng: hoàn 0%",
+    detail: isEn ? "Cancel under 24 hours before check-in: 0% refund" : "Hủy trong vòng 24 giờ trước nhận phòng: hoàn 0%",
   };
 }
 

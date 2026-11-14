@@ -133,12 +133,17 @@ export default function BookingHistory() {
   const [success, setSuccess] = useState("");
   const [cancelCustomerBooking, { isLoading: isCancelling }] =
     useCancelCustomerBookingMutation();
-  const { data: serverBookings } = useGetMyBookingsQuery(undefined, {
+  const { data: serverBookings, refetch: refetchMyBookings } = useGetMyBookingsQuery(undefined, {
     skip: !user,
+    pollingInterval: 5000,
+    refetchOnMountOrArgChange: true,
+    refetchOnFocus: true,
   });
 
   useEffect(() => {
-    const local = getBookings().filter((item) => user ? item.userEmail === user.email : (!item.userEmail || item.userEmail === 'guest'));
+    const local = getBookings()
+      .filter((item) => user ? item.userEmail === user.email : (!item.userEmail || item.userEmail === 'guest'))
+      .map((item) => ({ ...item, vat: 0 }));
     if (!serverBookings || !Array.isArray(serverBookings) || serverBookings.length === 0) {
       setBookings(local);
       return;
@@ -229,6 +234,7 @@ export default function BookingHistory() {
         map.set(String(sb.id), {
           ...existing,
           status: sb.status,
+          vat: 0,
           roomPrice: correctedRoomTotal,
           roomTotal: correctedRoomTotal,
           serviceFee: correctedServiceFee,
@@ -253,6 +259,62 @@ export default function BookingHistory() {
       localStorage.setItem('senviet_bookings', JSON.stringify(merged));
     } catch {}
   }, [user?.email, user?.name, serverBookings]);
+
+  // Đồng bộ tự động trạng thái thanh toán/xác nhận từ lễ tân cho các đơn đang pending_payment
+  useEffect(() => {
+    const pendingList = bookings.filter((b) => b.status === "pending_payment");
+    if (pendingList.length === 0) return;
+
+    let cancelled = false;
+    const checkPendingOrders = async () => {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8081";
+      let anyUpdated = false;
+      for (const b of pendingList) {
+        try {
+          const res = await fetch(`${apiUrl}/payment/check-order-status/${encodeURIComponent(b.id)}`);
+          if (!res.ok) continue;
+          const json = await res.json();
+          const data = json?.data || json;
+          const bStatus = String(data?.bookingStatus || "").toUpperCase();
+          if (
+            data?.isPaid === true ||
+            bStatus === "CONFIRMED" ||
+            bStatus === "CHECKED_IN" ||
+            bStatus === "COMPLETED"
+          ) {
+            if (!cancelled) {
+              updateBooking(b.id, { status: "confirmed" });
+              anyUpdated = true;
+            }
+          } else if (bStatus === "CANCELLED" || bStatus === "REFUNDED") {
+            if (!cancelled) {
+              updateBooking(b.id, { status: "cancelled" });
+              anyUpdated = true;
+            }
+          }
+        } catch {
+          // ignore network errors during background poll
+        }
+      }
+      if (anyUpdated && !cancelled) {
+        setBookings(
+          getBookings()
+            .filter((item) =>
+              user ? item.userEmail === user.email : !item.userEmail || item.userEmail === "guest",
+            )
+            .map((item) => ({ ...item, vat: 0 })),
+        );
+        refetchMyBookings();
+      }
+    };
+
+    checkPendingOrders();
+    const pollId = window.setInterval(checkPendingOrders, 5000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(pollId);
+    };
+  }, [bookings, user, refetchMyBookings]);
 
   useEffect(() => {
     const createdId = params.get("created");
@@ -766,7 +828,7 @@ export default function BookingHistory() {
                           </strong>
                         </div>
                       ))}
-                    {booking.vat > 0 && (
+                    {false && booking.vat > 0 && (
                       <div className="flex justify-between gap-3 border-t border-border/70 pt-2">
                         <span>{isVi ? "Thuế VAT (8%)" : "VAT (8%)"}</span>
                         <strong>
@@ -1555,7 +1617,7 @@ export default function BookingHistory() {
                     </div>
                   )}
 
-                  {booking.vat > 0 && (
+                  {false && booking.vat > 0 && (
                     <div className="flex justify-between text-slate-600">
                       <span>Thuế giá trị gia tăng (VAT 8%):</span>
                       <strong className="text-slate-900">{formatVnd(booking.vat)}</strong>
