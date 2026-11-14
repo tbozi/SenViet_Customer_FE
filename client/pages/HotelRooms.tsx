@@ -366,6 +366,10 @@ function RoomDetailsModal({
 
             <div className="relative flex min-h-[280px] flex-1 items-center justify-center">
 
+              <span className="absolute left-3 top-3 z-10 rounded-full bg-slate-950/75 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
+                {imageIndex + 1} / {images.length} ảnh
+              </span>
+
               <img loading="lazy" decoding="async"
 
                 src={images[imageIndex]}
@@ -931,6 +935,7 @@ export default function HotelRooms() {
 
   }, [routeHotelId, defaultDates.checkIn, defaultDates.checkOut, isEn, searchParams]);
   const [roomStays, setRoomStays] = useState<Record<string, StayDates[]>>({});
+  const [roomPhotoIndices, setRoomPhotoIndices] = useState<Record<string, number>>({});
   const [arrivalTime, setArrivalTime] = useState("14:00");
 
   const [departureTime, setDepartureTime] = useState("12:00");
@@ -1666,15 +1671,49 @@ export default function HotelRooms() {
 
         <div className="grid md:grid-cols-[1fr_1.2fr]">
 
-          <div className="relative flex min-h-64 items-center justify-center overflow-hidden bg-secondary text-xl font-semibold text-primary">
-            {hotel?.imageUrls?.[0] ? (
-              <img
-                src={hotel.imageUrls[0]}
-                alt={hotel.name}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
+          <div className="relative min-h-64 overflow-hidden bg-secondary text-xl font-semibold text-primary">
+            {hotel?.imageUrls && hotel.imageUrls.length > 1 ? (
+              <div className="grid h-full min-h-64 grid-cols-3 grid-rows-2 gap-1.5 p-1.5">
+                <div className="col-span-2 row-span-2 overflow-hidden rounded-xl">
+                  <img
+                    src={hotel.imageUrls[0]}
+                    alt={hotel.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                {hotel.imageUrls.slice(1, 3).map((imgUrl, idx) => (
+                  <div key={imgUrl + idx} className="relative overflow-hidden rounded-xl">
+                    <img
+                      src={imgUrl}
+                      alt={`${hotel.name} ${idx + 2}`}
+                      className="h-full w-full object-cover"
+                    />
+                    {idx === 1 && hotel.imageUrls.length > 3 && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-xs font-bold text-white">
+                        +{hotel.imageUrls.length - 3} ảnh
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <span className="absolute bottom-3 left-3 rounded-full bg-slate-950/75 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
+                  {isEn ? `${hotel.imageUrls.length} photos` : `Tổng ${hotel.imageUrls.length} ảnh`}
+                </span>
+              </div>
+            ) : hotel?.imageUrls?.[0] ? (
+              <>
+                <img
+                  src={hotel.imageUrls[0]}
+                  alt={hotel.name}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <span className="absolute bottom-3 left-3 rounded-full bg-slate-950/75 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
+                  {isEn ? "1 photo" : "Tổng 1 ảnh"}
+                </span>
+              </>
             ) : (
-              <span>Sen Việt</span>
+              <div className="flex h-full min-h-64 items-center justify-center">
+                <span>Sen Việt</span>
+              </div>
             )}
           </div>
           <div className="p-6 md:p-8">
@@ -1947,48 +1986,67 @@ export default function HotelRooms() {
                   <div className="grid md:grid-cols-[190px_1fr_auto]">
 
                     <div className="relative">
-
-                      <img loading="lazy" decoding="async"
-
-                        src={item.image || "/placeholder.svg"}
-                        alt={item.nameVi}
-
-                        className="aspect-[4/3] h-full w-full object-cover md:aspect-auto"
-
-                      />
-
-                      <div className="absolute bottom-3 left-3 flex gap-1">
-
-                        <button
-
-                          type="button"
-
-                          aria-label="Ảnh trước"
-
-                          className="rounded-full bg-white/90 p-1.5"
-
-                        >
-
-                          <ChevronLeft className="h-4 w-4" />
-
-                        </button>
-
-                        <button
-
-                          type="button"
-
-                          aria-label="Ảnh sau"
-
-                          className="rounded-full bg-white/90 p-1.5"
-
-                        >
-
-                          <ChevronRight className="h-4 w-4" />
-
-                        </button>
-
-                      </div>
-
+                      {(() => {
+                        const roomImgs =
+                          item.images && item.images.length > 0
+                            ? item.images
+                            : [item.image || "/placeholder.svg"];
+                        const curImgIdx =
+                          (roomPhotoIndices[item.id] || 0) % roomImgs.length;
+                        return (
+                          <>
+                            <img
+                              loading="lazy"
+                              decoding="async"
+                              src={roomImgs[curImgIdx]}
+                              alt={item.nameVi}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDetailRoom(index);
+                              }}
+                              className="aspect-[4/3] h-full w-full cursor-pointer object-cover md:aspect-auto"
+                            />
+                            <span className="absolute right-2.5 top-2.5 rounded-full bg-slate-950/75 px-2.5 py-0.5 text-[11px] font-bold text-white backdrop-blur-sm">
+                              {curImgIdx + 1}/{roomImgs.length} ảnh
+                            </span>
+                            {roomImgs.length > 1 && (
+                              <div className="absolute bottom-3 left-3 flex gap-1">
+                                <button
+                                  type="button"
+                                  aria-label="Ảnh trước"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRoomPhotoIndices((prev) => ({
+                                      ...prev,
+                                      [item.id]:
+                                        ((prev[item.id] || 0) - 1 + roomImgs.length) %
+                                        roomImgs.length,
+                                    }));
+                                  }}
+                                  className="rounded-full bg-white/90 p-1.5 shadow hover:bg-white"
+                                >
+                                  <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label="Ảnh sau"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRoomPhotoIndices((prev) => ({
+                                      ...prev,
+                                      [item.id]:
+                                        ((prev[item.id] || 0) + 1) % roomImgs.length,
+                                    }));
+                                  }}
+                                  className="rounded-full bg-white/90 p-1.5 shadow hover:bg-white"
+                                >
+                                  <ChevronRight className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div className="p-5">

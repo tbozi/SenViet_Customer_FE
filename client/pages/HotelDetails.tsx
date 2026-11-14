@@ -1227,16 +1227,13 @@ export default function HotelDetails() {
       });
     });
 
-    if (list.length < 5) {
-      for (const item of defaultBranchConfig.curatedGallery) {
-        if (!list.some((existing) => existing.url === item.url)) {
-          list.push({
-            ...item,
-            captionVi: `${item.captionVi} - ${hotel?.name || "Sen Việt"}`,
-            captionEn: `${item.captionEn} - ${hotel?.name || "Sen Viet"}`,
-          });
-        }
-      }
+    if (list.length === 0 && hotel?.image) {
+      list.push({
+        url: hotel.image,
+        captionVi: `${hotel.name} - Ảnh đại diện`,
+        captionEn: `${hotel.name} - Featured Photo`,
+        category: "architecture",
+      });
     }
 
     return list;
@@ -1702,13 +1699,17 @@ export default function HotelDetails() {
 
         <div className="relative grid grid-cols-1 gap-2.5 overflow-hidden rounded-3xl md:h-[480px] md:grid-cols-4 md:grid-rows-2">
 
-          {/* Main feature hero image (spans 2 cols & 2 rows) */}
+          {/* Main feature hero image */}
 
           <div
 
             onClick={() => setLightboxIndex(0)}
 
-            className="group relative cursor-pointer overflow-hidden rounded-2xl md:col-span-2 md:row-span-2"
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl ${
+              allGalleryItems.length === 1
+                ? "md:col-span-4 md:row-span-2"
+                : "md:col-span-2 md:row-span-2"
+            }`}
 
           >
 
@@ -1728,7 +1729,7 @@ export default function HotelDetails() {
 
               <span className="rounded-full bg-gold/90 px-3 py-1 text-xs font-bold text-primary shadow">
 
-                {isEn ? "Featured View" : "Góc nhìn nổi bật"}
+                {isEn ? `1 / ${allGalleryItems.length} Photos` : `1 / ${allGalleryItems.length} Ảnh`}
 
               </span>
 
@@ -1744,45 +1745,49 @@ export default function HotelDetails() {
 
 
 
-          {/* 4 mosaic secondary photos */}
+          {/* Mosaic secondary photos adapting to 2, 3, 4, or 5+ total images */}
 
-          {allGalleryItems.slice(1, 5).map((img, idx) => (
-
-            <div
-
-              key={img.url + idx}
-
-              onClick={() => setLightboxIndex(idx + 1)}
-
-              className="group relative hidden cursor-pointer overflow-hidden rounded-2xl md:block"
-
-            >
-
-              <img
-
-                src={img.url}
-
-                alt={isEn ? img.captionEn : img.captionVi}
-
-                className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-105"
-
-              />
-
-              <div className="absolute inset-0 bg-black/25 opacity-0 transition duration-300 group-hover:opacity-100" />
-
-              <div className="absolute bottom-2.5 left-2.5 right-2.5 translate-y-2 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-
-                <p className="line-clamp-1 text-xs font-semibold text-white drop-shadow">
-
-                  {isEn ? img.captionEn : img.captionVi}
-
-                </p>
-
+          {allGalleryItems.slice(1, 5).map((img, idx) => {
+            const total = allGalleryItems.length;
+            let spanClass = "md:col-span-1 md:row-span-1";
+            if (total === 2) {
+              spanClass = "md:col-span-2 md:row-span-2";
+            } else if (total === 3) {
+              spanClass = "md:col-span-2 md:row-span-1";
+            } else if (total === 4 && idx === 0) {
+              spanClass = "md:col-span-2 md:row-span-1";
+            }
+            const isLastTileWithMore = idx === 3 && total > 5;
+            return (
+              <div
+                key={img.url + idx}
+                onClick={() => setLightboxIndex(idx + 1)}
+                className={`group relative hidden cursor-pointer overflow-hidden rounded-2xl md:block ${spanClass}`}
+              >
+                <img
+                  src={img.url}
+                  alt={isEn ? img.captionEn : img.captionVi}
+                  className="h-full w-full object-cover transition duration-700 ease-out group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-black/25 opacity-0 transition duration-300 group-hover:opacity-100" />
+                {isLastTileWithMore && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/55 text-white backdrop-blur-[2px] transition hover:bg-black/65">
+                    <span className="font-display text-2xl font-extrabold">
+                      +{total - 5}
+                    </span>
+                    <span className="mt-0.5 text-xs font-semibold uppercase tracking-wider">
+                      {isEn ? `${total} photos total` : `Tổng ${total} ảnh`}
+                    </span>
+                  </div>
+                )}
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 translate-y-2 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <p className="line-clamp-1 text-xs font-semibold text-white drop-shadow">
+                    {isEn ? img.captionEn : img.captionVi}
+                  </p>
+                </div>
               </div>
-
-            </div>
-
-          ))}
+            );
+          })}
 
 
 
