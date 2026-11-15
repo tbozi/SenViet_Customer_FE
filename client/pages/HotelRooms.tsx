@@ -15,6 +15,8 @@ import {
 
   AlertCircle,
 
+  ArrowRight,
+
   Bed,
 
   BedDouble,
@@ -29,7 +31,11 @@ import {
 
   ChevronRight,
 
+  Clock,
+
   MapPin,
+
+  Phone,
 
   ShieldAlert,
 
@@ -1664,7 +1670,7 @@ export default function HotelRooms() {
 
     <main className="container py-12">
 
-      <QuickSearch />
+      <QuickSearch defaultLocation={hotel?.id ? String(hotel.id) : ""} />
 
       <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card">
 
@@ -1730,14 +1736,48 @@ export default function HotelRooms() {
               </div>
             )}
           </div>
-          <div className="p-6 md:p-8">
-            <h1 className="mt-3 font-display text-4xl font-bold text-primary">
-              {hotel?.name || (isEn ? "Hotel" : "Khách sạn")}
-            </h1>
-            <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              {formatHotelLocation({ city: hotel?.address, province: hotel?.provinceName || "" })}
-            </p>
+          <div className="flex flex-col justify-between p-6 md:p-8">
+            <div>
+              <h1 className="mt-1 font-display text-3xl sm:text-4xl font-bold text-primary">
+                {hotel?.name || (isEn ? "Hotel" : "Khách sạn")}
+              </h1>
+              <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4 shrink-0 text-gold" />
+                <span>{formatHotelLocation({ city: hotel?.address, province: hotel?.provinceName || "" })}</span>
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-sm text-muted-foreground">
+                {hotel?.phone && (
+                  <a
+                    href={`tel:${hotel.phone.replace(/\s+/g, "")}`}
+                    className="inline-flex items-center gap-1.5 font-semibold text-primary hover:text-gold transition-colors"
+                  >
+                    <Phone className="h-3.5 w-3.5 text-gold" />
+                    <span>{hotel.phone}</span>
+                  </a>
+                )}
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-gold" />
+                  {isEn ? "Check-in 14:00 · Check-out 12:00" : "Nhận phòng 14:00 · Trả phòng 12:00"}
+                </span>
+              </div>
+            </div>
+
+            {hotel?.id && (
+              <div className="mt-6 pt-4 border-t border-border/60 flex flex-wrap items-center justify-between gap-3">
+                <span className="text-xs text-muted-foreground">
+                  {isEn ? "Direct reservation with instant confirmation" : "Đặt phòng trực tiếp xác nhận tức thì"}
+                </span>
+                <Link
+                  to={`/hotels/${hotel.id}/details`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-secondary/50 px-4 py-2 text-xs font-semibold text-primary transition hover:bg-primary hover:text-primary-foreground"
+                >
+                  <span>{isEn ? "View Hotel Details" : "Xem chi tiết khách sạn"}</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )}
+
             {hotelListError && !hotel && (
               <p role="alert" className="mt-4 text-sm text-rose-600 dark:text-rose-400 font-medium">
                 {isEn ? "Unable to load hotel details." : "Không thể tải thông tin khách sạn."}
@@ -1749,153 +1789,47 @@ export default function HotelRooms() {
       </div>
 
       <section className="mt-8 rounded-2xl border border-border bg-card p-5 shadow-sm">
-
-        <div className="flex items-center gap-2">
-
-          <CalendarDays className="h-5 w-5 text-primary" />
-
-          <h2 className="font-display text-xl font-bold text-primary">
-
-            {isEn ? "Default Stay Dates" : "Ngày mặc định cho phòng mới"}
-
-          </h2>
-
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-xl font-bold text-primary">
+              {isEn ? "Estimated Check-in & Check-out Time" : "Giờ nhận & trả phòng dự kiến"}
+            </h2>
+          </div>
+          <span className="text-xs text-muted-foreground">
+            {isEn
+              ? "Default dates follow the search bar above; you can still customize dates per room below."
+              : "Ngày mặc định theo thanh tìm kiếm phía trên; có thể chỉnh ngày riêng cho từng phòng bên dưới."}
+          </span>
         </div>
 
-        <p className="mt-1 text-sm text-muted-foreground">
-
-          {isEn
-
-            ? "Stay dates can be customized individually for each room below, even within the same type."
-
-            : "Ngày của từng phòng có thể chỉnh riêng bên dưới, kể cả các phòng cùng một loại."}
-
-        </p>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-4">
-
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-medium text-primary">
-
-            {isEn ? "Check-in Date" : "Ngày nhận phòng"}
-
-            <input
-
-              type="date"
-
-              min={dateValue(today)}
-
-              value={defaultDates.checkIn}
-
-              onChange={(event) =>
-
-                setDefaultDates((current) => ({
-
-                  checkIn: event.target.value,
-
-                  checkOut:
-
-                    current.checkOut <= event.target.value
-
-                      ? nextDate(event.target.value)
-
-                      : current.checkOut,
-
-                }))
-
-              }
-
-              className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-background text-foreground p-2.5 outline-none focus:ring-2 focus:ring-primary/20 transition"
-
-            />
-
-            <span className="mt-1 block text-xs text-muted-foreground">
-
-              {isEn ? "Check-in from 14:00" : "Nhận phòng từ 14:00"}
-
-            </span>
-
-          </label>
-
-          <label className="text-sm font-medium text-primary">
-
-            {isEn ? "Check-out Date" : "Ngày trả phòng"}
-
-            <input
-
-              type="date"
-
-              min={defaultDates.checkIn}
-
-              value={defaultDates.checkOut}
-
-              onChange={(event) =>
-
-                setDefaultDates((current) => ({
-
-                  ...current,
-
-                  checkOut: event.target.value,
-
-                }))
-
-              }
-
-              className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-background text-foreground p-2.5 outline-none focus:ring-2 focus:ring-primary/20 transition"
-
-            />
-
-            <span className="mt-1 block text-xs text-muted-foreground">
-
-              {isEn ? "Check-out before 12:00" : "Trả phòng trước 12:00"}
-
-            </span>
-
-          </label>
-
-          <label className="text-sm font-medium text-primary">
-
             {isEn ? "Estimated Arrival Time" : "Giờ đến dự kiến"}
-
             <input
-
               type="time"
-
               value={arrivalTime}
-
               onChange={(event) => setArrivalTime(event.target.value)}
-
               className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-background text-foreground p-2.5 outline-none focus:ring-2 focus:ring-primary/20 transition"
-
             />
-
             <span className="mt-1 block text-xs text-muted-foreground">
-
-              {isEn ? "Please notify front desk if arriving after 22:00" : "Sau 22:00 vui lòng ghi chú lễ tân"}
-
+              {isEn ? "Check-in from 14:00. Please notify front desk if arriving after 22:00." : "Nhận phòng từ 14:00. Sau 22:00 vui lòng ghi chú lễ tân."}
             </span>
-
           </label>
 
           <label className="text-sm font-medium text-primary">
-
             {isEn ? "Estimated Departure Time" : "Giờ trả dự kiến"}
-
             <input
-
               type="time"
-
               value={departureTime}
-
               onChange={(event) => setDepartureTime(event.target.value)}
-
               className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-background text-foreground p-2.5 outline-none focus:ring-2 focus:ring-primary/20 transition"
-
             />
-
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {isEn ? "Standard check-out before 12:00." : "Trả phòng tiêu chuẩn trước 12:00."}
+            </span>
           </label>
-
         </div>
-
       </section>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">

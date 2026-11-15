@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, MapPin, Search, Ticket, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,19 @@ import { useLanguage } from "@/lib/i18n";
 import { toLocalDateStr } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/dateTime";
 
-export default function QuickSearch() {
+export default function QuickSearch({ defaultLocation }: { defaultLocation?: string }) {
   const { t, language } = useLanguage();
   const isEn = language === "en";
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { data: hotels = [], isLoading: hotelsLoading, isError: hotelsError } = useGetPublicHotelsQuery();
-  const [location, setLocation] = useState(() => searchParams.get("location") || "");
+  const [location, setLocation] = useState(() => searchParams.get("location") || defaultLocation || "");
+
+  useEffect(() => {
+    if (!location && defaultLocation) {
+      setLocation(defaultLocation);
+    }
+  }, [defaultLocation, location]);
   const [checkIn, setCheckIn] = useState(() => searchParams.get("checkIn") || "");
   const [checkOut, setCheckOut] = useState(() => searchParams.get("checkOut") || "");
   const [rooms, setRooms] = useState(() => searchParams.get("rooms") || "1");
