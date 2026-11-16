@@ -15,6 +15,7 @@ import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
 import { openChatWidget } from "@/components/ChatWidget";
 import { formatHotelLocation } from "@/data/hotels";
+import axiosInstance from "@/lib/axiosInstance";
 
 export default function ContactPage() {
   const { language } = useLanguage();
@@ -31,15 +32,43 @@ export default function ContactPage() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [sentEmail, setSentEmail] = useState("");
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setSubmitError("");
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const matchedBranch = hotels.find((h) => String(h.id) === String(form.branch));
+      const branchName = matchedBranch
+        ? matchedBranch.name
+        : isEn
+          ? "All Sen Việt Branches"
+          : "Toàn hệ thống Sen Việt";
+
+      await axiosInstance.post("/contact/public/send", {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        branchName,
+        subject: form.subject.trim(),
+        message: form.message.trim(),
+      });
+
+      setSentEmail(form.email.trim());
       setSubmitted(true);
       setForm({ name: "", email: "", phone: "", branch: "all", subject: "", message: "" });
-    }, 600);
+    } catch (err: any) {
+      setSubmitError(
+        err?.response?.data?.message ||
+          (isEn
+            ? "Unable to send email right now. Please try again or contact our hotline."
+            : "Không thể gửi email lúc này. Vui lòng thử lại hoặc liên hệ trực tiếp qua hotline.")
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -199,19 +228,20 @@ export default function ContactPage() {
                 <div className="my-8 rounded-2xl bg-emerald-50 border border-emerald-200 p-6 text-center text-emerald-900">
                   <CheckCircle className="mx-auto h-12 w-12 text-emerald-600 mb-3" />
                   <h3 className="text-base font-bold">
-                    {isEn ? "Message Sent Successfully!" : "Gửi thông tin thành công!"}
+                    {isEn ? "Email Sent Successfully!" : "Đã gửi email thắc mắc & góp ý thành công!"}
                   </h3>
                   <p className="text-xs sm:text-sm text-emerald-700 mt-1 max-w-md mx-auto">
-                    {isEn 
-                      ? "Thank you for reaching out to Sen Việt Hotels & Resorts. We will review your request and get back shortly."
-                      : "Cảm ơn quý khách đã gửi thư cho Sen Việt. Chúng tôi sẽ phản hồi trong thời gian sớm nhất."}
+                    {isEn
+                      ? `Thank you for reaching out to Sen Việt Hotels & Resorts. A confirmation copy has been sent to ${sentEmail || "your email"}.`
+                      : `Cảm ơn quý khách đã gửi góp ý cho Sen Việt. Hệ thống đã chuyển thông tin đến bộ phận CSKH và gửi email xác nhận tới ${sentEmail || "hộp thư của quý khách"}.`}
                   </p>
-                  <Button 
+                  <Button
+                    type="button"
                     onClick={() => setSubmitted(false)}
                     variant="outline"
                     className="mt-5 rounded-full text-xs font-semibold"
                   >
-                    {isEn ? "Send Another Message" : "Gửi thêm yêu cầu khác"}
+                    {isEn ? "Send Another Email" : "Gửi thêm góp ý khác"}
                   </Button>
                 </div>
               ) : (
@@ -315,13 +345,25 @@ export default function ContactPage() {
                     />
                   </div>
 
+                  {submitError && (
+                    <p role="alert" className="rounded-xl bg-rose-50 border border-rose-200 px-3.5 py-2.5 text-xs font-medium text-rose-700">
+                      {submitError}
+                    </p>
+                  )}
+
                   <Button
                     type="submit"
                     disabled={loading}
                     className="w-full rounded-xl bg-primary hover:bg-primary/90 text-xs font-semibold py-2.5 shadow-sm"
                   >
                     <Send className="mr-2 h-4 w-4" />
-                    {loading ? (isEn ? "Sending..." : "Đang gửi...") : (isEn ? "Send Message" : "Gửi thông tin liên hệ")}
+                    {loading
+                      ? isEn
+                        ? "Sending Email..."
+                        : "Đang gửi email..."
+                      : isEn
+                        ? "Send Email Inquiry"
+                        : "Gửi thông tin qua Email"}
                   </Button>
                 </form>
               )}

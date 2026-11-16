@@ -58,7 +58,7 @@ export const hotelApi = baseApi.injectEndpoints({
             response.result.map(async (hotel) => {
               try {
                 const roomsRes = await fetchWithBQ({
-                  url: `/rooms/hotel/${hotel.id}`,
+                  url: `/room/public/hotel/${hotel.id}`,
                   method: "GET",
                 });
                 const roomsData = (roomsRes.data as ApiResponse<any[]>)?.result;

@@ -26,8 +26,8 @@ export default function Hotels() {
         city: beH.address || beH.provinceName || "Việt Nam",
         province: beH.provinceName || "Việt Nam",
         region: inferVietnamRegion(beH.provinceName, beH.address),
-        description: beH.address || "",
-        descriptionEn: beH.address || "",
+        description: beH.phone ? `Hotline chi nhánh: ${beH.phone}` : "",
+        descriptionEn: beH.phone ? `Branch hotline: ${beH.phone}` : "",
         price: beH.startingPrice ?? 0,
         rating: Number((beH as any).averageRating ?? (beH as any).rating ?? 0),
         image:

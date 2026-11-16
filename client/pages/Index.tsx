@@ -15,10 +15,12 @@ import { GuestTestimonials } from "@/components/home/GuestTestimonials";
 import { Hotel } from "@/data/hotels";
 import { inferVietnamRegion, useGetPublicHotelsQuery, useGetPublicProvincesQuery } from "@/services/hotelApi";
 import { useLanguage } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 import { openChatWidget } from "@/components/ChatWidget";
 
 export default function Index() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const isEn = language === "en";
   const { data: hotels = [] } = useGetPublicHotelsQuery();
   const { data: provinces = [] } = useGetPublicProvincesQuery();
@@ -33,8 +35,8 @@ export default function Index() {
         city: beH.address || beH.provinceName || "Việt Nam",
         province: beH.provinceName || "Việt Nam",
         region: inferVietnamRegion(beH.provinceName, beH.address),
-        description: beH.address || "",
-        descriptionEn: beH.address || "",
+        description: beH.phone ? `Hotline chi nhánh: ${beH.phone}` : "",
+        descriptionEn: beH.phone ? `Branch hotline: ${beH.phone}` : "",
         price: beH.startingPrice ?? 0,
         rating: Number((beH as any).averageRating ?? (beH as any).rating ?? 0),
         image:
@@ -231,25 +233,27 @@ export default function Index() {
       {/* 10. Section 06: Editorial Guest Testimonials (Social Proof) */}
       <GuestTestimonials />
 
-      {/* 11. Section 07: Call To Action */}
-      <section className="container py-24">
-        <div className="relative overflow-hidden rounded-3xl bg-primary px-8 py-16 text-center sm:px-16 shadow-2xl">
-          <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
-          <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
-          <div className="relative">
-            <Users className="mx-auto h-9 w-9 text-gold" />
-            <h2 className="mx-auto mt-4 max-w-xl font-display text-3xl font-bold text-primary-foreground sm:text-5xl leading-tight">
-              {t("cta.title")}
-            </h2>
-            <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80 leading-relaxed text-base">
-              {t("cta.subtitle")}
-            </p>
-            <Button asChild size="lg" className="mt-8 rounded-full bg-gold px-8 text-gold-foreground font-semibold hover:bg-gold/90 shadow-xl shadow-amber-600/30 active:scale-95 transition-all">
-              <Link to="/register">{t("cta.button")}</Link>
-            </Button>
+      {/* 11. Section 07: Call To Action (only shown to guests who haven't signed in) */}
+      {!user && (
+        <section className="container py-24">
+          <div className="relative overflow-hidden rounded-3xl bg-primary px-8 py-16 text-center sm:px-16 shadow-2xl">
+            <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+            <div className="absolute -left-16 -bottom-16 h-64 w-64 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+            <div className="relative">
+              <Users className="mx-auto h-9 w-9 text-gold" />
+              <h2 className="mx-auto mt-4 max-w-xl font-display text-3xl font-bold text-primary-foreground sm:text-5xl leading-tight">
+                {t("cta.title")}
+              </h2>
+              <p className="mx-auto mt-4 max-w-lg text-primary-foreground/80 leading-relaxed text-base">
+                {t("cta.subtitle")}
+              </p>
+              <Button asChild size="lg" className="mt-8 rounded-full bg-gold px-8 text-gold-foreground font-semibold hover:bg-gold/90 shadow-xl shadow-amber-600/30 active:scale-95 transition-all">
+                <Link to="/register">{t("cta.button")}</Link>
+              </Button>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </main>
   );
 }
