@@ -34,6 +34,7 @@ const CustomerCRM = lazy(() => import("@/pages/CustomerCRM"));
 const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPasswordPage"));
 const AboutPage = lazy(() => import("@/pages/AboutPage"));
 const ContactPage = lazy(() => import("@/pages/ContactPage"));
+const UserGuidePage = lazy(() => import("@/pages/UserGuidePage"));
 const AiChatPage = lazy(() => import("@/pages/AiChatPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -168,6 +169,8 @@ function App() {
                           <Route path="/change-password" element={<Navigate to="/profile" replace />} />
                           <Route path="/about" element={<AboutPage />} />
                           <Route path="/contact" element={<ContactPage />} />
+                          <Route path="/guide" element={<UserGuidePage />} />
+                          <Route path="/huong-dan" element={<Navigate to="/guide" replace />} />
                           <Route path="/chat" element={<AiChatPage />} />
                           <Route path="/admin" element={<Placeholder title="Hệ thống Quản lý Chuỗi Sen Việt" />} />
                           <Route path="*" element={<NotFound />} />

@@ -338,6 +338,7 @@ export default function Header() {
     { to: "/services", label: t("nav.services") },
     { to: "/about", label: t("nav.about") },
     { to: "/contact", label: t("nav.contact") },
+    { to: "/guide", label: language === "en" ? "Guide" : "Hướng dẫn" },
   ];
 
   return (

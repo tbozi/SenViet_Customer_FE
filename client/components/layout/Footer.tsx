@@ -68,6 +68,11 @@ export default function Footer() {
                 {t("nav.hotels")}
               </Link>
             </li>
+            <li>
+              <Link to="/guide" className="hover:text-primary-foreground">
+                {language === "en" ? "User Guide" : "Hướng dẫn sử dụng"}
+              </Link>
+            </li>
           </ul>
         </div>
 
