@@ -115,6 +115,35 @@
     font-feature-settings: "cv11", "ss01";
   }
 
+  :where(
+    button:not(:disabled),
+    a[href],
+    [role="button"]:not([aria-disabled="true"]),
+    [role="tab"]:not([aria-disabled="true"]),
+    [role="menuitem"]:not([aria-disabled="true"]),
+    [role="option"]:not([aria-disabled="true"]),
+    summary,
+    select:not(:disabled),
+    input[type="checkbox"]:not(:disabled),
+    input[type="radio"]:not(:disabled),
+    label:has(> input[type="checkbox"]:not(:disabled)),
+    label:has(> input[type="radio"]:not(:disabled))
+  ) {
+    cursor: pointer;
+  }
+
+  :where(button:disabled, [aria-disabled="true"], input:disabled, select:disabled) {
+    cursor: not-allowed;
+  }
+
+  input[type="file"]:not(:disabled)::file-selector-button {
+    cursor: pointer;
+  }
+
+  input[type="file"]:disabled::file-selector-button {
+    cursor: not-allowed;
+  }
+
   :where(p, span, li, h1, h2, h3, h4, h5, h6, a, button, label, td, th) {
     overflow-wrap: anywhere;
     word-break: break-word;

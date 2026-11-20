@@ -58,6 +58,7 @@ import RoomAvailabilityCalendar from "@/components/RoomAvailabilityCalendar";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
 
 import { type RoomType } from "@/data/rooms";
+import BookingStepper from "@/components/BookingStepper";
 import { fetchRoomsByHotel, hotelSlugToIdMap, useGetBranchRoomDailyPricesQuery } from "@/services/roomApi";
 import { formatHotelLocation, formatVnd } from "@/data/hotels";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
@@ -1650,6 +1651,7 @@ export default function HotelRooms() {
 
     });
 
+    query.set("step", "guest");
     const nextPath = `/hotels/${hotelId}/services?${query.toString()}`;
     if (!user) {
       toast({
@@ -1832,7 +1834,10 @@ export default function HotelRooms() {
         </div>
       </section>
 
-      <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
+      <div className="mt-8">
+        <BookingStepper currentStep={1} />
+      </div>
+      <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_380px]">
 
         <section>
 

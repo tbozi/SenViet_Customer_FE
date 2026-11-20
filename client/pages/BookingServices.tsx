@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
-import { Check, ChevronLeft, Copy, Hotel, Minus, Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, ChevronLeft, Copy, Hotel, Minus, Plus, UserRound } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import BookingSummaryPanel from "@/components/booking/BookingSummaryPanel";
+import BookingStepper from "@/components/BookingStepper";
+import { useAuth } from "@/lib/auth";
+import { useLanguage } from "@/lib/i18n";
 import { formatVnd } from "@/data/hotels";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
@@ -114,6 +117,27 @@ function serviceTotal(stay: RoomStay) {
 export default function BookingServices() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
+  const { user } = useAuth();
+  const { language } = useLanguage();
+  const isEn = language === "en";
+  const [subStep, setSubStep] = useState<"guest" | "services">(() =>
+    params.get("step") === "services" ? "services" : "guest",
+  );
+  const [guestName, setGuestName] = useState(() => params.get("guestName") || user?.name || "");
+  const [guestPhone, setGuestPhone] = useState(() => params.get("guestPhone") || user?.phone || "");
+  const [guestEmail, setGuestEmail] = useState(() => params.get("guestEmail") || user?.email || "");
+  const [guestCccd, setGuestCccd] = useState(() => params.get("guestCccd") || user?.cccd || "");
+  const [specialRequest, setSpecialRequest] = useState(() => params.get("specialRequest") || "");
+  const [guestError, setGuestError] = useState("");
+
+  useEffect(() => {
+    if (!user) return;
+    setGuestName((prev) => prev || user.name || "");
+    setGuestPhone((prev) => prev || user.phone || "");
+    setGuestEmail((prev) => prev || user.email || "");
+    setGuestCccd((prev) => prev || user.cccd || "");
+  }, [user]);
+
   const { data: hotels = [], isLoading: hotelsLoading, isError: hotelsError } = useGetPublicHotelsQuery();
   const requestedHotelId = Number(params.get("hotel"));
   const hotel = hotels.find((item) => item.id === requestedHotelId);
@@ -358,6 +382,20 @@ export default function BookingServices() {
     );
   };
 
+  const handleContinueFromGuest = () => {
+    if (!guestName.trim() || !guestPhone.trim() || !guestEmail.trim()) {
+      setGuestError(
+        isEn
+          ? "Please enter your full name, phone number, and email."
+          : "Vui lòng nhập đầy đủ họ tên, số điện thoại và email.",
+      );
+      return;
+    }
+    setGuestError("");
+    setSubStep("services");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const continueToCheckout = () => {
     if (!hotel || !roomBreakdowns.length) return;
     const first = roomBreakdowns[0];
@@ -376,6 +414,11 @@ export default function BookingServices() {
       services: JSON.stringify(aggregatedServices),
       arrivalTime,
       departureTime,
+      guestName: guestName.trim(),
+      guestPhone: guestPhone.trim(),
+      guestEmail: guestEmail.trim(),
+      guestCccd: guestCccd.trim(),
+      specialRequest: specialRequest.trim(),
     });
     navigate(`/checkout?${query.toString()}`);
   };
@@ -408,20 +451,133 @@ export default function BookingServices() {
           Quay lại chọn phòng
         </Link>
 
-        <div className="mt-7 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <div className="mt-5">
+          <BookingStepper
+            currentStep={subStep === "guest" ? 2 : 3}
+            onStepClick={(step) => {
+              if (step === 1 && hotel) {
+                navigate(`/hotels/${hotel.id}?${params.toString()}`);
+              } else if (step === 2) {
+                setSubStep("guest");
+              }
+            }}
+          />
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
-            Bước 2/3 · Dịch vụ bổ sung
+            {subStep === "guest"
+              ? isEn
+                ? "Step 2/5 · Guest Information"
+                : "Bước 2/5 · Thông tin khách hàng"
+              : isEn
+                ? "Step 3/5 · Extra Services"
+                : "Bước 3/5 · Dịch vụ bổ sung"}
           </p>
           <h1 className="mt-2 font-display text-3xl font-bold text-primary sm:text-4xl">
-            Đặt thêm dịch vụ
+            {subStep === "guest"
+              ? isEn
+                ? "Guest Details"
+                : "Thông tin người đặt phòng"
+              : isEn
+                ? "Add Extra Services"
+                : "Đặt thêm dịch vụ"}
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">
-            Chọn dịch vụ cho từng mã phòng. Hóa đơn bên phải sẽ cập nhật ngay
-            theo lựa chọn của bạn.
+            {subStep === "guest"
+              ? isEn
+                ? "Verify or edit guest contact information before choosing extra services."
+                : "Kiểm tra hoặc chỉnh sửa thông tin liên hệ của khách trước khi sang bước chọn dịch vụ."
+              : isEn
+                ? "Select services per room. Your summary on the right updates in real time."
+                : "Chọn dịch vụ cho từng mã phòng. Hóa đơn bên phải sẽ cập nhật ngay theo lựa chọn của bạn."}
           </p>
         </div>
 
         <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+          {subStep === "guest" ? (
+            <section className="min-w-0 rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex items-start gap-3 border-b border-border pb-5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
+                  <UserRound className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[.14em] text-gold">
+                    {isEn ? "Primary Guest" : "Thông tin liên hệ"}
+                  </p>
+                  <h2 className="mt-1 font-display text-2xl font-bold text-primary">
+                    {isEn ? "Guest Information" : "Thông tin khách hàng"}
+                  </h2>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    {isEn ? "Full name *" : "Họ và tên *"}
+                  </label>
+                  <input
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder={isEn ? "Nguyen Van A" : "Nguyễn Văn A"}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-border px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    {isEn ? "Phone number *" : "Số điện thoại *"}
+                  </label>
+                  <input
+                    value={guestPhone}
+                    onChange={(e) => setGuestPhone(e.target.value)}
+                    placeholder="0909 123 456"
+                    className="mt-1.5 h-11 w-full rounded-xl border border-border px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="mt-1.5 h-11 w-full rounded-xl border border-border px-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    {isEn ? "ID / Passport" : "Số CCCD / CMND"}
+                  </label>
+                  <input
+                    value={guestCccd}
+                    onChange={(e) => setGuestCccd(e.target.value)}
+                    placeholder={isEn ? "National ID number" : "Nhập số CCCD"}
+                    className="mt-1.5 h-11 w-full rounded-xl border border-border px-3 text-sm"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs font-semibold text-muted-foreground">
+                    {isEn ? "Special requests" : "Yêu cầu đặc biệt"}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={specialRequest}
+                    onChange={(e) => setSpecialRequest(e.target.value)}
+                    placeholder={isEn ? "e.g. Late check-in, baby cot..." : "Ví dụ: đến sau 22:00, cần baby cot..."}
+                    className="mt-1.5 w-full rounded-xl border border-border p-3 text-sm"
+                  />
+                </div>
+              </div>
+
+              {guestError && (
+                <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {guestError}
+                </p>
+              )}
+            </section>
+          ) : (
           <section className="min-w-0 rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
             <div className="flex items-start gap-3 border-b border-border pb-5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
@@ -614,6 +770,7 @@ export default function BookingServices() {
               </p>
             )}
           </section>
+          )}
 
           <BookingSummaryPanel
             hotelName={hotel.name}
@@ -623,23 +780,50 @@ export default function BookingServices() {
             onRemoveRoom={handleRemoveRoom}
             cta={
               <div className="space-y-2.5">
-                <Button
-                  type="button"
-                  onClick={continueToCheckout}
-                  className="w-full"
-                  disabled={!selections.length}
-                >
-                  Tiếp tục đến thanh toán
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate(`/hotels/${hotel.id}?${params.toString()}`)}
-                  className="w-full gap-1.5"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Quay lại chọn phòng
-                </Button>
+                {subStep === "guest" ? (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={handleContinueFromGuest}
+                      className="w-full"
+                      disabled={!selections.length}
+                    >
+                      {isEn ? "Continue to Services" : "Tiếp tục đến chọn dịch vụ"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => navigate(`/hotels/${hotel.id}?${params.toString()}`)}
+                      className="w-full gap-1.5"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      {isEn ? "Back to Room Selection" : "Quay lại chọn phòng"}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      onClick={continueToCheckout}
+                      className="w-full"
+                      disabled={!selections.length}
+                    >
+                      {isEn ? "Continue to Promotions" : "Tiếp tục đến khuyến mãi"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setSubStep("guest");
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className="w-full gap-1.5"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      {isEn ? "Back to Guest Info" : "Quay lại thông tin khách"}
+                    </Button>
+                  </>
+                )}
               </div>
             }
           />

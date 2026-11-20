@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import BookingStepper from "@/components/BookingStepper";
 import { formatVnd } from "@/data/hotels";
 import { formatDisplayDate } from "@/lib/dateTime";
 import {
@@ -433,6 +434,7 @@ export default function BookingSuccess() {
   return (
     <main className="container py-12">
       <div className="mx-auto max-w-5xl">
+        <BookingStepper currentStep={5} />
         <header className="text-center">
           <div
             className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${

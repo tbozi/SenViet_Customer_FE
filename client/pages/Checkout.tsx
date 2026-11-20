@@ -42,6 +42,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useGetActivePromotionsQuery, useGetMySavedPromotionsQuery } from "@/services/promotionApi";
 import { useCreateCustomerBookingMutation } from "@/services/bookingApi";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
+import BookingStepper from "@/components/BookingStepper";
 
 const fallbackGuestForms = (params: URLSearchParams): GuestForm[] => {
   try {
@@ -144,23 +145,25 @@ export default function Checkout() {
   const hotelId = Number(params.get("hotel"));
   const hotel = publicHotels.find((item) => item.id === hotelId);
   const [name, setName] = useState(
-    user?.name || params.get("fullName") || params.get("name") || "",
+    params.get("guestName") || user?.name || params.get("fullName") || params.get("name") || "",
   );
   const [phone, setPhone] = useState(
-    user?.phone || params.get("phone") || "",
+    params.get("guestPhone") || user?.phone || params.get("phone") || "",
   );
   const [email, setEmail] = useState(
-    user?.email || params.get("email") || "",
+    params.get("guestEmail") || user?.email || params.get("email") || "",
   );
-  const [cccd, setCccd] = useState(user?.cccd || user?.identityNumber || "");
-  const [request, setRequest] = useState("");
+  const [cccd, setCccd] = useState(
+    params.get("guestCccd") || user?.cccd || user?.identityNumber || "",
+  );
+  const [request, setRequest] = useState(params.get("specialRequest") || "");
 
   useEffect(() => {
     if (user) {
-      if (user.name) setName(user.name);
-      if (user.phone) setPhone(user.phone);
-      if (user.email) setEmail(user.email);
-      if (user.cccd || user.identityNumber) setCccd(user.cccd || user.identityNumber || "");
+      if (user.name) setName((prev) => prev || user.name || "");
+      if (user.phone) setPhone((prev) => prev || user.phone || "");
+      if (user.email) setEmail((prev) => prev || user.email || "");
+      if (user.cccd || user.identityNumber) setCccd((prev) => prev || user.cccd || user.identityNumber || "");
     }
   }, [user]);
   const [promo, setPromo] = useState(params.get("promo") || "");
@@ -792,24 +795,40 @@ export default function Checkout() {
   return (
     <main className="container py-12">
       <div className="mx-auto max-w-5xl">
+        <BookingStepper
+          currentStep={4}
+          onStepClick={(step) => {
+            if (step === 1) {
+              navigate(`/hotels/${hotelId}?${params.toString()}`);
+            } else if (step === 2) {
+              const q = new URLSearchParams(params);
+              q.set("step", "guest");
+              navigate(`/hotels/${hotelId}/services?${q.toString()}`);
+            } else if (step === 3) {
+              const q = new URLSearchParams(params);
+              q.set("step", "services");
+              navigate(`/hotels/${hotelId}/services?${q.toString()}`);
+            }
+          }}
+        />
         <button
           type="button"
           onClick={() => navigate(-1)}
           className="mb-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
         >
           <ChevronLeft className="h-4 w-4" />
-          {isEn ? "Back to previous step" : "Quay lại bước trước"}
+          {isEn ? "Back to Services" : "Quay lại chọn dịch vụ"}
         </button>
         <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
-          Sen Việt checkout
+          {isEn ? "Step 4/5 · Promotions & Confirm Reservation" : "Bước 4/5 · Khuyến mãi & Xác nhận đặt phòng"}
         </p>
         <h1 className="mt-2 font-display text-4xl font-bold text-primary">
-          {language === "vi" ? "Xác nhận đặt phòng" : "Confirm your booking"}
+          {language === "vi" ? "Khuyến mãi & Xác nhận đặt phòng" : "Promotions & Confirm Booking"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {isEn
-            ? "Guest representative information only needs to be entered once. Specific rooms, stay dates, services, and fees are itemized below."
-            : "Thông tin người đại diện chỉ cần nhập một lần. Từng phòng cụ thể, khoảng ngày, dịch vụ và phụ phí được liệt kê riêng bên dưới."}
+            ? "Apply a promo code or saved voucher, review your summary, and click Confirm Booking to hold your room for 5 minutes and proceed to Step 5 (Payment)."
+            : "Áp dụng mã khuyến mãi hoặc voucher đã lưu, kiểm tra lại tóm tắt và bấm Xác nhận đặt phòng để giữ phòng 5 phút trước khi sang Bước 5 (Thanh toán)."}
         </p>
 
         <form

@@ -1,5 +1,6 @@
 import { formatStayDates, formatDisplayDate } from "@/lib/dateTime";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useDraggablePosition } from "@/hooks/useDraggablePosition";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
@@ -1014,6 +1015,18 @@ export default function ChatWidget() {
   const [fabPos, setFabPos] = useState<{ right: number; bottom: number } | null>(null);
   const fabDragRef = useRef<{ startX: number; startY: number; startRight: number; startBottom: number; moved: boolean } | null>(null);
   const didDragFabRef = useRef(false);
+  const menuWindowRef = useRef<HTMLDivElement | null>(null);
+  const staffWindowRef = useRef<HTMLDivElement | null>(null);
+  const aiWindowRef = useRef<HTMLDivElement | null>(null);
+  const menuDrag = useDraggablePosition(menuWindowRef, {
+    storageKey: "senviet_customer_menu_window_pos",
+  });
+  const staffDrag = useDraggablePosition(staffWindowRef, {
+    storageKey: "senviet_customer_staff_window_pos",
+  });
+  const aiDrag = useDraggablePosition(aiWindowRef, {
+    storageKey: "senviet_customer_ai_window_pos",
+  });
 
   const handleFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -3324,9 +3337,19 @@ export default function ChatWidget() {
 
       {menuOpen && !open && !staffOpen && (
 
-        <div className="fixed bottom-16 sm:bottom-20 right-4 sm:right-6 z-50 w-[26rem] sm:w-[27rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gold/40 bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <div
+          ref={menuWindowRef}
+          style={menuDrag.dragStyle}
+          className="fixed bottom-16 sm:bottom-20 right-4 sm:right-6 z-50 w-[26rem] sm:w-[27rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gold/40 bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200"
+        >
 
-          <div className="bg-gradient-to-r from-primary to-slate-900 px-4 py-3 text-white">
+          <div
+            onPointerDown={menuDrag.onPointerDown}
+            title={isEn ? "Drag to move" : "Kéo để di chuyển"}
+            className={`bg-gradient-to-r from-primary to-slate-900 px-4 py-3 text-white select-none ${
+              menuDrag.isDragging ? "cursor-grabbing" : "cursor-grab"
+            }`}
+          >
 
             <p className="text-xs font-bold uppercase tracking-wider text-gold">
 
@@ -3489,8 +3512,12 @@ export default function ChatWidget() {
       {staffOpen && (
 
         <div
-          style={customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : undefined}
-          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing ? "" : "transition-all duration-300 ease-in-out"} ${
+          ref={staffWindowRef}
+          style={{
+            ...staffDrag.dragStyle,
+            ...(customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : {}),
+          }}
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing || staffDrag.isDragging ? "" : "transition-all duration-300 ease-in-out"} ${
 
             isStaffExpanded
 
@@ -3510,9 +3537,15 @@ export default function ChatWidget() {
             <div className="h-10 w-0.5 rounded-full bg-border group-hover:bg-gold transition-colors" />
           </div>
 
-          {/* Header Nhân viên */}
+          {/* Header Nhân viên (kéo thả di chuyển) */}
 
-          <div className="flex items-center justify-between bg-gradient-to-r from-blue-900 via-primary to-slate-900 px-4 py-3 text-white shadow-sm">
+          <div
+            onPointerDown={staffDrag.onPointerDown}
+            title={isEn ? "Drag header to move chat window" : "Kéo thanh tiêu đề để di chuyển khung chat"}
+            className={`flex items-center justify-between bg-gradient-to-r from-blue-900 via-primary to-slate-900 px-4 py-3 text-white shadow-sm select-none ${
+              staffDrag.isDragging ? "cursor-grabbing" : "cursor-grab"
+            }`}
+          >
 
             <div className="flex items-center gap-2.5">
 
@@ -3932,8 +3965,12 @@ export default function ChatWidget() {
 
             exit="exit"
 
-          style={customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : undefined}
-          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing ? "" : "transition-all duration-300 ease-in-out"} ${
+          ref={aiWindowRef}
+          style={{
+            ...aiDrag.dragStyle,
+            ...(customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : {}),
+          }}
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing || aiDrag.isDragging ? "" : "transition-all duration-300 ease-in-out"} ${
 
             isExpanded
 
@@ -3953,8 +3990,14 @@ export default function ChatWidget() {
             <div className="h-10 w-0.5 rounded-full bg-border group-hover:bg-gold transition-colors" />
           </div>
 
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2 bg-primary px-3.5 py-2.5 text-primary-foreground shadow-sm">
+          {/* Header (kéo thả di chuyển) */}
+          <div
+            onPointerDown={aiDrag.onPointerDown}
+            title={isEn ? "Drag header to move chat window" : "Kéo thanh tiêu đề để di chuyển khung chat"}
+            className={`flex items-center justify-between gap-2 bg-primary px-3.5 py-2.5 text-primary-foreground shadow-sm select-none ${
+              aiDrag.isDragging ? "cursor-grabbing" : "cursor-grab"
+            }`}
+          >
             <div className="flex items-center gap-2 min-w-0">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold text-gold-foreground shadow-sm">
                 <Bot className="h-4.5 w-4.5" />

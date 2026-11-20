@@ -124,6 +124,7 @@ export default function BookingHistory() {
   const { user } = useAuth();
   const { language } = useLanguage();
   const isVi = language === "vi";
+  const isEn = language === "en";
   const labels = isVi ? labelsVi : labelsEn;
   const paymentLabels = isVi ? paymentLabelsVi : paymentLabelsEn;
   const [params] = useSearchParams();
@@ -154,7 +155,7 @@ export default function BookingHistory() {
       const rawStatus = (sb.bookingStatus || "").toUpperCase();
       if (rawStatus === "PENDING") {
         status = "pending_payment";
-      } else if (rawStatus === "CANCELLED" || rawStatus === "REFUNDED") {
+      } else if (rawStatus.startsWith("CANCELLED") || rawStatus === "REFUNDED") {
         status = "cancelled";
       } else if (rawStatus === "COMPLETED" || rawStatus === "CHECKED_OUT" || rawStatus === "CHECKED_IN") {
         status = "completed";
@@ -189,6 +190,17 @@ export default function BookingHistory() {
         total: sb.finalAmount || 0,
         paymentMethod: String(sb.paymentMethod || "").toUpperCase() === "CASH" ? "cash" : "qr",
         status,
+        rawBookingStatus: rawStatus,
+        ...(rawStatus === "CANCELLED_PAYMENT_TIMEOUT"
+          ? {
+              cancellation: {
+                policy: "",
+                refundPercent: 0,
+                refundAmount: 0,
+                reason: isEn ? "Cancelled due to payment timeout" : "Hủy do quá hạn thanh toán",
+              },
+            }
+          : {}),
         createdAt: sb.createdAt || new Date().toISOString(),
         guestName: sb.customerName || user?.name || "Khách hàng",
         phone: "",
@@ -286,9 +298,22 @@ export default function BookingHistory() {
               updateBooking(b.id, { status: "confirmed" });
               anyUpdated = true;
             }
-          } else if (bStatus === "CANCELLED" || bStatus === "REFUNDED") {
+          } else if (bStatus.startsWith("CANCELLED") || bStatus === "REFUNDED") {
             if (!cancelled) {
-              updateBooking(b.id, { status: "cancelled" });
+              updateBooking(b.id, {
+                status: "cancelled",
+                rawBookingStatus: bStatus,
+                ...(bStatus === "CANCELLED_PAYMENT_TIMEOUT"
+                  ? {
+                      cancellation: {
+                        policy: "",
+                        refundPercent: 0,
+                        refundAmount: 0,
+                        reason: isEn ? "Cancelled due to payment timeout" : "Hủy do quá hạn thanh toán",
+                      },
+                    }
+                  : {}),
+              });
               anyUpdated = true;
             }
           }
@@ -691,7 +716,9 @@ export default function BookingHistory() {
                   <span
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${booking.status === "cancelled" ? "bg-red-50 text-red-700" : booking.status === "confirmed" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
                   >
-                    {labels[booking.status]}
+                    {booking.status === "cancelled" && booking.rawBookingStatus === "CANCELLED_PAYMENT_TIMEOUT"
+                      ? (isEn ? "Cancelled (Payment Timeout)" : "Hủy do quá hạn thanh toán")
+                      : labels[booking.status]}
                   </span>
                 </div>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">

@@ -99,6 +99,7 @@ export interface Booking {
   total: number;
   paymentMethod: "cash" | "qr" | "momo" | "vnpay";
   status: BookingStatus;
+  rawBookingStatus?: string;
   createdAt: string;
   guestName: string;
   phone: string;

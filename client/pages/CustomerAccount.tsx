@@ -80,7 +80,7 @@ export default function CustomerAccount() {
       const rawStatus = (sb.bookingStatus || "").toUpperCase();
       if (rawStatus === "PENDING") {
         status = "pending_payment";
-      } else if (rawStatus === "CANCELLED" || rawStatus === "REFUNDED") {
+      } else if (rawStatus.startsWith("CANCELLED") || rawStatus === "REFUNDED") {
         status = "cancelled";
       } else if (
         rawStatus === "COMPLETED" ||
@@ -138,6 +138,7 @@ export default function CustomerAccount() {
         total: sb.finalAmount || 0,
         paymentMethod: String(sb.paymentMethod || "").toUpperCase() === "CASH" ? "cash" : "qr",
         status,
+        rawBookingStatus: rawStatus,
         createdAt: sb.createdAt || new Date().toISOString(),
         guestName: sb.customerName || user?.name || "Khách hàng",
         phone: "",
