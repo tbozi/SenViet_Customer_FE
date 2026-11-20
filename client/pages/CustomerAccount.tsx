@@ -136,7 +136,7 @@ export default function CustomerAccount() {
         serviceFee: sb.serviceTotal || 0,
         discount: sb.discountTotal || 0,
         total: sb.finalAmount || 0,
-        paymentMethod: "qr",
+        paymentMethod: String(sb.paymentMethod || "").toUpperCase() === "CASH" ? "cash" : "qr",
         status,
         createdAt: sb.createdAt || new Date().toISOString(),
         guestName: sb.customerName || user?.name || "Khách hàng",
@@ -202,8 +202,16 @@ export default function CustomerAccount() {
 
     const addedCodes = new Set<string>();
 
+    const nowMs = Date.now();
+    const isNotExpired = (endDate?: string) => {
+      if (!endDate) return true;
+      const t = new Date(endDate).getTime();
+      return Number.isNaN(t) || t >= nowMs;
+    };
+
     if (savedPromosBackend && Array.isArray(savedPromosBackend)) {
       for (const sp of savedPromosBackend) {
+        if (!isNotExpired(sp.endDate)) continue;
         const cleanCode = (sp.promotionCode || sp.code || "").toUpperCase();
         if (!cleanCode) continue;
         addedCodes.add(cleanCode);
@@ -237,6 +245,7 @@ export default function CustomerAccount() {
       const activeMatch = activePromotions.find(
         (ap) => ap.code.trim().toUpperCase() === cleanCode,
       );
+      if (activeMatch && !isNotExpired(activeMatch.endDate)) continue;
 
       const discountText = activeMatch
         ? activeMatch.discountType === "PERCENTAGE" ||
@@ -423,54 +432,32 @@ export default function CustomerAccount() {
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           {/* CỘT TRÁI: TAB NỘI DUNG (ĐẶT PHÒNG / ƯU ĐÃI) */}
           <div className="space-y-4">
-            {/* Thanh Tab chuyển đổi thông minh */}
+            {/* Tiêu đề mục đang chọn (không lặp lại thanh tab thứ 2) */}
             <div className="flex items-center justify-between border-b border-border/80 pb-3">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("bookings")}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                    activeTab === "bookings"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  <CalendarDays className="h-4 w-4" />
-                  <span>{isEn ? "My Bookings" : "Đặt phòng của tôi"}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                    activeTab === "bookings"
-                      ? "bg-primary-foreground/20 text-white"
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {active.length}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("vouchers")}
-                  className={`flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                    activeTab === "vouchers"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  <Ticket className="h-4 w-4" />
-                  <span>{isEn ? "Saved Offers" : "Ưu đãi đã lưu"}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                    activeTab === "vouchers"
-                      ? "bg-primary-foreground/20 text-white"
-                      : "bg-muted text-muted-foreground"
-                  }`}>
-                    {savedPromotions.length}
-                  </span>
-                </button>
+              <div className="flex items-center gap-2 text-base font-bold text-primary">
+                {activeTab === "bookings" ? (
+                  <>
+                    <CalendarDays className="h-4 w-4" />
+                    <span>{isEn ? "Active Bookings" : "Đặt phòng đang hoạt động"}</span>
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                      {active.length}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Ticket className="h-4 w-4 text-amber-600" />
+                    <span>{isEn ? "Saved Vouchers" : "Ưu đãi & Voucher đã lưu"}</span>
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-700">
+                      {savedPromotions.length}
+                    </span>
+                  </>
+                )}
               </div>
 
               {activeTab === "bookings" && (
                 <Link
                   to="/bookings"
-                  className="hidden sm:flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                  className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
                 >
                   <span>{isEn ? "Booking history" : "Lịch sử đặt phòng"}</span>
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -480,7 +467,7 @@ export default function CustomerAccount() {
               {activeTab === "vouchers" && (
                 <Link
                   to="/offers"
-                  className="hidden sm:flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline"
+                  className="flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
                   <span>{isEn ? "Explore offers" : "Khám phá thêm"}</span>

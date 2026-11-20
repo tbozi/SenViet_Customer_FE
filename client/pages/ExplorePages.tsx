@@ -65,8 +65,15 @@ export function Offers() {
   const [savePromo, { isLoading: isSaving }] = useSavePromotionMutation();
   const [unsavePromo, { isLoading: isUnsaving }] = useUnsavePromotionMutation();
 
-  const displayOffers = (activePromos && activePromos.length > 0)
-    ? activePromos.map((p, idx) => {
+  const nowMs = Date.now();
+  const validPromos = (activePromos || []).filter((p) => {
+    if (!p.endDate) return true;
+    const t = new Date(p.endDate).getTime();
+    return Number.isNaN(t) || t >= nowMs;
+  });
+
+  const displayOffers = validPromos.length > 0
+    ? validPromos.map((p, idx) => {
         const isPercent = p.discountType === "PERCENTAGE" || (p as any).promotionDiscountType === "PERCENTAGE" || p.discountValue <= 100;
         const discountText = isPercent ? `Giảm ${p.discountValue}%` : `Giảm ${formatVnd(p.discountValue)}`;
         const accents = [

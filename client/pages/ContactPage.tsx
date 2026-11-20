@@ -51,6 +51,7 @@ export default function ContactPage() {
         name: form.name.trim(),
         email: form.email.trim(),
         phone: form.phone.trim(),
+        hotelId: matchedBranch ? Number(matchedBranch.id) : null,
         branchName,
         subject: form.subject.trim(),
         message: form.message.trim(),

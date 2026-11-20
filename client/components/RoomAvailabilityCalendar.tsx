@@ -321,8 +321,8 @@ export default function RoomAvailabilityCalendar({
                       ? "border-primary/30 bg-primary/10 text-primary"
                       : !isCurrentMonth
                         ? available
-                          ? "border-dashed border-primary/25 bg-primary/[.03] text-primary/75 hover:border-primary hover:bg-primary/10"
-                          : "cursor-not-allowed border-dashed border-red-100 bg-red-50/70 text-red-400 opacity-80"
+                          ? "border-border bg-white text-foreground hover:border-primary hover:shadow-sm"
+                          : "cursor-not-allowed border-red-100 bg-red-50 text-red-500 opacity-80"
                         : available
                           ? "border-border bg-white hover:border-primary hover:shadow-sm"
                           : "cursor-not-allowed border-red-100 bg-red-50 text-red-500 opacity-80"

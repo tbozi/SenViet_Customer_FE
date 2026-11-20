@@ -187,7 +187,7 @@ export default function BookingHistory() {
         serviceFee: sb.serviceTotal || 0,
         discount: sb.discountTotal || 0,
         total: sb.finalAmount || 0,
-        paymentMethod: "qr",
+        paymentMethod: String(sb.paymentMethod || "").toUpperCase() === "CASH" ? "cash" : "qr",
         status,
         createdAt: sb.createdAt || new Date().toISOString(),
         guestName: sb.customerName || user?.name || "Khách hàng",

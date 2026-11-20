@@ -113,6 +113,9 @@ export default function BookingSuccess() {
       ? list.find((item) => String(item.id) === String(targetId))
       : list[0];
     setBooking(b);
+    if (b?.paymentMethod === "cash") {
+      setPaymentMethod("CASH");
+    }
 
     if (targetId) {
       fetch(`${API_BASE_URL}/orders/booking/${targetId}`)
@@ -132,7 +135,7 @@ export default function BookingSuccess() {
         .catch(() => {});
     }
 
-    if (b && b.status === "pending_payment" && b.createdAt) {
+    if (b && b.status === "pending_payment" && b.createdAt && b.paymentMethod !== "cash") {
       const createdTime = new Date(b.createdAt).getTime();
       const now = Date.now();
       const elapsedSeconds = (now - createdTime) / 1000;

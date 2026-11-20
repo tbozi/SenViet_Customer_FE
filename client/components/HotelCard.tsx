@@ -46,9 +46,13 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
                 <span className="truncate">{formatHotelLocation(hotel)}</span>
               </p>
             </div>
-            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary/80 text-gold opacity-0 -translate-x-1 translate-y-1 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0">
+            <Link
+              to={`/hotels/${hotel.id}`}
+              aria-label={hotel.name}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/80 text-gold transition-all duration-300 hover:bg-primary hover:text-primary-foreground"
+            >
               <ArrowUpRight className="h-4 w-4" />
-            </div>
+            </Link>
           </div>
 
           <p className="mt-3.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">

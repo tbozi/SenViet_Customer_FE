@@ -468,7 +468,9 @@ export default function UserGuidePage() {
                             : "sm:grid-cols-2 lg:grid-cols-3"
                       }`}
                     >
-                      {sec.images.map((img) => (
+                      {sec.images.map((img) => {
+                        const localizedSrc = isEn ? img.src.replace("/guide/", "/guide/en/") : img.src;
+                        return (
                         <figure
                           key={img.src}
                           className="group overflow-hidden rounded-2xl border border-border bg-secondary/20"
@@ -480,7 +482,12 @@ export default function UserGuidePage() {
                           >
                             <img
                               loading="lazy"
-                              src={img.src}
+                              src={localizedSrc}
+                              onError={(e) => {
+                                if (e.currentTarget.src !== window.location.origin + img.src) {
+                                  e.currentTarget.src = img.src;
+                                }
+                              }}
                               alt={isEn ? img.captionEn : img.captionVi}
                               className="h-56 sm:h-64 w-full object-cover object-top transition duration-500 group-hover:scale-[1.02]"
                             />
@@ -493,7 +500,8 @@ export default function UserGuidePage() {
                             {isEn ? img.captionEn : img.captionVi}
                           </figcaption>
                         </figure>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </article>
@@ -522,7 +530,12 @@ export default function UserGuidePage() {
               <X className="h-5 w-5" />
             </button>
             <img
-              src={lightboxImage.src}
+              src={isEn ? lightboxImage.src.replace("/guide/", "/guide/en/") : lightboxImage.src}
+              onError={(e) => {
+                if (e.currentTarget.src !== window.location.origin + lightboxImage.src) {
+                  e.currentTarget.src = lightboxImage.src;
+                }
+              }}
               alt={isEn ? lightboxImage.captionEn : lightboxImage.captionVi}
               className="max-h-[82vh] w-full object-contain bg-slate-950"
             />

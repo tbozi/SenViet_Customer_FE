@@ -29,6 +29,7 @@ export interface BookingCreateRequestDto {
   hotelId?: number;
   employeeId?: number | string;
   bookingChannel: "ONLINE" | "WALK_IN";
+  paymentMethod?: "CASH" | "PAYOS";
   customerPromotionId?: number | string | null;
   promotionId?: number | string | null;
   bookingDetails: BookingDetailRequestDto[];
@@ -41,6 +42,7 @@ export interface BookingResponseDto {
   customerName: string;
   bookingStatus: string;
   bookingChannel: string;
+  paymentMethod?: string;
   createdAt: string;
   roomTotal: number;
   serviceTotal: number;

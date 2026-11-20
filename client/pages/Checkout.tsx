@@ -308,46 +308,57 @@ export default function Checkout() {
   const hotelTarget = hotel?.name || String(hotelId);
 
   const savedPromotionItems = useMemo(() => {
-    return savedPromotionCodes.map((code) => {
-      const cleanCode = code.trim().toUpperCase();
-      const rule = PROMOTION_RULES[cleanCode];
-      const backendMatch = savedPromosBackend?.find(
-        (sp) =>
-          (sp.promotionCode && sp.promotionCode.toUpperCase() === cleanCode) ||
-          (sp.code && sp.code.toUpperCase().startsWith(cleanCode)),
-      );
-      const activeMatch = activePromotions.find(
-        (ap) => ap.code.trim().toUpperCase() === cleanCode,
-      );
-      const { applicable, reason } = isPromotionApplicableToHotel(
-        code,
-        hotelTarget,
-      );
-      const isAlreadyUsed = Boolean(backendMatch?.isUsed);
-      const backendDiscountText = backendMatch
-        ? backendMatch.discountType === "PERCENTAGE" || backendMatch.discountValue <= 100
-          ? `Giảm ${backendMatch.discountValue}%`
-          : `Giảm ${formatVnd(backendMatch.discountValue)}`
-        : activeMatch
-          ? activeMatch.discountType === "PERCENTAGE" || activeMatch.discountValue <= 100
-            ? `Giảm ${activeMatch.discountValue}%`
-            : `Giảm ${formatVnd(activeMatch.discountValue)}`
-          : undefined;
-      return {
-        code,
-        name:
-          rule?.name ||
-          backendMatch?.title ||
-          activeMatch?.name ||
-          promotionNames[code] ||
-          "Ưu đãi Sen Việt",
-        discountText: rule?.discountText || backendDiscountText,
-        applicable: isAlreadyUsed ? false : applicable,
-        reason: isAlreadyUsed
-          ? (isEn ? "Already used (1 use per account)" : "Mã đã được sử dụng (mỗi tài khoản chỉ dùng 1 lần)")
-          : reason,
-      };
-    });
+    const nowMs = Date.now();
+    const isNotExpired = (endDate?: string) => {
+      if (!endDate) return true;
+      const t = new Date(endDate).getTime();
+      return Number.isNaN(t) || t >= nowMs;
+    };
+
+    return savedPromotionCodes
+      .map((code) => {
+        const cleanCode = code.trim().toUpperCase();
+        const rule = PROMOTION_RULES[cleanCode];
+        const backendMatch = savedPromosBackend?.find(
+          (sp) =>
+            (sp.promotionCode && sp.promotionCode.toUpperCase() === cleanCode) ||
+            (sp.code && sp.code.toUpperCase().startsWith(cleanCode)),
+        );
+        const activeMatch = activePromotions.find(
+          (ap) => ap.code.trim().toUpperCase() === cleanCode,
+        );
+        if (backendMatch && !isNotExpired(backendMatch.endDate)) return null;
+        if (activeMatch && !isNotExpired(activeMatch.endDate)) return null;
+        const { applicable, reason } = isPromotionApplicableToHotel(
+          code,
+          hotelTarget,
+        );
+        const isAlreadyUsed = Boolean(backendMatch?.isUsed);
+        const backendDiscountText = backendMatch
+          ? backendMatch.discountType === "PERCENTAGE" || backendMatch.discountValue <= 100
+            ? `Giảm ${backendMatch.discountValue}%`
+            : `Giảm ${formatVnd(backendMatch.discountValue)}`
+          : activeMatch
+            ? activeMatch.discountType === "PERCENTAGE" || activeMatch.discountValue <= 100
+              ? `Giảm ${activeMatch.discountValue}%`
+              : `Giảm ${formatVnd(activeMatch.discountValue)}`
+            : undefined;
+        return {
+          code,
+          name:
+            rule?.name ||
+            backendMatch?.title ||
+            activeMatch?.name ||
+            promotionNames[code] ||
+            "Ưu đãi Sen Việt",
+          discountText: rule?.discountText || backendDiscountText,
+          applicable: isAlreadyUsed ? false : applicable,
+          reason: isAlreadyUsed
+            ? (isEn ? "Already used (1 use per account)" : "Mã đã được sử dụng (mỗi tài khoản chỉ dùng 1 lần)")
+            : reason,
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null);
   }, [savedPromotionCodes, hotelTarget, savedPromosBackend, activePromotions]);
 
   const promoApplicability = useMemo(() => {
@@ -695,6 +706,7 @@ export default function Checkout() {
         customerEmail: user?.email,
         hotelId,
         bookingChannel: "ONLINE",
+        paymentMethod: payment === "cash" ? "CASH" : "PAYOS",
         customerPromotionId: customerPromotionIdToSend,
         promotionId: promotionIdToSend,
         bookingDetails: bookingDetailsPayload,
@@ -870,21 +882,49 @@ export default function Checkout() {
               <h2 className="font-display text-2xl font-bold text-primary">
                 {isEn ? "Payment Method" : "Phương thức thanh toán"}
               </h2>
-              <div className="mt-5">
-                <div className="flex items-center gap-3 rounded-xl border border-primary bg-secondary p-4 text-left text-sm text-primary">
-                  <QrCode className="h-5 w-5 shrink-0" />
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    ["qr", isEn ? "Bank QR Code (PayOS)" : "Quét mã ngân hàng (PayOS)", QrCode],
+                    ["cash", isEn ? "Pay at Front Desk" : "Tiền mặt tại lễ tân", Banknote],
+                  ] as const
+                ).map(([value, label, Icon]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setPayment(value)}
+                    className={`flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition ${
+                      payment === value
+                        ? "border-primary bg-secondary text-primary shadow-xs"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    <span className="font-semibold">{label}</span>
+                  </button>
+                ))}
+              </div>
+              {payment === "qr" ? (
+                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-primary/20 bg-secondary/60 p-3 text-xs text-primary">
+                  <QrCode className="mt-0.5 h-4 w-4 shrink-0" />
                   <div>
-                    <span className="font-semibold block">
-                      {isEn ? "Online Bank QR Transfer (PayOS)" : "Chuyển khoản / Quét mã QR ngân hàng trực tuyến (PayOS)"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {isEn
-                        ? "Automatic instant confirmation via VietQR / PayOS gateway."
-                        : "Đặt phòng trực tuyến thanh toán qua mã VietQR PayOS và tự động xác nhận ngay lập tức."}
-                    </span>
+                    <span className="font-semibold">{isEn ? "PayOS Instant QR:" : "PayOS tự động xác nhận:"}</span>{" "}
+                    {isEn
+                      ? "Scan VietQR code to get instant automatic confirmation."
+                      : "Đặt phòng trực tuyến thanh toán qua mã VietQR PayOS và tự động xác nhận ngay lập tức."}
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
+                  <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                  <div>
+                    <span className="font-semibold text-amber-950">{isEn ? "Pay at Front Desk:" : "Thanh toán tại quầy lễ tân:"}</span>{" "}
+                    {isEn
+                      ? "Your reservation is held for check-in. Once the front desk confirms your cash payment, your booking status will automatically update to Confirmed."
+                      : "Đơn đặt phòng sẽ được giữ chỗ cho bạn. Khi bạn thanh toán tiền mặt tại quầy lễ tân và nhân viên xác nhận, trạng thái đơn trên web sẽ tự động cập nhật sang Đã xác nhận."}
+                  </div>
+                </div>
+              )}
             </div>
             {error && (
               <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
