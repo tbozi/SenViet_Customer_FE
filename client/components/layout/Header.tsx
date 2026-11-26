@@ -47,7 +47,7 @@ function FlagIcon({ code, className = "h-4 w-4" }: { code: string; className?: s
         <svg viewBox="0 0 24 24" className={`rounded-full shrink-0 ${className}`}>
           <rect width="24" height="24" fill="#DA251D" />
           <polygon
-            points="12,4 14.47,11.6 22.46,11.6 15.99,16.3 18.46,23.9 12,19.2 5.54,23.9 8.01,16.3 1.54,11.6 9.53,11.6"
+            points="12,5 13.59,9.82 18.66,9.84 14.57,12.84 16.11,17.66 12,14.7 7.89,17.66 9.43,12.84 5.34,9.84 10.41,9.82"
             fill="#FFFF00"
           />
         </svg>
@@ -167,6 +167,7 @@ export default function Header() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
   const userShortName = user?.name ? user.name.trim().split(/\s+/).pop() || user.name : "";
 
@@ -373,18 +374,23 @@ export default function Header() {
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {user && (
-            <Popover open={notifOpen} onOpenChange={setNotifOpen}>
+            <Popover
+              open={notifOpen}
+              onOpenChange={(next) => {
+                setNotifOpen(next);
+                if (next) setUserMenuOpen(false);
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="relative rounded-full transition hover:bg-secondary"
+                  className="relative h-10 w-10 rounded-full border border-border/70 bg-background/80 transition hover:bg-secondary"
                   aria-label="Thông báo"
                 >
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1 text-[10px] font-bold text-gold-foreground ring-2 ring-background">
-                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-gold opacity-75" />
+                    <span className="absolute top-0.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-background">
                       <span className="relative">{unreadCount > 99 ? "99+" : unreadCount}</span>
                     </span>
                   )}
@@ -392,7 +398,7 @@ export default function Header() {
               </PopoverTrigger>
               <PopoverContent
                 align="end"
-                className="w-80 sm:w-96 p-0 shadow-2xl rounded-2xl border-gold/40 overflow-hidden"
+                className="w-80 sm:w-96 p-0 shadow-2xl rounded-2xl border-gold/40 bg-card text-card-foreground overflow-hidden"
               >
                 <div className="flex items-center justify-between border-b border-border/70 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-3">
                   <div className="flex items-center gap-2">
@@ -451,7 +457,7 @@ export default function Header() {
                             <span className="text-[10px] text-muted-foreground shrink-0">{n.time}</span>
                           </div>
                           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
-                            {n.description}
+                            {n.description.replace(/(\d+)(?:\.\d+)?\s*(?:₫|đ)\b/gi, (_, num) => `${Number(num).toLocaleString("vi-VN")} VND`)}
                           </p>
                         </div>
                         {!n.read && (
@@ -485,7 +491,7 @@ export default function Header() {
             variant="ghost"
             size="sm"
             onClick={() => setLanguage(language === "vi" ? "en" : "vi")}
-            className="gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full hover:bg-secondary inline-flex items-center shrink-0 border border-border/40 transition-colors"
+            className="h-10 gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full hover:bg-secondary inline-flex items-center shrink-0 border border-border/70 transition-colors"
             aria-label="Chuyển đổi ngôn ngữ Tiếng Việt / English"
             title={language === "vi" ? "Bấm để đổi sang English" : "Click to switch to Tiếng Việt"}
           >
@@ -498,27 +504,33 @@ export default function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full shrink-0"
-            onClick={toggleTheme}
+            className="h-10 w-10 rounded-full border border-border/70 bg-background/80 hover:bg-secondary shrink-0"
+            onClick={(e) => toggleTheme(e)}
             aria-label="Chuyển chế độ sáng/tối"
             title={theme === "dark" ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
           >
             {theme === "dark" ? (
-              <Sun className="h-4 w-4 text-gold transition-all" />
+              <Sun className="h-4 w-4 text-amber-400 transition-all" />
             ) : (
               <Moon className="h-4 w-4 text-primary transition-all" />
             )}
           </Button>
 
           {user ? (
-            <DropdownMenu>
+            <DropdownMenu
+              open={userMenuOpen}
+              onOpenChange={(next) => {
+                setUserMenuOpen(next);
+                if (next) setNotifOpen(false);
+              }}
+            >
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-1.5 rounded-full px-3 py-1.5 shrink-0 border-border/60">
                   <User className="h-4 w-4 text-primary" />
                   <span className="font-semibold text-xs max-w-[85px] sm:max-w-[110px] truncate">{userShortName}</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuContent align="end" className="w-64 bg-card text-card-foreground">
                 <div className="px-3 py-2">
                   <p className="font-semibold text-primary">{user.name}</p>
                   <p className="text-xs text-muted-foreground">{user.email}</p>

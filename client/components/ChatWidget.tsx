@@ -738,7 +738,9 @@ function formatShortBranchName(name?: string): string {
 function formatReply(text: string): string {
   if (!text) return "";
   const safe = escapeHtml(text.trim());
-  const formatted = safe.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const formatted = safe
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^\s*\n][^*\n]*?)\*/g, "<em>$1</em>");
   const lines = formatted.split("\n");
   const processed: string[] = [];
   let inList = false;
@@ -898,7 +900,8 @@ export default function ChatWidget() {
 
   const [open, setOpen] = useState(false);
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Khung chat AI luôn mở mặc định ở kích thước nửa màn hình
+  const isExpanded = true;
 
   const [customWidth, setCustomWidth] = useState<number | null>(null);
 
@@ -1011,16 +1014,13 @@ export default function ChatWidget() {
   const voiceTargetRef = useRef<"ai" | "staff">("ai");
   const staffInputRef = useRef<HTMLInputElement>(null);
 
-  // Draggable floating chat launcher position (offset from bottom-right)
-  const [fabPos, setFabPos] = useState<{ right: number; bottom: number } | null>(null);
-  const fabDragRef = useRef<{ startX: number; startY: number; startRight: number; startBottom: number; moved: boolean } | null>(null);
+  // Draggable floating chat launcher position — snaps to left or right edge; menu stays anchored to it
+  const [fabPos, setFabPos] = useState<{ side: "left" | "right"; bottom: number }>({ side: "right", bottom: 24 });
+  const [fabDragLive, setFabDragLive] = useState<{ left: number; bottom: number } | null>(null);
+  const fabDragRef = useRef<{ startX: number; startY: number; startLeft: number; startBottom: number; width: number; moved: boolean } | null>(null);
   const didDragFabRef = useRef(false);
-  const menuWindowRef = useRef<HTMLDivElement | null>(null);
   const staffWindowRef = useRef<HTMLDivElement | null>(null);
   const aiWindowRef = useRef<HTMLDivElement | null>(null);
-  const menuDrag = useDraggablePosition(menuWindowRef, {
-    storageKey: "senviet_customer_menu_window_pos",
-  });
   const staffDrag = useDraggablePosition(staffWindowRef, {
     storageKey: "senviet_customer_staff_window_pos",
   });
@@ -1030,13 +1030,14 @@ export default function ChatWidget() {
 
   const handleFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const currentRight = fabPos ? fabPos.right : Math.max(12, window.innerWidth - rect.right);
-    const currentBottom = fabPos ? fabPos.bottom : Math.max(12, window.innerHeight - rect.bottom);
+    const currentLeft = rect.left;
+    const currentBottom = Math.max(16, window.innerHeight - rect.bottom);
     fabDragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
-      startRight: currentRight,
+      startLeft: currentLeft,
       startBottom: currentBottom,
+      width: rect.width,
       moved: false,
     };
     didDragFabRef.current = false;
@@ -1050,13 +1051,23 @@ export default function ChatWidget() {
         didDragFabRef.current = true;
       }
       if (fabDragRef.current.moved) {
-        const nextRight = Math.min(Math.max(8, fabDragRef.current.startRight - dx), window.innerWidth - 72);
-        const nextBottom = Math.min(Math.max(8, fabDragRef.current.startBottom - dy), window.innerHeight - 64);
-        setFabPos({ right: nextRight, bottom: nextBottom });
+        const nextLeft = Math.min(Math.max(12, fabDragRef.current.startLeft + dx), window.innerWidth - fabDragRef.current.width - 12);
+        const nextBottom = Math.min(Math.max(16, fabDragRef.current.startBottom - dy), window.innerHeight - 64);
+        setFabDragLive({ left: nextLeft, bottom: nextBottom });
       }
     };
 
-    const onUp = () => {
+    const onUp = (ev: PointerEvent) => {
+      if (fabDragRef.current?.moved) {
+        const dx = ev.clientX - fabDragRef.current.startX;
+        const dy = ev.clientY - fabDragRef.current.startY;
+        const finalLeft = Math.min(Math.max(12, fabDragRef.current.startLeft + dx), window.innerWidth - fabDragRef.current.width - 12);
+        const finalBottom = Math.min(Math.max(16, fabDragRef.current.startBottom - dy), window.innerHeight - 64);
+        const centerX = finalLeft + fabDragRef.current.width / 2;
+        const nextSide: "left" | "right" = centerX < window.innerWidth / 2 ? "left" : "right";
+        setFabPos({ side: nextSide, bottom: finalBottom });
+      }
+      setFabDragLive(null);
       fabDragRef.current = null;
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
@@ -1746,7 +1757,6 @@ export default function ChatWidget() {
         sessionStorage.removeItem("senviet_reopen_mini_chat");
         setMenuOpen(false);
         setStaffOpen(false);
-        setIsExpanded(false);
         setOpen(true);
       }
     } catch {}
@@ -3267,8 +3277,9 @@ export default function ChatWidget() {
 
     <>
 
-      {/* Nút Floating "Liên hệ" kiểu CellphoneS */}
+      {/* Nút Floating "Liên hệ" kiểu CellphoneS — ẩn khi khung chat đang mở để chỉ giữ 1 nút đóng (X) */}
 
+      {!(open || staffOpen) && (
       <button
 
         onPointerDown={handleFabPointerDown}
@@ -3277,13 +3288,19 @@ export default function ChatWidget() {
 
         aria-label={isEn ? "Contact Sen Việt Support" : "Liên hệ tư vấn Sen Việt"}
 
-        style={fabPos ? { right: `${fabPos.right}px`, bottom: `${fabPos.bottom}px`, touchAction: "none" } : { touchAction: "none" }}
+        style={
+          fabDragLive
+            ? { left: `${fabDragLive.left}px`, bottom: `${fabDragLive.bottom}px`, touchAction: "none" }
+            : fabPos.side === "left"
+              ? { left: "20px", bottom: `${fabPos.bottom}px`, touchAction: "none" }
+              : { right: "20px", bottom: `${fabPos.bottom}px`, touchAction: "none" }
+        }
 
-        className={`fixed z-50 flex h-11 w-11 sm:h-auto sm:w-auto items-center justify-center gap-2 sm:gap-2.5 rounded-full bg-gradient-to-r from-primary via-primary to-slate-900 p-0 sm:px-5 sm:py-3.5 text-white shadow-xl shadow-black/30 ring-2 ring-gold/60 transition hover:scale-105 cursor-grab active:cursor-grabbing ${fabPos ? "" : "bottom-4 right-4 sm:bottom-6 sm:right-6"}`}
+        className={`fixed z-50 flex h-11 w-11 sm:h-auto sm:w-auto items-center justify-center gap-2 sm:gap-2.5 rounded-full bg-gradient-to-r from-[#0f294a] via-[#13325b] to-slate-900 p-0 sm:px-5 sm:py-3.5 text-white shadow-xl shadow-black/30 ring-2 ring-gold/60 hover:scale-105 cursor-grab active:cursor-grabbing ${fabDragLive ? "" : "transition-all duration-200"}`}
 
       >
 
-        {open || staffOpen || menuOpen ? (
+        {menuOpen ? (
 
           <>
 
@@ -3330,6 +3347,7 @@ export default function ChatWidget() {
         )}
 
       </button>
+      )}
 
 
 
@@ -3338,18 +3356,21 @@ export default function ChatWidget() {
       {menuOpen && !open && !staffOpen && (
 
         <div
-          ref={menuWindowRef}
-          style={menuDrag.dragStyle}
-          className="fixed bottom-16 sm:bottom-20 right-4 sm:right-6 z-50 w-[26rem] sm:w-[27rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gold/40 bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200"
+          style={
+            typeof window !== "undefined" && fabPos.bottom > window.innerHeight - 300
+              ? {
+                  ...(fabPos.side === "left" ? { left: "20px" } : { right: "20px" }),
+                  top: `${Math.max(16, window.innerHeight - fabPos.bottom + 12)}px`,
+                }
+              : {
+                  ...(fabPos.side === "left" ? { left: "20px" } : { right: "20px" }),
+                  bottom: `${fabPos.bottom + 64}px`,
+                }
+          }
+          className="fixed z-50 w-[26rem] sm:w-[27rem] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl border border-gold/40 bg-card shadow-2xl animate-in fade-in slide-in-from-bottom-3 duration-200"
         >
 
-          <div
-            onPointerDown={menuDrag.onPointerDown}
-            title={isEn ? "Drag to move" : "Kéo để di chuyển"}
-            className={`bg-gradient-to-r from-primary to-slate-900 px-4 py-3 text-white select-none ${
-              menuDrag.isDragging ? "cursor-grabbing" : "cursor-grab"
-            }`}
-          >
+          <div className="bg-gradient-to-r from-[#0f294a] to-slate-900 px-4 py-3 text-white select-none">
 
             <p className="text-xs font-bold uppercase tracking-wider text-gold">
 
@@ -3513,11 +3534,8 @@ export default function ChatWidget() {
 
         <div
           ref={staffWindowRef}
-          style={{
-            ...staffDrag.dragStyle,
-            ...(customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : {}),
-          }}
-          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing || staffDrag.isDragging ? "" : "transition-all duration-300 ease-in-out"} ${
+          style={customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : undefined}
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing ? "" : "transition-all duration-300 ease-in-out"} ${
 
             isStaffExpanded
 
@@ -3537,15 +3555,9 @@ export default function ChatWidget() {
             <div className="h-10 w-0.5 rounded-full bg-border group-hover:bg-gold transition-colors" />
           </div>
 
-          {/* Header Nhân viên (kéo thả di chuyển) */}
+          {/* Header Nhân viên */}
 
-          <div
-            onPointerDown={staffDrag.onPointerDown}
-            title={isEn ? "Drag header to move chat window" : "Kéo thanh tiêu đề để di chuyển khung chat"}
-            className={`flex items-center justify-between bg-gradient-to-r from-blue-900 via-primary to-slate-900 px-4 py-3 text-white shadow-sm select-none ${
-              staffDrag.isDragging ? "cursor-grabbing" : "cursor-grab"
-            }`}
-          >
+          <div className="flex items-center justify-between bg-gradient-to-r from-blue-900 via-primary to-slate-900 px-4 py-3 text-white shadow-sm select-none">
 
             <div className="flex items-center gap-2.5">
 
@@ -3966,11 +3978,8 @@ export default function ChatWidget() {
             exit="exit"
 
           ref={aiWindowRef}
-          style={{
-            ...aiDrag.dragStyle,
-            ...(customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : {}),
-          }}
-          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing || aiDrag.isDragging ? "" : "transition-all duration-300 ease-in-out"} ${
+          style={customWidth ? { width: `${customWidth}px`, maxWidth: "calc(100vw - 1.5rem)" } : undefined}
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl ${isResizing ? "" : "transition-all duration-300 ease-in-out"} ${
 
             isExpanded
 
@@ -3990,14 +3999,8 @@ export default function ChatWidget() {
             <div className="h-10 w-0.5 rounded-full bg-border group-hover:bg-gold transition-colors" />
           </div>
 
-          {/* Header (kéo thả di chuyển) */}
-          <div
-            onPointerDown={aiDrag.onPointerDown}
-            title={isEn ? "Drag header to move chat window" : "Kéo thanh tiêu đề để di chuyển khung chat"}
-            className={`flex items-center justify-between gap-2 bg-primary px-3.5 py-2.5 text-primary-foreground shadow-sm select-none ${
-              aiDrag.isDragging ? "cursor-grabbing" : "cursor-grab"
-            }`}
-          >
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2 bg-[#0f294a] px-3.5 py-2.5 text-white shadow-sm select-none">
             <div className="flex items-center gap-2 min-w-0">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gold text-gold-foreground shadow-sm">
                 <Bot className="h-4.5 w-4.5" />
@@ -4009,11 +4012,6 @@ export default function ChatWidget() {
                   {selectedBranch && (
                     <span className="hidden sm:inline-block truncate max-w-[120px] rounded-full bg-gold/20 px-2 py-0.5 text-[10px] font-medium text-gold">
                       {formatShortBranchName(selectedBranch)}
-                    </span>
-                  )}
-                  {isExpanded && (
-                    <span className="hidden md:inline-block rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium text-white whitespace-nowrap shrink-0">
-                      {isEn ? "Half-page" : "Nửa trang"}
                     </span>
                   )}
                 </div>
@@ -4039,13 +4037,6 @@ export default function ChatWidget() {
                 title={isEn ? "New conversation" : "Cuộc trò chuyện mới"}
               >
                 <RotateCcw className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => { setCustomWidth(null); setIsExpanded((prev) => !prev); }}
-                className="rounded-full p-1.5 text-primary-foreground/80 transition hover:bg-white/10 hover:text-white shrink-0"
-                title={isExpanded ? (isEn ? "Restore" : "Thu nhỏ") : (isEn ? "Expand half-page" : "Mở rộng nửa trang")}
-              >
-                {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
               </button>
               <Link
                 to="/chat"
@@ -4751,7 +4742,7 @@ export default function ChatWidget() {
 
                                     ? "border-rose-400/40 bg-muted/40"
 
-                                    : "border-emerald-500/40 bg-white"
+                                    : "border-emerald-500/40 bg-card text-card-foreground"
 
                                 }`}
 

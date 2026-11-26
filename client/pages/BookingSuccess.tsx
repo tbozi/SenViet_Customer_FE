@@ -368,19 +368,7 @@ export default function BookingSuccess() {
     } catch {}
   }, [booking?.id, booking?.status, booking?.userEmail]);
 
-  // Tự động mở màn hình quét mã QR PayOS khi khách vừa chuyển từ Checkout sang với phương thức QR
-  useEffect(() => {
-    if (
-      booking &&
-      booking.status === "pending_payment" &&
-      booking.paymentMethod === "qr" &&
-      !qrModalOpen &&
-      !autoTriggeredQrRef.current
-    ) {
-      autoTriggeredQrRef.current = true;
-      handlePayment();
-    }
-  }, [booking?.id, booking?.status, booking?.paymentMethod, qrModalOpen]);
+  // Bước 5: Khách tự chọn Chuyển khoản QR hoặc Tiền mặt tại quầy rồi bấm Thanh toán ngay
 
   const handleCheckPaymentStatus = async () => {
     if (!booking || !qrData?.orderId) return;
@@ -643,7 +631,7 @@ export default function BookingSuccess() {
               </div>
             )}
           </section>
-          <aside className="rounded-2xl border border-border bg-white p-6 shadow-lg lg:sticky lg:top-6">
+          <aside className="rounded-2xl border border-border bg-card text-card-foreground p-6 shadow-lg lg:sticky lg:top-6">
             <p className="text-sm font-semibold uppercase tracking-[.16em] text-gold">
               {isEn ? "Payment" : "Thanh toán"}
             </p>
@@ -698,7 +686,7 @@ export default function BookingSuccess() {
                   <label
                     className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition ${
                       paymentMethod === "BANK"
-                        ? "border-primary bg-white shadow-sm font-semibold text-primary"
+                        ? "border-primary bg-card text-card-foreground shadow-sm font-semibold text-primary"
                         : "border-border bg-white/60 text-muted-foreground hover:border-primary/50"
                     }`}
                   >
@@ -717,7 +705,7 @@ export default function BookingSuccess() {
                   <label
                     className={`flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition ${
                       paymentMethod === "CASH"
-                        ? "border-primary bg-white shadow-sm font-semibold text-primary"
+                        ? "border-primary bg-card text-card-foreground shadow-sm font-semibold text-primary"
                         : "border-border bg-white/60 text-muted-foreground hover:border-primary/50"
                     }`}
                   >
@@ -814,7 +802,7 @@ export default function BookingSuccess() {
       <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
         <DialogContent className="max-w-[800px] max-h-[92vh] overflow-y-auto rounded-2xl p-0 sm:max-w-[800px] border-none shadow-2xl">
           {/* Header Modal */}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-white px-7 py-4">
+          <div className="flex items-center justify-between border-b border-slate-100 bg-card text-card-foreground px-7 py-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">{isEn ? "Pay via QR Code" : "Thanh toán qua mã QR"}</h2>
               <p className="text-xs text-slate-500 mt-0.5">{isEn ? "QR code is valid for 5 minutes" : "Mã QR có hiệu lực trong 5 phút"}</p>
@@ -825,7 +813,7 @@ export default function BookingSuccess() {
             </div>
           </div>
 
-          <div className="p-6 sm:p-7 space-y-4 bg-white">
+          <div className="p-6 sm:p-7 space-y-4 bg-card text-card-foreground">
             {/* Top Hotel Branding & Tip Banner */}
             <div className="flex items-center justify-between rounded-xl bg-slate-50/90 px-4 py-3 border border-slate-200/80">
               <div className="flex items-center gap-3">
@@ -841,7 +829,7 @@ export default function BookingSuccess() {
                   </span>
                 </div>
               </div>
-              <span className="text-xs text-slate-600 font-mono font-semibold bg-white px-2.5 py-1 rounded-md border border-slate-200">
+              <span className="text-xs text-slate-600 font-mono font-semibold bg-card text-card-foreground px-2.5 py-1 rounded-md border border-slate-200">
                 {booking?.id}
               </span>
             </div>
@@ -862,21 +850,21 @@ export default function BookingSuccess() {
             {qrData && (
               <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-stretch">
                 {/* Cột trái: QR Code */}
-                <div className="flex flex-col items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-sm text-center">
+                <div className="flex flex-col items-center justify-between rounded-2xl border border-slate-200 bg-card text-card-foreground p-4 shadow-sm text-center">
                   <div className="mb-2 flex items-center justify-center gap-1.5">
                     <span className="text-sm font-black tracking-wider text-rose-600">VIET</span>
                     <span className="text-sm font-black tracking-wider text-blue-800">QR</span>
                     <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">PRO</span>
                   </div>
 
-                  <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-2.5 shadow-inner">
+                  <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-card text-card-foreground p-2.5 shadow-inner">
                     <img
                       src={qrData.qrUrl}
                       alt="VietQR PayOS"
                       className={`h-52 w-52 object-contain transition duration-300 ${countdown === 0 ? "filter blur-[2px] opacity-20 grayscale" : ""}`}
                     />
                     {countdown === 0 && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 p-3 text-center rounded-xl">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 text-card-foreground p-3 text-center rounded-xl">
                         <AlertCircle className="h-9 w-9 text-rose-500 mb-1" />
                         <span className="text-xs font-bold text-rose-600 uppercase tracking-wide">
                           {isEn ? "QR code has expired" : "Mã QR đã hết hạn"}

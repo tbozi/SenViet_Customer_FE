@@ -99,22 +99,27 @@ export function CountUp({
   decimals = 0,
   className,
 }: CountUpProps) {
-  const [value, setValue] = useState(0);
+  const [value, setValue] = useState(end);
   const ref = React.useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-40px" });
+  const isInView = useInView(ref, { once: true, amount: "some" });
 
   useEffect(() => {
-    if (!isInView) return;
+    setValue(end);
+  }, [end]);
+
+  useEffect(() => {
+    if (!isInView || end <= 0) return;
 
     let startTime: number | null = null;
     let animationFrameId: number;
+    const startVal = Math.max(1, Math.floor(end * 0.5));
 
     const animate = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
       const progress = Math.min((timestamp - startTime) / (duration * 1000), 1);
       // Ease out cubic
       const easedProgress = 1 - Math.pow(1 - progress, 3);
-      const current = easedProgress * end;
+      const current = startVal + easedProgress * (end - startVal);
 
       setValue(current);
 

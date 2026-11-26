@@ -237,7 +237,7 @@ export default function RoomAvailabilityCalendar({
             type="button"
             onClick={() => moveMonth(-1)}
             aria-label="Tháng trước"
-            className="rounded-lg border border-border bg-white p-1.5 text-primary transition hover:border-primary"
+            className="rounded-lg border border-border bg-card text-card-foreground p-1.5 text-primary transition hover:border-primary"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -248,7 +248,7 @@ export default function RoomAvailabilityCalendar({
             type="button"
             onClick={() => moveMonth(1)}
             aria-label="Tháng sau"
-            className="rounded-lg border border-border bg-white p-1.5 text-primary transition hover:border-primary"
+            className="rounded-lg border border-border bg-card text-card-foreground p-1.5 text-primary transition hover:border-primary"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -321,10 +321,10 @@ export default function RoomAvailabilityCalendar({
                       ? "border-primary/30 bg-primary/10 text-primary"
                       : !isCurrentMonth
                         ? available
-                          ? "border-border bg-white text-foreground hover:border-primary hover:shadow-sm"
+                          ? "border-border bg-card text-card-foreground text-foreground hover:border-primary hover:shadow-sm"
                           : "cursor-not-allowed border-red-100 bg-red-50 text-red-500 opacity-80"
                         : available
-                          ? "border-border bg-white hover:border-primary hover:shadow-sm"
+                          ? "border-border bg-card text-card-foreground hover:border-primary hover:shadow-sm"
                           : "cursor-not-allowed border-red-100 bg-red-50 text-red-500 opacity-80"
               }`}
             >

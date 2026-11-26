@@ -313,7 +313,7 @@ export default function AboutPage() {
                 ) : (
                   <Building2 className="h-10 w-10" />
                 )}
-                <div className="absolute bottom-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-primary flex items-center gap-1">
+                <div className="absolute bottom-3 left-3 rounded-full bg-card/90 text-card-foreground px-2.5 py-1 text-[11px] font-semibold text-primary flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-gold" />
                   {hotel.provinceName || hotel.address}
                 </div>

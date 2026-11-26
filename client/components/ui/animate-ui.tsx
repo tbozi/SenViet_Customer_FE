@@ -48,7 +48,7 @@ export const MotionCard = React.forwardRef<HTMLDivElement, MotionCardProps>(
         variants={itemFadeUpVariants}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, margin: "-40px" }}
+        viewport={{ once: true, amount: 0.05 }}
         whileHover={
           hoverEffect
             ? {
@@ -59,7 +59,7 @@ export const MotionCard = React.forwardRef<HTMLDivElement, MotionCardProps>(
             : undefined
         }
         className={cn(
-          "rounded-3xl border border-slate-100 bg-white transition-colors duration-300",
+          "rounded-3xl border border-border bg-card text-card-foreground transition-colors duration-300",
           className
         )}
         {...props}
@@ -82,7 +82,7 @@ export const MotionButton = React.forwardRef<HTMLButtonElement, MotionButtonProp
     const variantStyles = {
       primary: "bg-primary text-white shadow-md hover:bg-primary/95",
       gold: "bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md shadow-amber-600/20 hover:from-amber-700 hover:to-amber-800",
-      outline: "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300",
+      outline: "border border-border bg-card text-foreground hover:bg-secondary hover:border-border",
       ghost: "text-slate-600 hover:bg-slate-100",
     }[variant];
 
@@ -154,7 +154,7 @@ export const MotionStaggerList: React.FC<{
     variants={containerVariants}
     initial="hidden"
     whileInView="visible"
-    viewport={{ once: true, margin: "-30px" }}
+    viewport={{ once: true, amount: 0.05 }}
     className={className}
   >
     {children}

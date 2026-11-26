@@ -161,7 +161,7 @@ export function formatHotelLocation(hotel: { city?: string; province?: string })
 }
 
 export function formatVnd(amount: number) {
-  if (typeof amount !== "number" || isNaN(amount)) return "0₫";
-  return amount.toLocaleString("vi-VN") + "₫";
+  if (typeof amount !== "number" || isNaN(amount)) return "0 VND";
+  return amount.toLocaleString("vi-VN") + " VND";
 }
 

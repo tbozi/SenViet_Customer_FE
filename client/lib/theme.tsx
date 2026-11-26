@@ -5,7 +5,7 @@ type Theme = "light" | "dark";
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  toggleTheme: () => void;
+  toggleTheme: (event?: React.MouseEvent) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -31,8 +31,43 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(nextTheme);
   };
 
-  const toggleTheme = () => {
-    setThemeState((prev) => (prev === "light" ? "dark" : "light"));
+  const toggleTheme = (event?: React.MouseEvent) => {
+    const nextTheme: Theme = theme === "light" ? "dark" : "light";
+    const doc = document as Document & {
+      startViewTransition?: (cb: () => void) => { ready: Promise<void> };
+    };
+
+    if (!doc.startViewTransition || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setThemeState(nextTheme);
+      return;
+    }
+
+    const x = event?.clientX ?? window.innerWidth - 40;
+    const y = event?.clientY ?? 32;
+    const endRadius = Math.hypot(
+      Math.max(x, window.innerWidth - x),
+      Math.max(y, window.innerHeight - y),
+    );
+
+    const transition = doc.startViewTransition(() => {
+      setThemeState(nextTheme);
+    });
+
+    transition.ready.then(() => {
+      document.documentElement.animate(
+        {
+          clipPath: [
+            `circle(0px at ${x}px ${y}px)`,
+            `circle(${endRadius}px at ${x}px ${y}px)`,
+          ],
+        },
+        {
+          duration: 950,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          pseudoElement: "::view-transition-new(root)",
+        },
+      );
+    }).catch(() => {});
   };
 
   return (

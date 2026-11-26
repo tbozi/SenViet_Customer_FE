@@ -57,13 +57,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
     stepsVi: [
       "Nhấn Đăng ký trên thanh điều hướng, điền Họ tên, Email, SĐT, Mật khẩu và xác thực mã OTP gửi về Email.",
       "Nhấn Đăng nhập để truy cập tài khoản. Nếu quên mật khẩu, chọn Quên mật khẩu? để nhận liên kết đặt lại.",
-      "Sau khi đăng nhập, nhấn vào tên tài khoản ở góc trên bên phải để xem Hồ sơ cá nhân (/profile) và Ví ưu đãi (/account).",
+      "Sau khi đăng nhập, nhấn vào tên tài khoản ở góc trên bên phải để xem Hồ sơ cá nhân và Ví ưu đãi.",
       "Có thể chuyển đổi Ngôn ngữ (VI / EN), Giao diện Sáng / Tối và xem Chuông thông báo đặt phòng realtime trên thanh điều hướng.",
     ],
     stepsEn: [
       "Click Register in the header, enter your details, and verify with the OTP code sent to your email.",
       "Click Sign In with your email and password, or use Forgot Password? to receive a reset link.",
-      "Click your profile name at the top right to manage Profile (/profile) and Member Account (/account).",
+      "Click your profile name at the top right to manage Profile and Member Account.",
       "Switch between VI / EN, Light / Dark mode, and check real-time booking notifications in the top bar.",
     ],
     actionTo: "/login",
@@ -129,13 +129,13 @@ const GUIDE_SECTIONS: GuideSection[] = [
     summaryEn:
       "Filter branches by North – Central – South regions and inspect photo galleries, amenities, and verified reviews.",
     stepsVi: [
-      "Tại trang Khách sạn (/hotels), lọc theo Khu vực (Tất cả / Miền Bắc / Miền Trung / Miền Nam), theo Tỉnh thành hoặc tìm theo từ khóa.",
-      "Nhấn Xem chi tiết để mở trang Chi tiết khách sạn (/hotels/:id/details) với thư viện ảnh phóng to, hotline chi nhánh, tiện ích và câu hỏi thường gặp.",
+      "Tại trang Khách sạn, lọc theo Khu vực (Tất cả / Miền Bắc / Miền Trung / Miền Nam), theo Tỉnh thành hoặc tìm theo từ khóa.",
+      "Nhấn Xem chi tiết để mở trang Chi tiết khách sạn với thư viện ảnh phóng to, hotline chi nhánh, tiện ích và câu hỏi thường gặp.",
       "Xem điểm đánh giá trung bình và lọc các nhận xét thực tế của khách hàng theo số sao (5★, 4★, 3★...).",
     ],
     stepsEn: [
-      "On Hotels (/hotels), filter by Region (All / North / Central / South), Province, or search keyword.",
-      "Click View Details to open Hotel Details (/hotels/:id/details) with full photo lightbox, branch hotline, amenities, and FAQ.",
+      "On Hotels, filter by Region (All / North / Central / South), Province, or search keyword.",
+      "Click View Details to open Hotel Details with full photo lightbox, branch hotline, amenities, and FAQ.",
       "Inspect verified guest ratings and filter reviews by star rating.",
     ],
     actionTo: "/hotels",
@@ -165,16 +165,16 @@ const GUIDE_SECTIONS: GuideSection[] = [
     summaryEn:
       "Select rooms synced with real-time availability, add extra services, apply promo codes, and pay via PayOS VietQR.",
     stepsVi: [
-      "Bước 1 — Chọn phòng (/hotels/:id): Kiểm tra giờ nhận/trả dự kiến (14:00 – 12:00), chọn số lượng phòng ở mục Chọn phòng phù hợp và chỉnh riêng ngày/số khách từng phòng nếu cần. Theo dõi cột Tóm tắt lựa chọn bên phải rồi nhấn Tiếp tục.",
+      "Bước 1 — Chọn phòng: Kiểm tra giờ nhận/trả dự kiến (14:00 – 12:00), chọn số lượng phòng ở mục Chọn phòng phù hợp và chỉnh riêng ngày/số khách từng phòng nếu cần. Theo dõi cột Tóm tắt lựa chọn bên phải rồi nhấn Tiếp tục.",
       "Bước 2 — Chọn dịch vụ (/booking-services, tùy chọn): Chọn thêm Spa, Nhà hàng, Đưa đón sân bay... theo từng phòng đã chọn (yêu cầu đăng nhập).",
-      "Bước 3 — Thanh toán (/checkout): Kiểm tra thông tin liên hệ, nhập hoặc chọn Voucher đã lưu, xem chính sách hủy (trước > 24h được yêu cầu hoàn tiền; trong 24h không hoàn tiền) và nhấn Xác nhận & Thanh toán.",
-      "Bước 4 — Quét QR PayOS (/booking-success): Dùng app ngân hàng quét mã VietQR trong thời gian đếm ngược giữ phòng. Hệ thống tự động xác nhận đơn realtime và gửi email hóa đơn ngay khi thanh toán thành công.",
+      "Bước 3 — Thanh toán: Kiểm tra thông tin liên hệ, nhập hoặc chọn Voucher đã lưu, xem chính sách hủy (trước > 24h được yêu cầu hoàn tiền; trong 24h không hoàn tiền) và nhấn Xác nhận & Thanh toán.",
+      "Bước 4 — Quét QR PayOS: Dùng app ngân hàng quét mã VietQR trong thời gian đếm ngược giữ phòng. Hệ thống tự động xác nhận đơn realtime và gửi email hóa đơn ngay khi thanh toán thành công.",
     ],
     stepsEn: [
-      "Step 1 — Select Rooms (/hotels/:id): Verify estimated arrival/departure time, choose room quantities matching real-time availability, and review the sticky Booking Summary panel.",
+      "Step 1 — Select Rooms: Verify estimated arrival/departure time, choose room quantities matching real-time availability, and review the sticky Booking Summary panel.",
       "Step 2 — Add Services (/booking-services, optional): Attach Spa, Dining, or Transfer services per room (login required).",
-      "Step 3 — Checkout (/checkout): Confirm guest info, apply a promo code or saved voucher, review the 24-hour cancellation/refund policy, and proceed to PayOS.",
-      "Step 4 — Scan PayOS QR (/booking-success): Scan the VietQR code before the hold timer expires. Confirmation and invoice email update automatically in real time.",
+      "Step 3 — Checkout: Confirm guest info, apply a promo code or saved voucher, review the 24-hour cancellation/refund policy, and proceed to PayOS.",
+      "Step 4 — Scan PayOS QR: Scan the VietQR code before the hold timer expires. Confirmation and invoice email update automatically in real time.",
     ],
     actionTo: "/hotels/8",
     actionLabelVi: "Thử Chọn phòng ngay",
@@ -198,12 +198,12 @@ const GUIDE_SECTIONS: GuideSection[] = [
     summaryEn:
       "Search active promotions, inspect eligibility conditions, copy codes, or save vouchers to your account.",
     stepsVi: [
-      "Truy cập mục Ưu đãi (/offers) để xem các chương trình khuyến mãi đang áp dụng từ hệ thống.",
+      "Truy cập mục Ưu đãi để xem các chương trình khuyến mãi đang áp dụng từ hệ thống.",
       "Lọc theo Chi nhánh hoặc Loại ưu đãi (Giảm giá phòng, Giảm giá dịch vụ, Toàn bộ hóa đơn).",
       "Nhấn Sao chép để copy mã, Xem chi tiết để kiểm tra đơn tối thiểu/mức giảm tối đa, hoặc Lưu voucher để chọn nhanh ở bước thanh toán.",
     ],
     stepsEn: [
-      "Open Offers (/offers) to view all currently active promotions from the database.",
+      "Open Offers to view all currently active promotions from the database.",
       "Filter by Branch or Discount Type (Room, Service, or Total Invoice).",
       "Click Copy to copy a code, View Details for terms, or Save Voucher (when signed in) for one-click checkout.",
     ],
@@ -251,8 +251,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         src: "/guide/09b_chat_fullpage.png",
-        captionVi: "Giao diện Trợ lý AI toàn màn hình (/chat)",
-        captionEn: "Full-screen AI Concierge interface (/chat)",
+        captionVi: "Giao diện Trợ lý AI toàn màn hình",
+        captionEn: "Full-screen AI Concierge interface",
       },
     ],
   },
@@ -267,18 +267,18 @@ const GUIDE_SECTIONS: GuideSection[] = [
     summaryEn:
       "Track bookings, resume pending payments, print PDF invoices, request refunds, and leave stay reviews.",
     stepsVi: [
-      "Vào Lịch sử đặt phòng (/bookings) từ menu tài khoản để xem trạng thái toàn bộ đơn đã đặt.",
+      "Vào Lịch sử đặt phòng từ menu tài khoản để xem trạng thái toàn bộ đơn đã đặt.",
       "Đơn Chờ thanh toán: nhấn Thanh toán để mở lại mã QR PayOS trước khi hết thời gian giữ phòng.",
-      "Xem hóa đơn (/invoices/:id): kiểm tra chi tiết tiền phòng, dịch vụ, VAT, giảm giá và nhấn In hóa đơn / Lưu PDF.",
+      "Xem hóa đơn: kiểm tra chi tiết tiền phòng, dịch vụ, VAT, giảm giá và nhấn In hóa đơn / Lưu PDF.",
       "Hủy phòng & Hoàn tiền: với đơn đủ điều kiện (hủy trước giờ nhận > 24h), điền thông tin tài khoản ngân hàng nhận tiền để gửi yêu cầu Hoàn tiền do hủy booking.",
-      "Đánh giá (/reviews/:bookingId): sau khi hoàn tất lưu trú, chấm điểm 5 tiêu chí và gửi nhận xét công khai.",
+      "Đánh giá sau lưu trú: chấm điểm 5 tiêu chí và gửi nhận xét công khai.",
     ],
     stepsEn: [
-      "Open Booking History (/bookings) from your account menu to track all reservations.",
+      "Open Booking History from your account menu to track all reservations.",
       "Pending orders: reopen the PayOS QR code before expiration to complete payment.",
-      "View Invoice (/invoices/:id): review itemized room, service, VAT, and discount details, and print or save as PDF.",
+      "View Invoice: review itemized room, service, VAT, and discount details, and print or save as PDF.",
       "Cancel & Refund: for eligible paid bookings (> 24h before check-in), submit bank details to request a cancellation refund.",
-      "Review (/reviews/:bookingId): after check-out, rate 5 criteria and share your feedback publicly.",
+      "Post-stay Review: after check-out, rate 5 criteria and share your feedback publicly.",
     ],
     actionTo: "/bookings",
     actionLabelVi: "Xem Lịch sử đặt phòng",
@@ -296,14 +296,14 @@ const GUIDE_SECTIONS: GuideSection[] = [
     summaryEn:
       "Send inquiries via email directly to support, look up branch hotlines, and explore brand stories.",
     stepsVi: [
-      "Tại trang Liên hệ (/contact), điền Họ tên, SĐT, Email, chọn Chi nhánh, Tiêu đề và Nội dung rồi nhấn Gửi thông tin qua Email — hệ thống sẽ gửi thư đến CSKH và gửi email xác nhận lại cho bạn.",
+      "Tại trang Liên hệ, điền Họ tên, SĐT, Email, chọn Chi nhánh, Tiêu đề và Nội dung rồi nhấn Gửi thông tin qua Email — hệ thống sẽ gửi thư đến CSKH và gửi email xác nhận lại cho bạn.",
       "Kéo xuống phần Danh bạ chi nhánh để xem địa chỉ và bấm gọi trực tiếp số hotline từng chi nhánh.",
-      "Trang Về chúng tôi (/about) giới thiệu câu chuyện thương hiệu, giá trị cốt lõi và mạng lưới chi nhánh Sen Việt.",
+      "Trang Về chúng tôi giới thiệu câu chuyện thương hiệu, giá trị cốt lõi và mạng lưới chi nhánh Sen Việt.",
     ],
     stepsEn: [
-      "On Contact (/contact), fill out the inquiry form and click Send Email Inquiry — the backend emails support and sends a confirmation copy to your inbox.",
+      "On Contact, fill out the inquiry form and click Send Email Inquiry — the backend emails support and sends a confirmation copy to your inbox.",
       "Scroll to the Branch Directory to view verified addresses and click-to-call branch phone numbers.",
-      "Visit About Us (/about) to explore Sen Việt's heritage, core values, and nationwide properties.",
+      "Visit About Us to explore Sen Việt's heritage, core values, and nationwide properties.",
     ],
     actionTo: "/contact",
     actionLabelVi: "Đi tới Trang Liên hệ",
@@ -316,8 +316,8 @@ const GUIDE_SECTIONS: GuideSection[] = [
       },
       {
         src: "/guide/08_about.png",
-        captionVi: "Trang Về chúng tôi (/about)",
-        captionEn: "About Us page (/about)",
+        captionVi: "Trang Về chúng tôi",
+        captionEn: "About Us page",
       },
     ],
   },
@@ -417,8 +417,8 @@ export default function UserGuidePage() {
                   id={sec.id}
                   className="scroll-mt-24 rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-xs"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 pb-5">
-                    <div className="flex items-start gap-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border/60 pb-5">
+                    <div className="flex items-start gap-4 min-w-0 flex-1">
                       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-gold shadow-xs">
                         <Icon className="h-6 w-6" />
                       </div>

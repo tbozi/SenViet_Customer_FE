@@ -174,21 +174,22 @@ export function HeroCinematicSlider({
       {/* 2. Slide Content & Foreground Typography */}
       <div className="container relative z-10 flex min-h-[700px] lg:min-h-[740px] items-center py-24">
         <div className="max-w-3xl text-primary-foreground">
-          {/* Tagline & Location Pill */}
-          <div className="mb-6 flex flex-wrap items-center gap-3">
-            <ShinyBadge>
-              <Sparkles className="h-4 w-4 text-amber-300" />
+          {/* Editorial Eyebrow & Location — clean luxury typography */}
+          <div className="mb-5 flex flex-wrap items-center gap-3">
+            <span className="inline-flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-300">
+              <span className="h-[1.5px] w-7 bg-amber-400/90 rounded-full" />
               <span>{activeSlide.tagline[isEn ? "en" : "vi"]}</span>
-            </ShinyBadge>
+            </span>
 
             <motion.div
               key={`loc-${activeSlide.id}`}
-              initial={{ opacity: 0, x: -10 }}
+              initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
-              className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/20 px-3.5 py-1 text-xs font-medium text-amber-300 backdrop-blur-md"
+              transition={{ duration: 0.4 }}
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-white/80"
             >
-              <MapPin className="h-3.5 w-3.5 text-amber-400" />
+              <span className="text-white/35">•</span>
+              <MapPin className="h-3.5 w-3.5 text-amber-400/90" />
               <span>{activeSlide.location[isEn ? "en" : "vi"]}</span>
             </motion.div>
           </div>
@@ -286,47 +287,38 @@ export function HeroCinematicSlider({
         </div>
       </div>
 
-      {/* 3. Slider Navigation Controls */}
-      <div className="absolute bottom-10 right-6 sm:right-12 z-20 flex items-center gap-4 bg-slate-950/60 border border-white/20 backdrop-blur-xl px-4 py-2.5 rounded-full shadow-2xl">
-        {/* Slide Counter (e.g. 01 / 05) */}
-        <div className="font-mono text-xs font-bold tracking-wider text-amber-400">
+      {/* 3. Minimalist Slider Navigation Controls — top-right inside Hero so it never overlaps stats or QuickSearch */}
+      <div className="absolute top-24 sm:top-28 right-6 sm:right-12 z-20 flex items-center gap-3 bg-slate-950/55 border border-white/15 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-lg">
+        {/* Slide Counter (e.g. 01 / 08) */}
+        <div className="font-mono text-[11px] font-semibold tracking-wider text-amber-400 tabular-nums">
           <span>{String(safeIndex + 1).padStart(2, "0")}</span>
-          <span className="text-white/40 mx-1">/</span>
+          <span className="text-white/35 mx-1">/</span>
           <span className="text-white/60">{String(slides.length).padStart(2, "0")}</span>
         </div>
 
-        {/* Slide Indicator Dots with Progress */}
-        <div className="flex items-center gap-1.5">
-          {slides.map((slide, idx) => (
-            <button
-              key={slide.id}
-              onClick={() => setCurrentIndex(idx)}
-              aria-label={`Go to slide ${idx + 1}`}
-              className={cn(
-                "h-2 rounded-full transition-all duration-300",
-                safeIndex === idx
-                  ? "w-7 bg-amber-400 shadow-xs shadow-amber-400/50"
-                  : "w-2 bg-white/30 hover:bg-white/60"
-              )}
-            />
-          ))}
+        {/* Sleek Linear Progress Indicator */}
+        <div className="hidden sm:block h-1 w-14 overflow-hidden rounded-full bg-white/20">
+          <div
+            className="h-full rounded-full bg-amber-400 transition-all duration-300"
+            style={{ width: `${((safeIndex + 1) / Math.max(1, slides.length)) * 100}%` }}
+          />
         </div>
 
         {/* Prev / Next Navigation Arrows */}
-        <div className="flex items-center gap-1 border-l border-white/20 pl-2">
+        <div className="flex items-center gap-0.5 border-l border-white/15 pl-2">
           <button
             onClick={prevSlide}
             aria-label="Previous Slide"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-white/80 hover:bg-white/20 hover:text-white transition-all active:scale-90"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition-all active:scale-90"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={nextSlide}
             aria-label="Next Slide"
-            className="flex h-7 w-7 items-center justify-center rounded-full text-white/80 hover:bg-white/20 hover:text-white transition-all active:scale-90"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition-all active:scale-90"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

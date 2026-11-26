@@ -159,7 +159,7 @@ export default function Hotels() {
                   ? "Search by hotel name, address, or city..."
                   : "Tìm theo tên khách sạn, địa chỉ, thành phố..."
               }
-              className="w-full rounded-full border border-border bg-white pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
+              className="w-full rounded-full border border-border bg-card text-card-foreground pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
             />
             {searchQuery && (
               <button
@@ -176,7 +176,7 @@ export default function Hotels() {
             <select
               value={selectedProvince}
               onChange={(e) => updateFilters(region, e.target.value, searchQuery)}
-              className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
+              className="w-full rounded-full border border-border bg-card text-card-foreground px-4 py-2.5 text-sm font-medium outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 shadow-xs"
             >
               <option value="all">
                 {isEn ? "📍 All Provinces & Cities" : "📍 Tất cả tỉnh thành"}

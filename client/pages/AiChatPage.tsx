@@ -111,7 +111,9 @@ function escapeHtml(text: string): string {
 function formatReply(text: string): string {
   if (!text) return "";
   const safe = escapeHtml(text.trim());
-  const formatted = safe.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  const formatted = safe
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^\s*\n][^*\n]*?)\*/g, "<em>$1</em>");
   const lines = formatted.split("\n");
   const processed: string[] = [];
   let inList = false;
@@ -585,21 +587,23 @@ export default function AiChatPage() {
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                {isEn
-                  ? `Explore ${publicHotels.length} Branch${publicHotels.length === 1 ? "" : "es"}`
-                  : `Hệ thống ${publicHotels.length} Chi nhánh`}
+                {isEn ? "Sen Việt Branches" : "Hệ thống Chi nhánh"}
               </p>
               <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
                 {publicHotels.map((h) => (
                   <button
                     key={h.id}
                     onClick={() => send(isEn ? `Check available rooms at ${h.name}` : `Kiểm tra phòng trống tại ${h.name}`)}
-                    className="w-full text-left rounded-xl px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-secondary/70 transition flex items-center justify-between gap-2 group"
+                    className="w-full text-left rounded-xl px-3 py-2 text-xs font-medium text-foreground hover:bg-secondary/70 transition flex flex-col items-start gap-0.5 group"
                   >
-                    <span className="truncate">{h.name}</span>
-                    <span className="text-[10px] text-muted-foreground group-hover:text-primary shrink-0">
-                      {h.provinceName || h.address}
+                    <span className="font-semibold text-primary group-hover:text-primary truncate w-full">
+                      {h.name}
                     </span>
+                    {(h.provinceName || h.address) && (
+                      <span className="text-[11px] text-muted-foreground group-hover:text-foreground/80 line-clamp-1 w-full">
+                        {h.provinceName || h.address}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -832,7 +836,7 @@ export default function AiChatPage() {
                           </div>
                           {payosPayment.qrCodeUrl && (
                             <div className="text-center">
-                              <div className="inline-block rounded-xl border-2 border-dashed border-emerald-500/40 bg-white p-2 shadow-inner">
+                              <div className="inline-block rounded-xl border-2 border-dashed border-emerald-500/40 bg-card text-card-foreground p-2 shadow-inner">
                                 <img
                                   src={
                                     payosPayment.qrCodeUrl.startsWith("http")
@@ -944,8 +948,8 @@ export default function AiChatPage() {
             )}
           </div>
 
-          {/* Quick Prompts Bar on 1 line */}
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-border bg-muted/30 px-4 py-2.5 whitespace-nowrap">
+          {/* Quick Prompts Bar on mobile/tablet only (desktop already shows sidebar) */}
+          <div className="flex lg:hidden items-center gap-2 overflow-x-auto no-scrollbar border-t border-border bg-muted/30 px-4 py-2.5 whitespace-nowrap">
             {quickPrompts.map((q) => (
               <button
                 key={q}

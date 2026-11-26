@@ -112,7 +112,10 @@ function shouldSkipElement(el: Element | null): boolean {
   return false;
 }
 
+let translationEpoch = 0;
+
 export function restoreOriginalDomTexts() {
+  translationEpoch += 1;
   translatedNodes.forEach((node) => {
     const orig = originalTextMap.get(node);
     if (orig !== undefined && node.isConnected) {
@@ -124,6 +127,7 @@ export function restoreOriginalDomTexts() {
 
 export async function translateVisibleDomToEn() {
   if (typeof document === "undefined" || !document.body) return;
+  const myEpoch = translationEpoch;
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const nodesToTranslate: Text[] = [];
   const texts: string[] = [];
@@ -149,6 +153,8 @@ export async function translateVisibleDomToEn() {
   if (nodesToTranslate.length === 0) return;
 
   const translatedMap = await translateDynamicTexts(texts, "en");
+  // Abort if user switched back to Vietnamese while translation was in flight
+  if (myEpoch !== translationEpoch) return;
   for (const node of nodesToTranslate) {
     if (!node.isConnected) continue;
     const orig = originalTextMap.get(node) ?? node.nodeValue ?? "";

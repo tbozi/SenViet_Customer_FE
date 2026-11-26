@@ -1499,7 +1499,7 @@ export default function HotelDetails() {
 
             onClick={handleShare}
 
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-semibold text-primary shadow-sm transition hover:border-gold hover:text-gold"
+            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card text-card-foreground px-3.5 py-1.5 text-xs font-semibold text-primary shadow-sm transition hover:border-gold hover:text-gold"
 
             title={isEn ? "Share this hotel" : "Chia sẻ khách sạn"}
 
@@ -1525,7 +1525,7 @@ export default function HotelDetails() {
 
                 ? "border-rose-400 bg-rose-50 text-rose-600"
 
-                : "border-border bg-white text-primary hover:border-rose-300 hover:text-rose-600"
+                : "border-border bg-card text-card-foreground text-primary hover:border-rose-300 hover:text-rose-600"
 
             }`}
 
@@ -1799,7 +1799,7 @@ export default function HotelDetails() {
 
             onClick={() => setLightboxIndex(0)}
 
-            className="absolute bottom-4 right-4 flex items-center gap-2 rounded-2xl bg-white/95 px-4 py-2.5 text-xs font-bold text-primary shadow-xl backdrop-blur transition hover:bg-gold hover:text-primary-foreground"
+            className="absolute bottom-4 right-4 flex items-center gap-2 rounded-2xl bg-card/95 text-card-foreground px-4 py-2.5 text-xs font-bold text-primary shadow-xl backdrop-blur transition hover:bg-gold hover:text-primary-foreground"
 
           >
 
@@ -1831,7 +1831,7 @@ export default function HotelDetails() {
 
             >
 
-              <img src={img.url} alt="" className="h-full w-full object-cover" />
+              {img.url ? <img src={img.url} alt="" className="h-full w-full object-cover" /> : null}
 
             </button>
 
@@ -1907,7 +1907,7 @@ export default function HotelDetails() {
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
 
-              <div className="rounded-2xl border border-border bg-white p-5 shadow-xs transition hover:border-gold/50">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-xs transition hover:border-gold/50">
 
                 <Building2 className="h-6 w-6 text-gold" />
 
@@ -1927,7 +1927,7 @@ export default function HotelDetails() {
 
 
 
-              <div className="rounded-2xl border border-border bg-white p-5 shadow-xs transition hover:border-gold/50">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-xs transition hover:border-gold/50">
 
                 <Utensils className="h-6 w-6 text-gold" />
 
@@ -1951,7 +1951,7 @@ export default function HotelDetails() {
 
 
 
-              <div className="rounded-2xl border border-border bg-white p-5 shadow-xs transition hover:border-gold/50">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-xs transition hover:border-gold/50">
 
                 <Waves className="h-6 w-6 text-gold" />
 
@@ -1975,7 +1975,7 @@ export default function HotelDetails() {
 
 
 
-              <div className="rounded-2xl border border-border bg-white p-5 shadow-xs transition hover:border-gold/50">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-xs transition hover:border-gold/50">
 
                 <Clock3 className="h-6 w-6 text-gold" />
 
@@ -2033,7 +2033,7 @@ export default function HotelDetails() {
 
               {/* Category 1: Wellness */}
 
-              <div className="rounded-2xl border border-border bg-white p-5">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5">
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
@@ -2089,7 +2089,7 @@ export default function HotelDetails() {
 
               {/* Category 2: Dining */}
 
-              <div className="rounded-2xl border border-border bg-white p-5">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5">
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
@@ -2145,7 +2145,7 @@ export default function HotelDetails() {
 
               {/* Category 3: Concierge & Privileges */}
 
-              <div className="rounded-2xl border border-border bg-white p-5">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5">
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
@@ -2201,7 +2201,7 @@ export default function HotelDetails() {
 
               {/* Category 4: Room Comforts */}
 
-              <div className="rounded-2xl border border-border bg-white p-5">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-5">
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
@@ -2301,7 +2301,7 @@ export default function HotelDetails() {
 
                   key={room.id}
 
-                  className="group overflow-hidden rounded-3xl border border-border bg-white shadow-sm transition duration-300 hover:border-gold/50 hover:shadow-lg"
+                  className="group overflow-hidden rounded-3xl border border-border bg-card text-card-foreground shadow-sm transition duration-300 hover:border-gold/50 hover:shadow-lg"
 
                 >
 
@@ -2327,7 +2327,7 @@ export default function HotelDetails() {
 
                       </div>
 
-                      <div className="absolute bottom-3 left-3 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-bold text-primary shadow">
+                      <div className="absolute bottom-3 left-3 rounded-full bg-card/95 text-card-foreground px-2.5 py-0.5 text-[11px] font-bold text-primary shadow">
 
                         {room.bedsVi}
 
@@ -2561,7 +2561,7 @@ export default function HotelDetails() {
 
                   key={lm.nameVi}
 
-                  className="flex items-center justify-between rounded-2xl border border-border bg-white p-4 transition hover:border-gold/40"
+                  className="flex items-center justify-between rounded-2xl border border-border bg-card text-card-foreground p-4 transition hover:border-gold/40"
 
                 >
 
@@ -2633,7 +2633,7 @@ export default function HotelDetails() {
 
               </div>
 
-              <div className="absolute bottom-3 left-3 rounded-lg bg-white/95 px-3 py-1.5 text-xs font-semibold text-primary shadow backdrop-blur">
+              <div className="absolute bottom-3 left-3 rounded-lg bg-card/95 text-card-foreground px-3 py-1.5 text-xs font-semibold text-primary shadow backdrop-blur">
 
                 📍 {formatHotelLocation(hotel)}
 
@@ -2667,7 +2667,7 @@ export default function HotelDetails() {
 
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
 
-              <div className="rounded-2xl border border-border bg-white p-4">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-4">
 
                 <Clock3 className="h-5 w-5 text-gold" />
 
@@ -2679,7 +2679,7 @@ export default function HotelDetails() {
 
 
 
-              <div className="rounded-2xl border border-border bg-white p-4">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-4">
 
                 <Users className="h-5 w-5 text-gold" />
 
@@ -2691,7 +2691,7 @@ export default function HotelDetails() {
 
 
 
-              <div className="rounded-2xl border border-border bg-white p-4">
+              <div className="rounded-2xl border border-border bg-card text-card-foreground p-4">
 
                 <ShieldCheck className="h-5 w-5 text-gold" />
 
@@ -2719,7 +2719,7 @@ export default function HotelDetails() {
 
                     key={faq.qVi}
 
-                    className="overflow-hidden rounded-2xl border border-border bg-white transition hover:border-gold/40"
+                    className="overflow-hidden rounded-2xl border border-border bg-card text-card-foreground transition hover:border-gold/40"
 
                   >
 
@@ -2799,7 +2799,7 @@ export default function HotelDetails() {
 
                 {/* Left: Overall stats & score breakdown */}
 
-                <div className="rounded-2xl border border-border bg-white p-5 shadow-xs">
+                <div className="rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-xs">
 
                   <div className="flex items-baseline gap-3">
 
@@ -3049,7 +3049,7 @@ export default function HotelDetails() {
 
                         key={rev.id}
 
-                        className="rounded-2xl border border-border bg-white p-5 shadow-xs transition hover:shadow-md"
+                        className="rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-xs transition hover:shadow-md"
 
                       >
 
@@ -3139,7 +3139,7 @@ export default function HotelDetails() {
 
         {/* ====== Sticky Direct Booking Sidebar (Right 1/3 Column) ====== */}
 
-        <aside className="rounded-3xl border border-primary/20 bg-white p-6 shadow-xl shadow-primary/10 lg:sticky lg:top-6">
+        <aside className="rounded-3xl border border-primary/20 bg-card text-card-foreground p-6 shadow-xl shadow-primary/10 lg:sticky lg:top-6">
 
           <div className="flex items-start justify-between gap-4">
 
@@ -3485,13 +3485,13 @@ export default function HotelDetails() {
 
               <a
 
-                href="mailto:hello@senviet.vn"
+                href="mailto:contact@senviet.vn"
 
                 className="font-bold text-primary underline underline-offset-2 hover:text-gold"
 
               >
 
-                ✉️ hello@senviet.vn
+                ✉️ contact@senviet.vn
 
               </a>
 
@@ -3801,7 +3801,7 @@ export default function HotelDetails() {
 
                 >
 
-                  <img src={img.url} alt="" className="h-full w-full object-cover" />
+                  {img.url ? <img src={img.url} alt="" className="h-full w-full object-cover" /> : null}
 
                 </button>
 
@@ -3859,7 +3859,7 @@ export default function HotelDetails() {
 
               exit="exit"
 
-              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
+              className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-card text-card-foreground p-6 shadow-2xl sm:p-8"
 
             >
 

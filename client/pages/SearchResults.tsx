@@ -61,16 +61,16 @@ export default function SearchResults() {
             {isEn ? "Your search:" : "Tìm kiếm của bạn:"}
           </span>
           {selectedLocation && (
-            <span className="rounded-full bg-white px-3 py-1">
+            <span className="rounded-full bg-card text-card-foreground px-3 py-1">
               {selectedLocation}
             </span>
           )}
           {checkIn && checkOut && (
-            <span className="rounded-full bg-white px-3 py-1">
+            <span className="rounded-full bg-card text-card-foreground px-3 py-1">
               {checkIn} → {checkOut}
             </span>
           )}
-          <span className="rounded-full bg-white px-3 py-1">
+          <span className="rounded-full bg-card text-card-foreground px-3 py-1">
             {rooms} {isEn ? "rooms" : "phòng"} · {adults}{" "}
             {isEn ? "adults" : "người lớn"} · {children}{" "}
             {isEn ? "children" : "trẻ em"}
@@ -103,7 +103,7 @@ export default function SearchResults() {
           <select
             value={sort}
             onChange={(event) => setSort(event.target.value)}
-            className="rounded-full border border-input bg-white px-3 py-2 text-xs"
+            className="rounded-full border border-input bg-card text-card-foreground px-3 py-2 text-xs"
             aria-label={isEn ? "Sort hotels" : "Sắp xếp khách sạn"}
           >
             <option value="recommended">{isEn ? "Recommended" : "Đề xuất"}</option>
@@ -112,7 +112,7 @@ export default function SearchResults() {
           <select
             value={maxPrice}
             onChange={(event) => setMaxPrice(event.target.value)}
-            className="rounded-full border border-input bg-white px-3 py-2 text-xs"
+            className="rounded-full border border-input bg-card text-card-foreground px-3 py-2 text-xs"
             aria-label={isEn ? "Maximum price" : "Giá tối đa"}
           >
             <option value="all">{isEn ? "Any price" : "Mọi mức giá"}</option>

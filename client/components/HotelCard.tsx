@@ -16,12 +16,12 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
       <div>
         <div className="relative h-56 overflow-hidden">
           <img
-            loading="lazy"
             decoding="async"
-            src={hotel.image}
+            src={hotel.image || "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=1200"}
             alt={hotel.name}
             onError={(e) => {
-              e.currentTarget.src = "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=1200";
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23d4af37' font-family='sans-serif' font-size='28' font-weight='bold'%3ESEN VI%E1%BB%86T LUXURY%3C/text%3E%3C/svg%3E";
             }}
             className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
           />
@@ -37,8 +37,8 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
 
         <div className="p-5">
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <h3 className="font-display text-xl font-bold text-primary transition-colors group-hover:text-primary">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-display text-xl font-bold text-primary transition-colors group-hover:text-primary truncate">
                 {hotel.name}
               </h3>
               <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">

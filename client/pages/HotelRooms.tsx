@@ -340,7 +340,7 @@ function RoomDetailsModal({
 
       <div
 
-        className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+        className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-card text-card-foreground shadow-2xl"
 
         onClick={(event) => event.stopPropagation()}
 
@@ -354,7 +354,7 @@ function RoomDetailsModal({
 
           aria-label="Đóng chi tiết phòng"
 
-          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-md backdrop-blur transition hover:bg-rose-50 hover:text-rose-600"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-card-foreground text-slate-700 shadow-md backdrop-blur transition hover:bg-rose-50 hover:text-rose-600"
 
         >
 
@@ -394,7 +394,7 @@ function RoomDetailsModal({
 
                 aria-label="Ảnh trước"
 
-                className="absolute left-3 rounded-full bg-white/90 p-2 text-primary shadow-md hover:bg-white sm:left-4"
+                className="absolute left-3 rounded-full bg-card/90 text-card-foreground p-2 text-primary shadow-md hover:bg-white sm:left-4"
 
               >
 
@@ -410,7 +410,7 @@ function RoomDetailsModal({
 
                 aria-label="Ảnh sau"
 
-                className="absolute right-3 rounded-full bg-white/90 p-2 text-primary shadow-md hover:bg-white sm:right-4"
+                className="absolute right-3 rounded-full bg-card/90 text-card-foreground p-2 text-primary shadow-md hover:bg-white sm:right-4"
 
               >
 
@@ -1976,7 +1976,7 @@ export default function HotelRooms() {
                                         roomImgs.length,
                                     }));
                                   }}
-                                  className="rounded-full bg-white/90 p-1.5 shadow hover:bg-white"
+                                  className="rounded-full bg-card/90 text-card-foreground p-1.5 shadow hover:bg-white"
                                 >
                                   <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -1991,7 +1991,7 @@ export default function HotelRooms() {
                                         ((prev[item.id] || 0) + 1) % roomImgs.length,
                                     }));
                                   }}
-                                  className="rounded-full bg-white/90 p-1.5 shadow hover:bg-white"
+                                  className="rounded-full bg-card/90 text-card-foreground p-1.5 shadow hover:bg-white"
                                 >
                                   <ChevronRight className="h-4 w-4" />
                                 </button>
@@ -2150,7 +2150,7 @@ export default function HotelRooms() {
 
                           onClick={(event) => event.stopPropagation()}
 
-                          className="mt-1 w-full rounded-lg border border-input bg-white p-2.5"
+                          className="mt-1 w-full rounded-lg border border-input bg-card text-card-foreground p-2.5"
 
                         >
 
@@ -2190,7 +2190,7 @@ export default function HotelRooms() {
 
                     <div
 
-                      className="border-t border-border bg-white p-5"
+                      className="border-t border-border bg-card text-card-foreground p-5"
 
                       onClick={(event) => event.stopPropagation()}
 
@@ -2290,7 +2290,7 @@ export default function HotelRooms() {
 
                                     }
 
-                                    className="rounded-lg border border-primary/30 bg-white px-2.5 py-1 text-xs font-bold text-primary shadow-sm hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                    className="rounded-lg border border-primary/30 bg-card text-card-foreground px-2.5 py-1 text-xs font-bold text-primary shadow-sm hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
 
                                   >
 
@@ -2368,7 +2368,7 @@ export default function HotelRooms() {
 
                                   }
 
-                                  className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-white px-2.5 py-1.5 text-xs font-semibold text-primary"
+                                  className="inline-flex items-center gap-1 rounded-lg border border-primary/20 bg-card text-card-foreground px-2.5 py-1.5 text-xs font-semibold text-primary"
 
                                 >
 
@@ -2414,7 +2414,7 @@ export default function HotelRooms() {
 
                                     }
 
-                                    className="mt-1 w-full rounded-lg border border-input bg-white p-2"
+                                    className="mt-1 w-full rounded-lg border border-input bg-card text-card-foreground p-2"
 
                                   />
 
@@ -2448,7 +2448,7 @@ export default function HotelRooms() {
 
                                     }
 
-                                    className="mt-1 w-full rounded-lg border border-input bg-white p-2"
+                                    className="mt-1 w-full rounded-lg border border-input bg-card text-card-foreground p-2"
 
                                   />
 
@@ -2516,7 +2516,7 @@ export default function HotelRooms() {
 
                                           }
 
-                                          className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm font-semibold text-primary"
+                                          className="mt-1 w-full rounded-lg border border-input bg-card text-card-foreground p-2 text-sm font-semibold text-primary"
 
                                         >
 
@@ -2570,7 +2570,7 @@ export default function HotelRooms() {
 
                                           }
 
-                                          className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm font-semibold text-primary"
+                                          className="mt-1 w-full rounded-lg border border-input bg-card text-card-foreground p-2 text-sm font-semibold text-primary"
 
                                         >
 
@@ -2624,7 +2624,7 @@ export default function HotelRooms() {
 
                                           }
 
-                                          className="mt-1 w-full rounded-lg border border-input bg-white p-2 text-sm font-semibold text-primary"
+                                          className="mt-1 w-full rounded-lg border border-input bg-card text-card-foreground p-2 text-sm font-semibold text-primary"
 
                                         >
 
@@ -2757,7 +2757,7 @@ export default function HotelRooms() {
 
               <Button type="button" onClick={goCheckout} className="w-full">
 
-                Tiếp tục đến bước dịch vụ
+                Tiếp tục đến thông tin khách
 
               </Button>
 

@@ -105,11 +105,11 @@ export function CuratedPromotions() {
             <div>
               {/* Top Tag & Discount Badge */}
               <div className="flex items-center justify-between gap-2 pb-5 border-b border-border/40">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary shadow-xs backdrop-blur-xs">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/85 dark:bg-slate-900/85 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-900 dark:text-amber-300 shadow-xs backdrop-blur-xs">
                   <Gift className="h-3.5 w-3.5 text-gold" />
                   {offer.tag}
                 </span>
-                <span className="font-display text-sm font-bold text-amber-700 bg-amber-100/80 px-3 py-1 rounded-full">
+                <span className="font-display text-sm font-bold text-amber-800 dark:text-amber-200 bg-amber-100/80 dark:bg-amber-900/60 px-3 py-1 rounded-full">
                   {offer.discountBadge}
                 </span>
               </div>
@@ -127,17 +127,17 @@ export function CuratedPromotions() {
 
             {/* Voucher Code Box & Action Button */}
             <div className="mt-7 pt-5 border-t border-border/40">
-              <div className="flex items-center justify-between gap-2 bg-white/90 rounded-2xl p-2.5 border border-dashed border-amber-500/50">
+              <div className="flex items-center justify-between gap-2 bg-white/90 dark:bg-slate-900/90 rounded-2xl p-2.5 border border-dashed border-amber-500/50">
                 <div className="flex items-center gap-2 pl-2">
                   <Tag className="h-4 w-4 text-gold shrink-0" />
-                  <span className="font-mono text-sm font-bold tracking-wider text-primary">
+                  <span className="font-mono text-sm font-bold tracking-wider text-slate-900 dark:text-amber-300">
                     {offer.code}
                   </span>
                 </div>
                 <Button
                   size="sm"
                   onClick={() => handleCopyCode(offer.code)}
-                  className="rounded-xl bg-primary text-white hover:bg-gold hover:text-white transition-all text-xs h-8 px-3"
+                  className="rounded-xl bg-slate-900 text-white hover:bg-gold hover:text-white dark:bg-amber-500 dark:text-slate-950 dark:hover:bg-amber-400 transition-all text-xs h-8 px-3"
                 >
                   {copiedCode === offer.code ? (
                     <>

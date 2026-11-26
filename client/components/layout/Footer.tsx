@@ -81,8 +81,8 @@ export default function Footer() {
             {t("footer.contact")}
           </h4>
           <ul className="mt-4 space-y-2 text-sm text-primary-foreground/70">
-            <li>1800 6868</li>
-            <li>hello@senviet.vn</li>
+            <li>1900 6868</li>
+            <li>contact@senviet.vn</li>
             <li>
               <Link to="/contact" className="hover:text-primary-foreground">
                 {t("nav.contact")}

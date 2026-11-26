@@ -55,11 +55,21 @@ export function GuestTestimonials() {
                 ? "Great stay and attentive service."
                 : "Trải nghiệm lưu trú tuyệt vời, dịch vụ chu đáo."),
             author: r.customerName || (isEn ? "Verified Guest" : "Khách hàng xác thực"),
-            role: r.createdAt
-              ? new Date(r.createdAt).toLocaleDateString(isEn ? "en-US" : "vi-VN")
-              : isEn
-                ? "Verified Booking"
-                : "Đặt phòng xác thực",
+            role: (() => {
+              const raw = r.createdAt as unknown;
+              let d: Date | null = null;
+              if (Array.isArray(raw) && raw.length >= 3) {
+                d = new Date(Number(raw[0]), Number(raw[1]) - 1, Number(raw[2]));
+              } else if (typeof raw === "string" || typeof raw === "number") {
+                const parsed = new Date(raw);
+                if (!Number.isNaN(parsed.getTime())) d = parsed;
+              }
+              return d && !Number.isNaN(d.getTime())
+                ? d.toLocaleDateString(isEn ? "en-US" : "vi-VN")
+                : isEn
+                  ? "Verified Booking"
+                  : "Đặt phòng xác thực";
+            })(),
             stay: [r.roomTypeName, hotel.name].filter(Boolean).join(" — "),
             rating: Math.max(1, Math.min(5, Math.round(r.rating || 5))),
           });
@@ -79,12 +89,12 @@ export function GuestTestimonials() {
   }, [beHotels, isEn]);
 
   return (
-    <section className="bg-stone-50/70 py-24 border-t border-border/50">
+    <section className="bg-stone-50/70 dark:bg-slate-950/50 py-24 border-t border-border/50">
       <div className="container">
         {/* Section Header */}
         <div className="mx-auto max-w-2xl text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[.18em] text-amber-700">
-            <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[.18em] text-amber-700 dark:text-amber-300">
+            <Sparkles className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
             <span>{isEn ? "Guest Reflections" : "Lời Khen Từ Khách Quý"}</span>
           </div>
 
@@ -99,7 +109,7 @@ export function GuestTestimonials() {
           </p>
 
           {/* Social Proof Aggregate Badge */}
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 shadow-xs border border-border/60">
+          <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-card text-card-foreground px-5 py-2 shadow-xs border border-border/60">
             <div className="flex text-amber-500">
               {[...Array(5)].map((_, i) => (
                 <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
@@ -116,7 +126,7 @@ export function GuestTestimonials() {
 
         {/* Editorial Cards from DB */}
         {reviews.length === 0 ? (
-          <div className="mt-12 rounded-2xl border border-dashed border-border bg-white/70 p-8 text-center text-sm text-muted-foreground">
+          <div className="mt-12 rounded-2xl border border-dashed border-border bg-card/80 p-8 text-center text-sm text-muted-foreground">
             {isEn
               ? "No guest reviews have been submitted yet."
               : "Chưa có đánh giá nào được gửi trên hệ thống."}
@@ -131,7 +141,7 @@ export function GuestTestimonials() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: idx * 0.12 }}
               whileHover={{ y: -5 }}
-              className="relative flex flex-col justify-between rounded-3xl border border-border/70 bg-white p-8 shadow-xs transition-all duration-300 hover:shadow-xl hover:border-amber-500/40"
+              className="relative flex flex-col justify-between rounded-3xl border border-border/70 bg-card text-card-foreground p-8 shadow-xs transition-all duration-300 hover:shadow-xl hover:border-amber-500/40"
             >
               {/* Quote mark decoration */}
               <Quote className="h-8 w-8 text-amber-500/20 mb-4" />
@@ -144,13 +154,13 @@ export function GuestTestimonials() {
               </div>
 
               {/* Quote text */}
-              <p className="text-sm leading-relaxed text-slate-700 italic flex-1">
+              <p className="text-sm leading-relaxed text-foreground/90 italic flex-1">
                 "{rev.quote}"
               </p>
 
               {/* Verified Stay Tag */}
               <div className="mt-6 pt-5 border-t border-border/50">
-                <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md block truncate">
+                <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-2.5 py-1 rounded-md block truncate">
                   {rev.stay}
                 </span>
 

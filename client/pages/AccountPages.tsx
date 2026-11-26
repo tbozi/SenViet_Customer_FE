@@ -53,7 +53,7 @@ function RegistrationProgress({ step }: { step: 1 | 2 | 3 }) {
               {completed ? "✓" : number}
             </span>
             <span
-              className={`mt-2 block text-[10px] leading-tight sm:text-xs ${active ? "font-bold text-primary" : "text-muted-foreground"}`}
+              className={`mt-2 block text-[10px] leading-tight sm:text-[11px] whitespace-nowrap ${active ? "font-bold text-primary" : "text-muted-foreground"}`}
             >
               {t(`auth.${label}`)}
             </span>
@@ -164,7 +164,7 @@ const isIdentityMismatchError = (requestError: any) => {
 
 export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const { t } = useLanguage();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [checkCustomerRegistration, { isLoading: isCheckingCustomer }] =
     useCheckCustomerRegistrationMutation();
   const [registerRequest, { isLoading: isRegistering }] =
@@ -210,6 +210,12 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   const verifyLocked = useRef(false);
   const resendLocked = useRef(false);
   const from = (location.state as { from?: string } | null)?.from || "/";
+
+  useEffect(() => {
+    if (user) {
+      navigate(from, { replace: true });
+    }
+  }, [user, navigate, from]);
   const localizedMessage = (
     message: string | { key: string; detail?: string },
   ) => {
@@ -348,6 +354,9 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
       }
       return;
     }
+
+    if (!email.trim()) return setError("auth.emailRequired");
+    if (!password.trim()) return setError("auth.passwordLength");
 
     const result = await login(email, password);
     if (!result.ok) {
@@ -516,7 +525,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
   return (
     <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-secondary/50 px-4 py-14">
       <div className="w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-xl sm:p-10">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-gold">
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-gold">
           <Flower2 className="h-6 w-6" />
         </div>
         {mode === "register" && (
@@ -536,7 +545,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
               ? t("auth.accountInfoSubtitle")
               : t("auth.registerSubtitle")}
         </p>
-        <form onSubmit={submit} className="mt-8 space-y-4">
+        <form noValidate onSubmit={submit} className="mt-8 space-y-4">
           {mode === "register" && !accountStep && (
             <>
               <label className="block text-sm font-medium text-primary">

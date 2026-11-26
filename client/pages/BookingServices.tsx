@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, Copy, Hotel, Minus, Plus, UserRound } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -116,12 +116,21 @@ function serviceTotal(stay: RoomStay) {
 
 export default function BookingServices() {
   const navigate = useNavigate();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const { user } = useAuth();
   const { language } = useLanguage();
   const isEn = language === "en";
   const [subStep, setSubStep] = useState<"guest" | "services">(() =>
     params.get("step") === "services" ? "services" : "guest",
+  );
+  const switchSubStep = useCallback(
+    (next: "guest" | "services") => {
+      setSubStep(next);
+      const nextParams = new URLSearchParams(params);
+      nextParams.set("step", next);
+      setParams(nextParams, { replace: true });
+    },
+    [params, setParams],
   );
   const [guestName, setGuestName] = useState(() => params.get("guestName") || user?.name || "");
   const [guestPhone, setGuestPhone] = useState(() => params.get("guestPhone") || user?.phone || "");
@@ -392,7 +401,7 @@ export default function BookingServices() {
       return;
     }
     setGuestError("");
-    setSubStep("services");
+    switchSubStep("services");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -440,6 +449,35 @@ export default function BookingServices() {
     );
   }
 
+  if (!user) {
+    return (
+      <main className="container py-16">
+        <div className="mx-auto max-w-lg rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
+          <h1 className="font-display text-2xl font-bold text-primary">
+            {isEn ? "Sign in to continue booking" : "Đăng nhập để tiếp tục đặt phòng"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {isEn
+              ? "Guests can browse rooms and rates freely. Please sign in or create an account to continue."
+              : "Khách vãng lai có thể xem phòng và giá tự do. Vui lòng đăng nhập hoặc đăng ký tài khoản để tiếp tục đặt phòng."}
+          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <Button asChild>
+              <Link to="/login" state={{ from: `${window.location.pathname}${window.location.search}` }}>
+                {isEn ? "Sign In" : "Đăng nhập"}
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/register">
+                {isEn ? "Sign Up" : "Đăng ký"}
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="container py-8 sm:py-10">
       <div className="mx-auto max-w-7xl">
@@ -458,7 +496,9 @@ export default function BookingServices() {
               if (step === 1 && hotel) {
                 navigate(`/hotels/${hotel.id}?${params.toString()}`);
               } else if (step === 2) {
-                setSubStep("guest");
+                switchSubStep("guest");
+              } else if (step === 3) {
+                switchSubStep("services");
               }
             }}
           />
@@ -496,7 +536,7 @@ export default function BookingServices() {
 
         <div className="mt-8 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           {subStep === "guest" ? (
-            <section className="min-w-0 rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+            <section className="min-w-0 rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-sm sm:p-6">
               <div className="flex items-start gap-3 border-b border-border pb-5">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
                   <UserRound className="h-5 w-5" />
@@ -578,7 +618,7 @@ export default function BookingServices() {
               )}
             </section>
           ) : (
-          <section className="min-w-0 rounded-2xl border border-border bg-white p-5 shadow-sm sm:p-6">
+          <section className="min-w-0 rounded-2xl border border-border bg-card text-card-foreground p-5 shadow-sm sm:p-6">
             <div className="flex items-start gap-3 border-b border-border pb-5">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
                 <Hotel className="h-5 w-5" />
@@ -681,6 +721,10 @@ export default function BookingServices() {
                         <img loading="lazy" decoding="async"
                           src={service.image}
                           alt={service.name}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23d4af37' font-family='sans-serif' font-size='28' font-weight='bold'%3ESEN VI%E1%BB%86T LUXURY%3C/text%3E%3C/svg%3E";
+                          }}
                           className="aspect-[16/9] w-full object-cover"
                         />
                         <div className="p-4">
@@ -737,7 +781,7 @@ export default function BookingServices() {
                                       -1,
                                     )
                                   }
-                                  className="rounded bg-white p-1 text-primary"
+                                  className="rounded bg-card text-card-foreground p-1 text-primary"
                                 >
                                   <Minus className="h-3 w-3" />
                                 </button>
@@ -751,7 +795,7 @@ export default function BookingServices() {
                                       1,
                                     )
                                   }
-                                  className="rounded bg-white p-1 text-primary"
+                                  className="rounded bg-card text-card-foreground p-1 text-primary"
                                 >
                                   <Plus className="h-3 w-3" />
                                 </button>
@@ -814,7 +858,7 @@ export default function BookingServices() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        setSubStep("guest");
+                        switchSubStep("guest");
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
                       className="w-full gap-1.5"

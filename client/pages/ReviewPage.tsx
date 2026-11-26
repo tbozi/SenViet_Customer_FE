@@ -150,7 +150,7 @@ export default function ReviewPage() {
         </div>
 
         {/* Form đánh giá sao (không cần bình luận) */}
-        <form onSubmit={submit} className="mt-8 rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8">
+        <form onSubmit={submit} className="mt-8 rounded-3xl border border-border bg-card text-card-foreground p-6 shadow-sm sm:p-8">
           {/* Mục 1: Điểm sao tổng quan */}
           <div>
             <label className="block font-display text-lg font-bold text-primary">

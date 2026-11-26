@@ -1138,7 +1138,7 @@ export default function BookingHistory() {
                         const found = VIETNAMESE_BANKS.find((b) => b.code === code);
                         if (found) setCancelBankName(found.name);
                       }}
-                      className="w-full rounded-xl border border-border bg-white px-3 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-xl border border-border bg-card text-card-foreground px-3 py-2 text-xs font-medium text-slate-900 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
                     >
                       {VIETNAMESE_BANKS.map((bank) => (
                         <option key={bank.code} value={bank.code}>
@@ -1164,7 +1164,7 @@ export default function BookingHistory() {
                             setCancelAccountNumber(e.target.value.replace(/[^0-9]/g, ""))
                           }
                           placeholder="VD: 0123456789"
-                          className="w-full rounded-xl border border-border bg-white pl-8 pr-3 py-2 text-xs font-mono outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                          className="w-full rounded-xl border border-border bg-card text-card-foreground pl-8 pr-3 py-2 text-xs font-mono outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
                         />
                       </div>
                     </div>
@@ -1179,7 +1179,7 @@ export default function BookingHistory() {
                         value={cancelAccountName}
                         onChange={(e) => setCancelAccountName(e.target.value.toUpperCase())}
                         placeholder="NGUYEN VAN A"
-                        className="w-full rounded-xl border border-border bg-white px-3 py-2 text-xs font-semibold uppercase outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                        className="w-full rounded-xl border border-border bg-card text-card-foreground px-3 py-2 text-xs font-semibold uppercase outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
                       />
                     </div>
                   </div>
@@ -1193,7 +1193,7 @@ export default function BookingHistory() {
                       value={cancelRefundEmail}
                       onChange={(e) => setCancelRefundEmail(e.target.value)}
                       placeholder="email@example.com"
-                      className="w-full rounded-xl border border-border bg-white px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-full rounded-xl border border-border bg-card text-card-foreground px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
                     />
                   </div>
                 </div>

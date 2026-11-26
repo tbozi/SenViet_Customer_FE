@@ -107,11 +107,11 @@ export function HeritageManifesto() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: idx * 0.12 }}
                 whileHover={{ y: -6 }}
-                className="group relative rounded-2xl border border-border/70 bg-white/90 p-8 shadow-xs transition-all duration-300 hover:border-amber-500/40 hover:shadow-xl backdrop-blur-xs"
+                className="group relative rounded-2xl border border-border/70 bg-card/90 text-card-foreground p-8 shadow-xs transition-all duration-300 hover:border-amber-500/40 hover:shadow-xl backdrop-blur-xs"
               >
                 {/* Index tag & Top row */}
                 <div className="flex items-center justify-between border-b border-border/40 pb-5">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600 transition-colors duration-300 group-hover:bg-primary group-hover:text-amber-400">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 transition-colors duration-300 group-hover:bg-primary group-hover:text-amber-400">
                     <Icon className="h-6 w-6" />
                   </div>
                   <span className="font-display text-2xl font-bold tracking-wider text-amber-600/30 group-hover:text-amber-600/70 transition-colors">

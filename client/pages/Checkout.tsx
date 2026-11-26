@@ -836,111 +836,151 @@ export default function Checkout() {
           className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px]"
         >
           <section className="space-y-6">
+            {/* Tóm tắt thông tin khách hàng từ Bước 2 */}
             <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="flex items-center gap-2">
-                <UserRound className="h-5 w-5 text-primary" />
-                <h2 className="font-display text-2xl font-bold text-primary">
-                  {isEn ? "Guest Representative Information" : "Thông tin người đại diện nhận phòng"}
-                </h2>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <UserRound className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-xl font-bold text-primary">
+                    {isEn ? "Guest Information (Step 2)" : "Thông tin khách hàng (Bước 2)"}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const q = new URLSearchParams(params);
+                    q.set("step", "guest");
+                    navigate(`/hotels/${hotelId}/services?${q.toString()}`);
+                  }}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  {isEn ? "Edit" : "Chỉnh sửa"}
+                </button>
               </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {isEn ? "This information applies to all rooms within this reservation." : "Thông tin này áp dụng cho tất cả các phòng trong cùng một lượt đặt."}
-              </p>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <label className="text-sm font-medium text-primary">
-                  {isEn ? "Full Name" : "Họ tên"}
-                  <input
-                    required
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
-                  />
-                </label>
-                <label className="text-sm font-medium text-primary">
-                  {isEn ? "Phone Number" : "Số điện thoại"}
-                  <input
-                    required
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
-                  />
-                </label>
-                <label className="text-sm font-medium text-primary">
-                  Email
-                  <input
-                    required
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
-                  />
-                </label>
-                <label className="text-sm font-medium text-primary">
-                  {isEn ? "Citizen ID / Passport" : "Số CCCD / CMND"}
-                  <input
-                    required
-                    value={cccd}
-                    onChange={(event) => setCccd(event.target.value)}
-                    placeholder={isEn ? "Enter Citizen ID / Passport number" : "Nhập số CCCD (12 số)"}
-                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
-                  />
-                </label>
-                <label className="text-sm font-medium text-primary sm:col-span-2">
-                  {isEn ? "Special Requests" : "Yêu cầu đặc biệt"}
-                  <textarea
-                    value={request}
-                    onChange={(event) => setRequest(event.target.value)}
-                    rows={3}
-                    placeholder={isEn ? "e.g. arrival after 22:00, need baby cot..." : "Ví dụ: đến sau 22:00, cần baby cot..."}
-                    className="mt-1 w-full rounded-xl border border-input bg-background text-foreground p-3"
-                  />
-                </label>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 text-sm">
+                <div className="rounded-xl bg-secondary/40 px-3.5 py-2.5">
+                  <span className="block text-[11px] text-muted-foreground">{isEn ? "Full Name" : "Họ và tên"}</span>
+                  <strong className="text-primary">{name || "—"}</strong>
+                </div>
+                <div className="rounded-xl bg-secondary/40 px-3.5 py-2.5">
+                  <span className="block text-[11px] text-muted-foreground">{isEn ? "Phone" : "Số điện thoại"}</span>
+                  <strong className="text-primary">{phone || "—"}</strong>
+                </div>
+                <div className="rounded-xl bg-secondary/40 px-3.5 py-2.5">
+                  <span className="block text-[11px] text-muted-foreground">Email</span>
+                  <strong className="text-primary">{email || "—"}</strong>
+                </div>
+                <div className="rounded-xl bg-secondary/40 px-3.5 py-2.5">
+                  <span className="block text-[11px] text-muted-foreground">{isEn ? "Citizen ID" : "Số CCCD / CMND"}</span>
+                  <strong className="text-primary">{cccd || "—"}</strong>
+                </div>
+                {request && (
+                  <div className="sm:col-span-2 rounded-xl bg-secondary/40 px-3.5 py-2.5">
+                    <span className="block text-[11px] text-muted-foreground">{isEn ? "Special Requests" : "Yêu cầu đặc biệt"}</span>
+                    <span className="text-foreground">{request}</span>
+                  </div>
+                )}
               </div>
             </div>
+
+            {/* Khuyến mãi (Bước 4) */}
             <div className="rounded-2xl border border-border bg-card p-6">
               <h2 className="font-display text-2xl font-bold text-primary">
-                {isEn ? "Payment Method" : "Phương thức thanh toán"}
+                {isEn ? "Promotions & Vouchers" : "Khuyến mãi & Mã ưu đãi"}
               </h2>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {(
-                  [
-                    ["qr", isEn ? "Bank QR Code (PayOS)" : "Quét mã ngân hàng (PayOS)", QrCode],
-                    ["cash", isEn ? "Pay at Front Desk" : "Tiền mặt tại lễ tân", Banknote],
-                  ] as const
-                ).map(([value, label, Icon]) => (
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                {isEn
+                  ? "Enter a promo code or pick a saved voucher below. After clicking Confirm Booking, your room is held for 5 minutes and you will proceed to Step 5 (Payment)."
+                  : "Nhập mã khuyến mãi hoặc chọn voucher đã lưu bên dưới. Sau khi bấm Xác nhận đặt phòng, hệ thống sẽ giữ phòng 5 phút và chuyển sang Bước 5 (Thanh toán)."}
+              </p>
+
+              <div className="mt-4 flex gap-2">
+                <input
+                  value={promo}
+                  onChange={(event) => setPromo(event.target.value.toUpperCase().trim())}
+                  placeholder={isEn ? "Enter promo code (e.g. SEN10)" : "Nhập mã khuyến mãi (VD: SEN10)"}
+                  className="h-11 w-full rounded-xl border border-input bg-background px-3.5 font-mono text-sm font-bold uppercase tracking-wider text-primary"
+                />
+                {promo && (
                   <button
-                    key={value}
                     type="button"
-                    onClick={() => setPayment(value)}
-                    className={`flex items-center gap-3 rounded-xl border p-4 text-left text-sm transition ${
-                      payment === value
-                        ? "border-primary bg-secondary text-primary shadow-xs"
-                        : "border-border hover:border-primary/40"
-                    }`}
+                    onClick={() => setPromo("")}
+                    className="shrink-0 rounded-xl border border-input px-4 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-primary"
                   >
-                    <Icon className="h-5 w-5 shrink-0" />
-                    <span className="font-semibold">{label}</span>
+                    {isEn ? "Clear" : "Bỏ chọn"}
                   </button>
-                ))}
+                )}
               </div>
-              {payment === "qr" ? (
-                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-primary/20 bg-secondary/60 p-3 text-xs text-primary">
-                  <QrCode className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div>
-                    <span className="font-semibold">{isEn ? "PayOS Instant QR:" : "PayOS tự động xác nhận:"}</span>{" "}
-                    {isEn
-                      ? "Scan VietQR code to get instant automatic confirmation."
-                      : "Đặt phòng trực tuyến thanh toán qua mã VietQR PayOS và tự động xác nhận ngay lập tức."}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-3.5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900">
-                  <Banknote className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-                  <div>
-                    <span className="font-semibold text-amber-950">{isEn ? "Pay at Front Desk:" : "Thanh toán tại quầy lễ tân:"}</span>{" "}
-                    {isEn
-                      ? "Your reservation is held for check-in. Once the front desk confirms your cash payment, your booking status will automatically update to Confirmed."
-                      : "Đơn đặt phòng sẽ được giữ chỗ cho bạn. Khi bạn thanh toán tiền mặt tại quầy lễ tân và nhân viên xác nhận, trạng thái đơn trên web sẽ tự động cập nhật sang Đã xác nhận."}
+
+              {promo && promoAlreadyUsed && (
+                <p className="mt-2.5 rounded-lg bg-rose-50 p-2.5 text-xs font-medium text-rose-700">
+                  ✕ {isEn ? "You have already used this promo code on a previous booking. Each account may use it once." : "Bạn đã sử dụng mã ưu đãi này cho một đơn đặt phòng thành công trước đó. Mỗi tài khoản chỉ dùng 1 lần."}
+                </p>
+              )}
+              {promo && !promoAlreadyUsed && !promoApplicability.applicable && (
+                <p className="mt-2.5 rounded-lg bg-rose-50 p-2.5 text-xs font-medium text-rose-700">
+                  ✕ {promoApplicability.reason || "Mã không áp dụng cho khách sạn này."}
+                </p>
+              )}
+              {promo && !promoAlreadyUsed && promoMinBookingFailed && (
+                <p className="mt-2.5 rounded-lg bg-amber-50 p-2.5 text-xs font-medium text-amber-800">
+                  ⚠ Mã {matchedActivePromo?.code} yêu cầu giá trị tiền phòng tối thiểu {matchedActivePromo?.minBookingValue?.toLocaleString("vi-VN")}đ (hiện tại: {roomSubtotal.toLocaleString("vi-VN")}đ).
+                </p>
+              )}
+              {promo && !promoAlreadyUsed && promoApplicability.applicable && !promoMinBookingFailed && discount === 0 && (
+                <p className="mt-2.5 rounded-lg bg-amber-50 p-2.5 text-xs font-medium text-amber-800">
+                  ⚠ Mã chưa đủ điều kiện cho đơn này (ví dụ: số đêm tối thiểu).
+                </p>
+              )}
+              {promo && discount > 0 && (
+                <p className="mt-2.5 rounded-lg bg-emerald-50 p-2.5 text-xs font-semibold text-emerald-700">
+                  ✓ Áp dụng thành công: giảm {formatVnd(discount)}
+                </p>
+              )}
+
+              {savedPromotionItems.length > 0 && (
+                <div className="mt-5">
+                  <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {isEn ? `Saved Vouchers (${savedPromotionItems.length})` : `Ưu đãi đã lưu (${savedPromotionItems.length})`}
+                  </p>
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    {savedPromotionItems.map((item) => {
+                      const isSelected = promo.trim().toUpperCase() === item.code.trim().toUpperCase();
+                      return (
+                        <button
+                          key={item.code}
+                          type="button"
+                          disabled={!item.applicable}
+                          onClick={() => setPromo(isSelected ? "" : item.code)}
+                          className={`flex items-center justify-between gap-2 rounded-xl border p-3 text-left transition ${
+                            !item.applicable
+                              ? "border-border/60 bg-muted/40 opacity-60 cursor-not-allowed"
+                              : isSelected
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-amber-200 bg-amber-50/50 hover:border-amber-400"
+                          }`}
+                        >
+                          <div className="min-w-0">
+                            <p className="font-mono text-xs font-bold text-primary truncate">{item.code}</p>
+                            <p className="text-xs text-muted-foreground truncate">{item.name}</p>
+                            {item.discountText && (
+                              <span className="mt-0.5 inline-block text-[11px] font-semibold text-amber-700">
+                                {item.discountText}
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={`shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-card text-card-foreground border border-border text-primary"
+                            }`}
+                          >
+                            {isSelected ? (isEn ? "Applied" : "Đã chọn") : (isEn ? "Apply" : "Áp dụng")}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -974,57 +1014,6 @@ export default function Checkout() {
               discount,
               total,
             }}
-            promo={
-              <div className="mt-5 space-y-2">
-                <label className="block text-sm font-medium text-primary">
-                  {isEn ? "Promo code" : "Mã khuyến mãi"}
-                  <div className="mt-1 flex gap-2">
-                    <input
-                      value={promo}
-                      onChange={(event) =>
-                        setPromo(event.target.value.toUpperCase().trim())
-                      }
-                      placeholder={isEn ? "Enter or select promo code" : "Nhập hoặc chọn mã ưu đãi"}
-                      className="w-full rounded-xl border border-input bg-background p-3 font-mono font-bold uppercase tracking-wider text-primary"
-                    />
-                    {promo && (
-                      <button
-                        type="button"
-                        onClick={() => setPromo("")}
-                        className="shrink-0 whitespace-nowrap rounded-xl border border-input px-4 text-xs font-medium text-muted-foreground transition hover:bg-secondary hover:text-primary"
-                      >
-                        {isEn ? "Remove" : "Xóa"}
-                      </button>
-                    )}
-                  </div>
-                </label>
-                {promo && promoAlreadyUsed && (
-                  <p className="rounded-lg bg-rose-50 p-2 text-xs font-medium text-rose-700">
-                    ✕ {isEn ? "You have already used this promo code on a previous booking. Each account may use it once." : "Bạn đã sử dụng mã ưu đãi này cho một đơn đặt phòng thành công trước đó. Mỗi tài khoản chỉ dùng 1 lần."}
-                  </p>
-                )}
-                {promo && !promoAlreadyUsed && !promoApplicability.applicable && (
-                  <p className="rounded-lg bg-rose-50 p-2 text-xs font-medium text-rose-700">
-                    ✕ {promoApplicability.reason || "Mã không áp dụng cho khách sạn này."}
-                  </p>
-                )}
-                {promo && !promoAlreadyUsed && promoMinBookingFailed && (
-                  <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
-                    ⚠ Mã {matchedActivePromo?.code} yêu cầu giá trị tiền phòng tối thiểu {matchedActivePromo?.minBookingValue?.toLocaleString("vi-VN")}đ (hiện tại: {roomSubtotal.toLocaleString("vi-VN")}đ).
-                  </p>
-                )}
-                {promo && !promoAlreadyUsed && promoApplicability.applicable && !promoMinBookingFailed && discount === 0 && (
-                  <p className="rounded-lg bg-amber-50 p-2 text-xs font-medium text-amber-800">
-                    ⚠ Mã chưa đủ điều kiện cho đơn này (ví dụ: số đêm tối thiểu).
-                  </p>
-                )}
-                {promo && discount > 0 && (
-                  <p className="rounded-lg bg-emerald-50 p-2 text-xs font-semibold text-emerald-700">
-                    ✓ Áp dụng thành công: giảm {formatVnd(discount)}
-                  </p>
-                )}
-              </div>
-            }
             savedPromotions={savedPromotionItems}
             selectedPromotionCode={promo}
             onSelectPromotion={setPromo}

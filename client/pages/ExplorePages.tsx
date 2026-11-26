@@ -565,7 +565,7 @@ export function Offers() {
                 <p className="text-xs font-semibold uppercase tracking-[.12em] text-gold">{isVietnamese ? "Cách sử dụng" : "How to use"}</p>
                 <p className="mt-2 text-sm leading-6 text-primary">{isVietnamese ? selectedOffer.usage : selectedOffer.usageEn}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <span className="rounded-lg border border-primary/10 bg-white px-3 py-2 font-bold tracking-wider text-primary">{selectedOffer.code}</span>
+                  <span className="rounded-lg border border-primary/10 bg-card text-card-foreground px-3 py-2 font-bold tracking-wider text-primary">{selectedOffer.code}</span>
                   <button type="button" onClick={() => copyCode(selectedOffer.code)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline">
                     {copiedCode === selectedOffer.code ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                     {copiedCode === selectedOffer.code ? (isVietnamese ? "Đã sao chép" : "Copied") : (isVietnamese ? "Sao chép mã" : "Copy code")}
@@ -573,7 +573,7 @@ export function Offers() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-border bg-white p-4">
+              <div className="rounded-xl border border-border bg-card text-card-foreground p-4">
                 <p className="text-xs font-semibold uppercase tracking-[.12em] text-gold">{isVietnamese ? "Điều kiện áp dụng" : "Terms & conditions"}</p>
                 <ul className="mt-3 space-y-2.5">
                   {(isVietnamese ? selectedOffer.conditions : selectedOffer.conditionsEn).map((condition) => (
@@ -582,7 +582,7 @@ export function Offers() {
                 </ul>
               </div>
 
-              <div className="rounded-xl border border-border bg-white p-4">
+              <div className="rounded-xl border border-border bg-card text-card-foreground p-4">
                 <p className="text-xs font-semibold uppercase tracking-[.12em] text-gold">{isVietnamese ? "Khách sạn áp dụng" : "Applicable hotels"}</p>
                 <ul className="mt-3 space-y-2.5">
                   {(isVietnamese ? selectedOffer.hotels : selectedOffer.hotelsEn).map((hotel) => (
@@ -781,7 +781,7 @@ export function Services() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={isVietnamese ? "Tìm theo tên dịch vụ, món ăn, spa, đưa đón..." : "Search services, dining, spa, transfer..."}
-                className="w-full rounded-full border border-border bg-white pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                className="w-full rounded-full border border-border bg-card text-card-foreground pl-10 pr-10 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
               />
               {searchTerm && (
                 <button
@@ -799,7 +799,7 @@ export function Services() {
               <select
                 value={selectedHotel}
                 onChange={(e) => setSelectedHotel(e.target.value)}
-                className="w-full rounded-full border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
+                className="w-full rounded-full border border-border bg-card text-card-foreground px-4 py-2.5 text-sm font-medium outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-xs"
               >
                 <option value="all">{isVietnamese ? "🏨 Tất cả khách sạn / chi nhánh" : "🏨 All hotels & branches"}</option>
                 <option value="system">{isVietnamese ? "⭐ Toàn chuỗi Sen Việt" : "⭐ Chain-wide services"}</option>
@@ -896,6 +896,10 @@ export function Services() {
                     <img loading="lazy" decoding="async"
                       src={srv.imageUrl}
                       alt={srv.name}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='450' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23d4af37' font-family='sans-serif' font-size='28' font-weight='bold'%3ESEN VI%E1%BB%86T LUXURY%3C/text%3E%3C/svg%3E";
+                      }}
                       className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
                     />
                   </div>
