@@ -779,7 +779,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
             </label>
           )}
           {successInfo && (
-            <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-semibold text-emerald-800">
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/50 p-3 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
               {t(successInfo)}
             </p>
           )}
@@ -789,7 +789,7 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
                 {localizedMessage(error)}
               </p>
               {mode === "login" && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
+                <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/50 p-3 text-xs text-amber-800 dark:text-amber-300 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-300">
                   {t("auth.forgotPasswordPrompt")}{" "}
                   <Link
                     to="/forgot-password"

@@ -448,7 +448,7 @@ export default function CustomerAccount() {
                   <>
                     <Ticket className="h-4 w-4 text-amber-600" />
                     <span>{isEn ? "Saved Vouchers" : "Ưu đãi & Voucher đã lưu"}</span>
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-700">
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">
                       {savedPromotions.length}
                     </span>
                   </>

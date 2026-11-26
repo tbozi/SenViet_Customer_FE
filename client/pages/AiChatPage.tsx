@@ -955,7 +955,7 @@ export default function AiChatPage() {
                 key={q}
                 onClick={() => send(q)}
                 disabled={isTyping}
-                className="shrink-0 rounded-full border border-amber-300/80 bg-amber-50/90 dark:border-amber-700/60 dark:bg-amber-950/40 px-3.5 py-1 text-xs font-medium text-amber-950 dark:text-amber-200 transition hover:bg-amber-100 disabled:opacity-50"
+                className="shrink-0 rounded-full border border-amber-300/80 bg-amber-50/90 dark:bg-amber-950/50 dark:border-amber-700/60 dark:bg-amber-950/40 px-3.5 py-1 text-xs font-medium text-amber-950 dark:text-amber-200 transition hover:bg-amber-100 disabled:opacity-50"
               >
                 💬 {q}
               </button>

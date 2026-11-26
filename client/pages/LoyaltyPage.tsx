@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Gift, History, Medal, Percent, Sparkles, Star, Ticket } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,11 @@ import axiosInstance from "@/lib/axiosInstance";
 import { formatVnd } from "@/data/hotels";
 
 const tierLabels: Record<string, { name: string; color: string; badge: string; nextTier?: string; nextSpend: number }> = {
-  STANDARD: { name: "Hạng Tiêu Chuẩn (Standard)", color: "text-blue-500", badge: "bg-blue-100 text-blue-800", nextTier: "Hạng Bạc (Silver)", nextSpend: 10000000 },
-  SILVER: { name: "Hạng Bạc (Lotus Silver)", color: "text-slate-400", badge: "bg-slate-100 text-slate-800", nextTier: "Hạng Vàng (Gold)", nextSpend: 30000000 },
-  GOLD: { name: "Hạng Vàng (Lotus Gold)", color: "text-amber-500", badge: "bg-amber-100 text-amber-800", nextTier: "Hạng Bạch Kim (Platinum)", nextSpend: 60000000 },
+  STANDARD: { name: "Hạng Tiêu Chuẩn (Standard)", color: "text-blue-500", badge: "bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300", nextTier: "Hạng Bạc (Silver)", nextSpend: 10000000 },
+  SILVER: { name: "Hạng Bạc (Lotus Silver)", color: "text-slate-400", badge: "bg-slate-100 dark:bg-slate-800/70 text-slate-800 dark:text-slate-100", nextTier: "Hạng Vàng (Gold)", nextSpend: 30000000 },
+  GOLD: { name: "Hạng Vàng (Lotus Gold)", color: "text-amber-500", badge: "bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300", nextTier: "Hạng Bạch Kim (Platinum)", nextSpend: 60000000 },
   PLATINUM: { name: "Hạng Bạch Kim (Platinum)", color: "text-purple-500", badge: "bg-purple-100 text-purple-800", nextTier: "Hạng Kim Cương (Diamond)", nextSpend: 100000000 },
-  DIAMOND: { name: "Hạng Kim Cương (Diamond)", color: "text-emerald-500", badge: "bg-emerald-100 text-emerald-800", nextSpend: 0 },
+  DIAMOND: { name: "Hạng Kim Cương (Diamond)", color: "text-emerald-500", badge: "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300", nextSpend: 0 },
 };
 
 export default function LoyaltyPage() {

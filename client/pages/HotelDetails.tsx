@@ -1523,7 +1523,7 @@ export default function HotelDetails() {
 
               savedWishlist
 
-                ? "border-rose-400 bg-rose-50 text-rose-600"
+                ? "border-rose-400 bg-rose-50 dark:bg-rose-950/50 text-rose-600"
 
                 : "border-border bg-card text-card-foreground text-primary hover:border-rose-300 hover:text-rose-600"
 
@@ -1579,7 +1579,7 @@ export default function HotelDetails() {
 
 
 
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 border border-amber-200">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-950/50 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300 border border-amber-200">
 
             <Award className="h-3.5 w-3.5 text-amber-600" />
 
@@ -1589,7 +1589,7 @@ export default function HotelDetails() {
 
 
 
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200">
 
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
 
@@ -1635,7 +1635,7 @@ export default function HotelDetails() {
 
             </div>
 
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+            <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">
 
               {reviewSummary?.totalReviews
                 ? isEn
@@ -2037,7 +2037,7 @@ export default function HotelDetails() {
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600">
 
                     <Waves className="h-4 w-4" />
 
@@ -2093,7 +2093,7 @@ export default function HotelDetails() {
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-600">
 
                     <Utensils className="h-4 w-4" />
 
@@ -2149,7 +2149,7 @@ export default function HotelDetails() {
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600">
 
                     <Car className="h-4 w-4" />
 
@@ -2205,7 +2205,7 @@ export default function HotelDetails() {
 
                 <div className="flex items-center gap-2.5 font-bold text-primary">
 
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-300">
 
                     <Wifi className="h-4 w-4" />
 
@@ -2361,7 +2361,7 @@ export default function HotelDetails() {
 
                           </div>
 
-                          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                          <span className="rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
 
                             {isEn ? "Free cancel 72h+ prior" : "Miễn phí hủy trước 72 giờ"}
 
@@ -2625,7 +2625,7 @@ export default function HotelDetails() {
 
                 </div>
 
-                <span className="mt-2 rounded-full bg-primary/95 px-3 py-1 text-xs font-bold text-white shadow-lg backdrop-blur">
+                <span className="mt-2 rounded-full bg-[#0f294a]/95 px-3 py-1 text-xs font-bold text-white shadow-lg backdrop-blur">
 
                   {hotel.name}
 
@@ -3061,7 +3061,7 @@ export default function HotelDetails() {
 
                               <h4 className="font-display text-base font-bold text-primary">{rev.customerName}</h4>
 
-                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
 
                                 <ShieldCheck className="h-3 w-3" />
 
@@ -3397,7 +3397,7 @@ export default function HotelDetails() {
 
               </div>
 
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
 
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
 

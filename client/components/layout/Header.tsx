@@ -116,7 +116,7 @@ function getNotificationIcon(n: HeaderNotification) {
     n.description.toLowerCase().includes("thành công")
   ) {
     return (
-      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
         <CheckCircle2 className="h-4 w-4" />
       </span>
     );
@@ -127,13 +127,13 @@ function getNotificationIcon(n: HeaderNotification) {
     n.title.toLowerCase().includes("hoàn tiền")
   ) {
     return (
-      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
         <AlertCircle className="h-4 w-4" />
       </span>
     );
   }
   return (
-    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-950/50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
       <Bell className="h-4 w-4" />
     </span>
   );

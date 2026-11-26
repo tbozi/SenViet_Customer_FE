@@ -83,7 +83,7 @@ export const MotionButton = React.forwardRef<HTMLButtonElement, MotionButtonProp
       primary: "bg-primary text-white shadow-md hover:bg-primary/95",
       gold: "bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-md shadow-amber-600/20 hover:from-amber-700 hover:to-amber-800",
       outline: "border border-border bg-card text-foreground hover:bg-secondary hover:border-border",
-      ghost: "text-slate-600 hover:bg-slate-100",
+      ghost: "text-slate-600 dark:text-slate-300 hover:bg-slate-100",
     }[variant];
 
     return (

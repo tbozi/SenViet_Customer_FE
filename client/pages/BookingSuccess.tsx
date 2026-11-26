@@ -427,10 +427,10 @@ export default function BookingSuccess() {
           <div
             className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
               isCancelled
-                ? "bg-rose-100 text-rose-600"
+                ? "bg-rose-100 dark:bg-rose-950/50 text-rose-600"
                 : pending
-                ? "bg-gold/20 text-amber-700"
-                : "bg-emerald-100 text-emerald-600"
+                ? "bg-gold/20 text-amber-700 dark:text-amber-300"
+                : "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600"
             }`}
           >
             {isCancelled ? (
@@ -466,13 +466,13 @@ export default function BookingSuccess() {
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_380px] lg:items-start">
           <section className="rounded-2xl border border-border bg-card p-6">
             {isCancelled && (
-              <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/90 p-4 text-xs text-rose-800 flex items-start gap-3 shadow-sm">
+              <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/90 dark:bg-rose-950/50 p-4 text-xs text-rose-800 dark:text-rose-300 flex items-start gap-3 shadow-sm">
                 <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
                 <div>
-                  <p className="font-bold text-sm text-rose-900">
+                  <p className="font-bold text-sm text-rose-900 dark:text-rose-300">
                     {isEn ? "Reservation automatically cancelled" : "Đơn đặt phòng đã bị hủy tự động"}
                   </p>
-                  <p className="mt-1 text-rose-700 leading-relaxed">
+                  <p className="mt-1 text-rose-700 dark:text-rose-300 leading-relaxed">
                     {isEn ? "According to Sen Việt policy, if payment is not completed within 5 minutes, reservations are automatically cancelled and rooms released for other guests." : "Theo quy định của chuỗi khách sạn Sen Việt, sau 5 phút nếu đơn đặt phòng chưa hoàn tất thanh toán, hệ thống sẽ tự động hủy đơn và mở lại phòng cho các khách hàng khác."}
                   </p>
                 </div>
@@ -625,8 +625,8 @@ export default function BookingSuccess() {
               </div>
             ) : null}
             {booking.cancellationPolicy && (
-              <div className="mt-5 rounded-xl border border-amber-200/70 bg-amber-50/50 p-4 text-xs">
-                <p className="font-semibold text-amber-900">{isEn ? "Applicable Cancellation Policy" : "Chính sách hủy phòng áp dụng"}</p>
+              <div className="mt-5 rounded-xl border border-amber-200/70 bg-amber-50/50 dark:bg-amber-950/50 p-4 text-xs">
+                <p className="font-semibold text-amber-900 dark:text-amber-300">{isEn ? "Applicable Cancellation Policy" : "Chính sách hủy phòng áp dụng"}</p>
                 <p className="mt-1 text-amber-800/90">{booking.cancellationPolicy}</p>
               </div>
             )}
@@ -666,14 +666,14 @@ export default function BookingSuccess() {
                 </div>
               )}
               {booking.discount > 0 && (
-                <div className="flex justify-between gap-3 text-emerald-700">
+                <div className="flex justify-between gap-3 text-emerald-700 dark:text-emerald-300">
                   <span>{isEn ? "Discount" : "Giảm giá"}</span>
                   <strong className="tabular-nums font-semibold">-{formatVnd(booking.discount)}</strong>
                 </div>
               )}
               <div className="flex justify-between items-center gap-3 border-t-2 border-primary/20 pt-3 text-base font-bold text-primary">
                 <span>{isEn ? "Total Payment" : "Tổng thanh toán"}</span>
-                <span className="tabular-nums text-xl font-extrabold text-amber-700">{formatVnd(booking.total)}</span>
+                <span className="tabular-nums text-xl font-extrabold text-amber-700 dark:text-amber-300">{formatVnd(booking.total)}</span>
               </div>
             </div>
 
@@ -744,8 +744,8 @@ export default function BookingSuccess() {
             )}
 
             {isCancelled && (
-              <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-center">
-                <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-rose-700">
+              <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50/80 dark:bg-rose-950/50 p-4 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300">
                   <AlertCircle className="h-4 w-4" />
                   Đã hết hạn giữ phòng
                 </p>
@@ -762,8 +762,8 @@ export default function BookingSuccess() {
             )}
 
             {!pending && !isCancelled && (
-              <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 text-center">
-                <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700">
+              <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50/70 dark:bg-emerald-950/50 p-3.5 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">
                   <CheckCircle2 className="h-4 w-4" />
                   {isEn ? "Payment Confirmed Successfully" : "Đã thanh toán thành công"}
                 </p>
@@ -804,10 +804,10 @@ export default function BookingSuccess() {
           {/* Header Modal */}
           <div className="flex items-center justify-between border-b border-slate-100 bg-card text-card-foreground px-7 py-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">{isEn ? "Pay via QR Code" : "Thanh toán qua mã QR"}</h2>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{isEn ? "Pay via QR Code" : "Thanh toán qua mã QR"}</h2>
               <p className="text-xs text-slate-500 mt-0.5">{isEn ? "QR code is valid for 5 minutes" : "Mã QR có hiệu lực trong 5 phút"}</p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-sm">
+            <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-3.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300 border border-emerald-200 shadow-sm">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span>payOS</span>
             </div>
@@ -815,13 +815,13 @@ export default function BookingSuccess() {
 
           <div className="p-6 sm:p-7 space-y-4 bg-card text-card-foreground">
             {/* Top Hotel Branding & Tip Banner */}
-            <div className="flex items-center justify-between rounded-xl bg-slate-50/90 px-4 py-3 border border-slate-200/80">
+            <div className="flex items-center justify-between rounded-xl bg-slate-50/90 dark:bg-slate-800/70 px-4 py-3 border border-slate-200/80">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-sm border border-primary/20">
                   🏨
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100 block">
                     QUẢN LÝ KHÁCH SẠN
                   </span>
                   <span className="text-[12px] text-muted-foreground">
@@ -829,13 +829,13 @@ export default function BookingSuccess() {
                   </span>
                 </div>
               </div>
-              <span className="text-xs text-slate-600 font-mono font-semibold bg-card text-card-foreground px-2.5 py-1 rounded-md border border-slate-200">
+              <span className="text-xs text-slate-600 dark:text-slate-300 font-mono font-semibold bg-card text-card-foreground px-2.5 py-1 rounded-md border border-slate-200">
                 {booking?.id}
               </span>
             </div>
 
             {/* Instruction Tip */}
-            <div className="flex items-start gap-2.5 rounded-xl bg-amber-50/80 px-4 py-3 text-xs text-amber-900 border border-amber-200/80">
+            <div className="flex items-start gap-2.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/50 px-4 py-3 text-xs text-amber-900 dark:text-amber-300 border border-amber-200/80">
               <Lightbulb className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
               <span className="leading-relaxed">
                 {isEn ? (
@@ -853,7 +853,7 @@ export default function BookingSuccess() {
                 <div className="flex flex-col items-center justify-between rounded-2xl border border-slate-200 bg-card text-card-foreground p-4 shadow-sm text-center">
                   <div className="mb-2 flex items-center justify-center gap-1.5">
                     <span className="text-sm font-black tracking-wider text-rose-600">VIET</span>
-                    <span className="text-sm font-black tracking-wider text-blue-800">QR</span>
+                    <span className="text-sm font-black tracking-wider text-blue-800 dark:text-blue-300">QR</span>
                     <span className="rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">PRO</span>
                   </div>
 
@@ -876,10 +876,10 @@ export default function BookingSuccess() {
                     )}
                   </div>
 
-                  <div className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-slate-600">
+                  <div className="mt-3 flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
                     <span className="text-blue-600 font-bold">napas 247</span>
                     <span className="text-slate-300">|</span>
-                    <span className="text-slate-700 font-bold truncate max-w-[180px]" title={qrData.bankName}>
+                    <span className="text-slate-700 dark:text-slate-200 font-bold truncate max-w-[180px]" title={qrData.bankName}>
                       {qrData.bankName || "MB Bank"}
                     </span>
                   </div>
@@ -889,16 +889,16 @@ export default function BookingSuccess() {
                 <div className="space-y-3 text-xs">
                   {/* Hàng 1: Khách hàng & Mã hóa đơn */}
                   <div className="grid grid-cols-2 gap-2.5">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 p-3">
                       <p className="text-[11px] text-slate-500">{isEn ? "Customer" : "Khách hàng"}</p>
-                      <p className="font-bold text-slate-900 text-xs truncate mt-0.5" title={qrData.customerName || booking.guestName}>
+                      <p className="font-bold text-slate-900 dark:text-slate-100 text-xs truncate mt-0.5" title={qrData.customerName || booking.guestName}>
                         {qrData.customerName || booking.guestName || (isEn ? "Guest" : "Khách đặt")}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 p-3">
                       <div className="min-w-0 pr-1">
                         <p className="text-[11px] text-slate-500">{isEn ? "Invoice Code" : "Mã hóa đơn"}</p>
-                        <p className="font-mono font-bold text-slate-900 text-xs truncate mt-0.5" title={qrData.orderId}>
+                        <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs truncate mt-0.5" title={qrData.orderId}>
                           {qrData.orderId}
                         </p>
                       </div>
@@ -916,25 +916,25 @@ export default function BookingSuccess() {
                   </div>
 
                   {/* Hàng 2: Số tiền cần thanh toán (Không có nút sao chép) */}
-                  <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 px-3.5 py-2.5">
-                    <p className="text-[11px] font-medium text-emerald-800">{isEn ? "Payment Amount" : "Số tiền thanh toán"}</p>
+                  <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 dark:bg-emerald-950/50 px-3.5 py-2.5">
+                    <p className="text-[11px] font-medium text-emerald-800 dark:text-emerald-300">{isEn ? "Payment Amount" : "Số tiền thanh toán"}</p>
                     <p className="font-mono font-bold text-emerald-600 text-xl tracking-tight mt-0.5">
                       {formatVnd(qrData.amount)}
                     </p>
                   </div>
 
                   {/* Hàng 3: Ngân hàng & Chủ tài khoản */}
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-2.5 space-y-1.5">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 p-2.5 space-y-1.5">
                     <div className="flex justify-between items-start gap-2">
                       <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Payment Gateway:" : "Cổng thanh toán:"}</span>
-                      <span className="font-bold text-slate-900 text-xs text-right leading-tight">
+                      <span className="font-bold text-slate-900 dark:text-slate-100 text-xs text-right leading-tight">
                         {qrData.bankName || "PayOS VietQR"}
                       </span>
                     </div>
                     {qrData.accountName && (
                       <div className="flex justify-between items-center border-t border-slate-200/70 pt-1.5">
                         <span className="text-[11px] text-slate-500 shrink-0">{isEn ? "Account Name:" : "Chủ tài khoản:"}</span>
-                        <span className="font-bold text-slate-900 text-xs uppercase text-right">
+                        <span className="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase text-right">
                           {qrData.accountName}
                         </span>
                       </div>
@@ -943,10 +943,10 @@ export default function BookingSuccess() {
 
                   {/* Hàng 4: Số tài khoản (nếu có) */}
                   {qrData.accountNo && (
-                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2">
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 px-3 py-2">
                       <div>
                         <p className="text-[11px] text-slate-500">{isEn ? "Account Number" : "Số tài khoản"}</p>
-                        <p className="font-mono font-bold text-slate-900 text-sm tracking-wide">{qrData.accountNo}</p>
+                        <p className="font-mono font-bold text-slate-900 dark:text-slate-100 text-sm tracking-wide">{qrData.accountNo}</p>
                       </div>
                       <Button
                         type="button"
@@ -962,9 +962,9 @@ export default function BookingSuccess() {
                   )}
 
                   {/* Hàng 5: Nội dung chuyển khoản */}
-                  <div className="flex items-center justify-between rounded-xl border border-amber-200/90 bg-amber-50/70 px-3 py-2">
+                  <div className="flex items-center justify-between rounded-xl border border-amber-200/90 bg-amber-50/70 dark:bg-amber-950/50 px-3 py-2">
                     <div className="min-w-0 pr-2">
-                      <p className="text-[11px] font-semibold text-amber-900">{isEn ? "Payment Description" : "Nội dung chuyển khoản"}</p>
+                      <p className="text-[11px] font-semibold text-amber-900 dark:text-amber-300">{isEn ? "Payment Description" : "Nội dung chuyển khoản"}</p>
                       <p className="font-mono font-bold text-amber-950 text-xs truncate tracking-wide mt-0.5" title={qrData.description}>
                         {qrData.description}
                       </p>
@@ -974,7 +974,7 @@ export default function BookingSuccess() {
                       variant="outline"
                       size="sm"
                       onClick={() => copyToClipboard(qrData.description, "Nội dung")}
-                      className="h-7 px-2.5 gap-1 rounded-lg text-xs font-semibold border-amber-300 text-amber-900 hover:bg-amber-100 shrink-0"
+                      className="h-7 px-2.5 gap-1 rounded-lg text-xs font-semibold border-amber-300 text-amber-900 dark:text-amber-300 hover:bg-amber-100 shrink-0"
                     >
                       {copiedField === "Nội dung" ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                       <span>{isEn ? "Copy" : "Sao chép"}</span>
@@ -987,7 +987,7 @@ export default function BookingSuccess() {
             {/* Countdown & External Link */}
             <div className="border-t border-slate-100 pt-2.5 text-center space-y-1">
               {countdown > 0 ? (
-                <p className="text-xs font-semibold text-amber-700">
+                <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
                   {isEn ? "Time remaining:" : "Thời gian còn lại:"} <span className="font-mono text-sm font-bold">{formatCountdown(countdown)}</span>
                 </p>
               ) : (
@@ -1013,7 +1013,7 @@ export default function BookingSuccess() {
 
             {/* Realtime detection message */}
             {countdown > 0 ? (
-              <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50/80 px-3 py-2 text-xs text-emerald-800 border border-emerald-200/60">
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/50 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300 border border-emerald-200/60">
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>

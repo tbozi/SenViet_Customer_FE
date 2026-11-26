@@ -42,10 +42,10 @@ export function HeritageManifesto() {
   ];
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-stone-50/80 via-white to-stone-50/40 py-20 border-b border-border/50">
+    <section className="relative overflow-hidden bg-gradient-to-b from-stone-50/80 via-white to-stone-50/40 dark:from-slate-950/80 dark:via-background dark:to-slate-950/60 py-20 border-b border-border/50">
       {/* Decorative Subtle Watermark Background */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.03]">
-        <Flower2 className="h-[550px] w-[550px] text-amber-900" />
+        <Flower2 className="h-[550px] w-[550px] text-amber-900 dark:text-amber-300" />
       </div>
 
       <div className="container relative z-10">
@@ -56,7 +56,7 @@ export function HeritageManifesto() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[.18em] text-amber-700"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[.18em] text-amber-700 dark:text-amber-300"
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-600" />
             <span>{isEn ? "The Heritage Manifesto" : "Triết Lý Di Sản Sen Việt"}</span>
@@ -72,12 +72,12 @@ export function HeritageManifesto() {
             {isEn ? (
               <>
                 Where Timeless Vietnamese Heritage Meets{" "}
-                <span className="italic font-normal text-amber-700">Artful Luxury</span>
+                <span className="italic font-normal text-amber-700 dark:text-amber-300">Artful Luxury</span>
               </>
             ) : (
               <>
                 Nơi Nét Đẹp Di Sản Ngàn Năm Giao Hòa Cùng{" "}
-                <span className="italic font-normal text-amber-700">Nghệ Thuật Hiếu Khách</span> Thượng Lưu
+                <span className="italic font-normal text-amber-700 dark:text-amber-300">Nghệ Thuật Hiếu Khách</span> Thượng Lưu
               </>
             )}
           </motion.h2>

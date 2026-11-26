@@ -238,7 +238,7 @@ export default function ProfilePage() {
             <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{passwordError}</p>
           )}
           {passwordMsg && (
-            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">{passwordMsg}</p>
+            <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/50 p-3 text-sm text-emerald-700 dark:text-emerald-300 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300">{passwordMsg}</p>
           )}
           <div className="mt-4 flex flex-wrap gap-3">
             <Button type="submit" variant="outline" className="rounded-xl" disabled={passwordLoading}>

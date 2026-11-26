@@ -441,7 +441,7 @@ export function Offers() {
                     <div className="flex items-center gap-1.5">
                       <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] ${
                         (offer as any).hotelId
-                          ? "bg-amber-100 text-amber-900 border border-amber-300 font-bold shadow-xs"
+                          ? "bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border border-amber-300 font-bold shadow-xs"
                           : "bg-secondary/80 text-primary font-medium"
                       }`}>
                         <Building2 className="h-3 w-3 text-gold" />
@@ -496,18 +496,18 @@ export function Offers() {
                     disabled={isSaving || isUnsaving}
                     className={`mt-5 flex w-full items-center justify-center gap-2 rounded-full border py-2.5 text-sm font-semibold transition ${
                       isSaved
-                        ? "border-amber-400 bg-amber-100 text-amber-950 shadow-xs hover:bg-rose-100 hover:border-rose-300 hover:text-rose-900"
-                        : "border-amber-300/80 bg-amber-50/80 text-amber-900 shadow-xs hover:border-amber-400 hover:bg-amber-100/90"
+                        ? "border-amber-400 bg-amber-100 dark:bg-amber-950/50 text-amber-950 shadow-xs hover:bg-rose-100 hover:border-rose-300 hover:text-rose-900"
+                        : "border-amber-300/80 bg-amber-50/80 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 shadow-xs hover:border-amber-400 hover:bg-amber-100/90"
                     }`}
                   >
                     {isSaved ? (
                       <>
-                        <BookmarkCheck className="h-4 w-4 text-amber-700" />
+                        <BookmarkCheck className="h-4 w-4 text-amber-700 dark:text-amber-300" />
                         <span>{isVietnamese ? "Đã lưu · Bấm để bỏ lưu" : "Saved · Click to unsave"}</span>
                       </>
                     ) : (
                       <>
-                        <Bookmark className="h-4 w-4 text-amber-700" />
+                        <Bookmark className="h-4 w-4 text-amber-700 dark:text-amber-300" />
                         <span>{isVietnamese ? "Lưu voucher" : "Save voucher"}</span>
                       </>
                     )}
@@ -611,18 +611,18 @@ export function Offers() {
                 disabled={isSaving || isUnsaving}
                 className={`inline-flex items-center justify-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition ${
                   isSavedCode(selectedOffer.code)
-                    ? "border-amber-400 bg-amber-100 text-amber-950 hover:bg-amber-200/80"
-                    : "border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100"
+                    ? "border-amber-400 bg-amber-100 dark:bg-amber-950/50 text-amber-950 hover:bg-amber-200/80"
+                    : "border-amber-300 bg-amber-50/80 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 hover:bg-amber-100"
                 }`}
               >
                 {isSavedCode(selectedOffer.code) ? (
                   <>
-                    <BookmarkCheck className="h-4 w-4 text-amber-700" />
+                    <BookmarkCheck className="h-4 w-4 text-amber-700 dark:text-amber-300" />
                     <span>{isVietnamese ? "Đã lưu vào ví" : "Saved"}</span>
                   </>
                 ) : (
                   <>
-                    <Bookmark className="h-4 w-4 text-amber-700" />
+                    <Bookmark className="h-4 w-4 text-amber-700 dark:text-amber-300" />
                     <span>{isVietnamese ? "Lưu voucher này" : "Save voucher"}</span>
                   </>
                 )}
@@ -826,7 +826,7 @@ export function Services() {
                   className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
                     selectedCategory === cat
                       ? "bg-primary text-primary-foreground shadow-xs"
-                      : "bg-white/80 text-muted-foreground border border-border hover:text-primary hover:bg-white"
+                      : "bg-card text-foreground border border-border hover:bg-secondary"
                   }`}
                 >
                   {cat === "all" ? (isVietnamese ? "Tất cả" : "All") : cat}

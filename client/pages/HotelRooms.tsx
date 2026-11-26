@@ -354,7 +354,7 @@ function RoomDetailsModal({
 
           aria-label="Đóng chi tiết phòng"
 
-          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-card-foreground text-slate-700 shadow-md backdrop-blur transition hover:bg-rose-50 hover:text-rose-600"
+          className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-card/90 text-card-foreground text-slate-700 dark:text-slate-200 shadow-md backdrop-blur transition hover:bg-rose-50 hover:text-rose-600"
 
         >
 
@@ -556,7 +556,7 @@ function RoomDetailsModal({
 
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 p-3">
 
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
 
@@ -564,7 +564,7 @@ function RoomDetailsModal({
 
                 </span>
 
-                <p className="mt-1 text-xs font-bold text-slate-800">
+                <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-100">
 
                   {room.bedsVi}
 
@@ -574,7 +574,7 @@ function RoomDetailsModal({
 
 
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 p-3">
 
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
 
@@ -582,7 +582,7 @@ function RoomDetailsModal({
 
                 </span>
 
-                <p className="mt-1 text-xs font-bold text-slate-800">
+                <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-100">
 
                   {room.standardCapacity > 0 || room.capacity.adults > 0
                     ? `Chuẩn ${room.standardCapacity || room.capacity.adults} người`
@@ -594,7 +594,7 @@ function RoomDetailsModal({
 
 
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 p-3">
 
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
 
@@ -602,7 +602,7 @@ function RoomDetailsModal({
 
                 </span>
 
-                <p className="mt-1 text-xs font-bold text-slate-800">
+                <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-100">
 
                   {room.size}
 
@@ -612,7 +612,7 @@ function RoomDetailsModal({
 
 
 
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 dark:bg-slate-800/70 p-3">
 
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
 
@@ -620,7 +620,7 @@ function RoomDetailsModal({
 
                 </span>
 
-                <p className="mt-1 text-xs font-bold text-slate-800">
+                <p className="mt-1 text-xs font-bold text-slate-800 dark:text-slate-100">
 
                   {room.buildingName && `${/^tòa\s/i.test(room.buildingName) ? room.buildingName : `Tòa ${room.buildingName}`} · `}
                   {room.floor > 0 && `Tầng ${room.floor}`}
@@ -642,7 +642,7 @@ function RoomDetailsModal({
 
                   availableCount > 0
 
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200"
 
                     : "bg-red-50 text-red-700 border border-red-200"
 
@@ -669,7 +669,7 @@ function RoomDetailsModal({
 
 
 
-            <p className="mt-3 text-sm leading-relaxed text-slate-600">
+            <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
 
               {room.description}
 
@@ -678,11 +678,11 @@ function RoomDetailsModal({
 
 
             {(room.extraAdultFee != null || room.extraChildFee != null) && (
-              <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50/40 p-4 text-xs">
+              <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50/40 dark:bg-blue-950/50 p-4 text-xs">
                 <h3 className="text-sm font-bold text-blue-950">
                   Phụ thu khách thêm
                 </h3>
-                <div className="mt-3 space-y-2 text-slate-700">
+                <div className="mt-3 space-y-2 text-slate-700 dark:text-slate-200">
                   {room.extraAdultFee != null && (
                     <p>
                       Người lớn thêm: {formatVnd(room.extraAdultFee)} / người / đêm
@@ -716,7 +716,7 @@ function RoomDetailsModal({
 
                     key={amenity}
 
-                    className="flex items-center gap-2 text-xs text-slate-600"
+                    className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"
 
                   >
 
@@ -2061,7 +2061,7 @@ export default function HotelRooms() {
 
                         <span
 
-                          className={`rounded-full px-3 py-1 font-semibold ${maxQuantity > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+                          className={`rounded-full px-3 py-1 font-semibold ${maxQuantity > 0 ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300" : "bg-red-50 text-red-700"}`}
 
                         >
 

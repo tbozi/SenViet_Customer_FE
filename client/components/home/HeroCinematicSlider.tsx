@@ -195,32 +195,26 @@ export function HeroCinematicSlider({
           </div>
 
           {/* Animated Headline Transition */}
-          <AnimatePresence mode="wait">
-            <motion.h1
-              key={`title-${activeSlide.id}`}
-              initial={{ opacity: 0, y: 25, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -15, filter: "blur(6px)" }}
-              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-              className="font-display text-4xl font-bold leading-[1.12] tracking-tight text-white sm:text-6xl lg:text-7xl drop-shadow-md"
-            >
-              {activeSlide.title[isEn ? "en" : "vi"]}
-            </motion.h1>
-          </AnimatePresence>
+          <motion.h1
+            key={`title-${activeSlide.id}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="font-display text-4xl font-bold leading-[1.12] tracking-tight text-white sm:text-6xl lg:text-7xl drop-shadow-md"
+          >
+            {activeSlide.title[isEn ? "en" : "vi"]}
+          </motion.h1>
 
           {/* Animated Subtitle */}
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={`sub-${activeSlide.id}`}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-200 sm:text-xl drop-shadow-xs"
-            >
-              {activeSlide.subtitle[isEn ? "en" : "vi"]}
-            </motion.p>
-          </AnimatePresence>
+          <motion.p
+            key={`sub-${activeSlide.id}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.05 }}
+            className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-200 sm:text-xl drop-shadow-xs"
+          >
+            {activeSlide.subtitle[isEn ? "en" : "vi"]}
+          </motion.p>
 
           {/* CTAs */}
           <div className="mt-9 flex flex-wrap gap-4">

@@ -275,7 +275,7 @@ export default function ForgotPasswordPage() {
               )}
 
               {successInfo && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/50 p-3 text-sm text-emerald-800 dark:text-emerald-300 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-300">
                   {successInfo}
                 </div>
               )}
@@ -316,7 +316,7 @@ export default function ForgotPasswordPage() {
 
         {step === "success" && (
           <div className="text-center">
-            <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+            <div className="mx-auto mt-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h1 className="mt-4 font-display text-2xl font-bold text-primary">Thành công!</h1>

@@ -913,27 +913,27 @@ export default function Checkout() {
               </div>
 
               {promo && promoAlreadyUsed && (
-                <p className="mt-2.5 rounded-lg bg-rose-50 p-2.5 text-xs font-medium text-rose-700">
+                <p className="mt-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 p-2.5 text-xs font-medium text-rose-700 dark:text-rose-300">
                   ✕ {isEn ? "You have already used this promo code on a previous booking. Each account may use it once." : "Bạn đã sử dụng mã ưu đãi này cho một đơn đặt phòng thành công trước đó. Mỗi tài khoản chỉ dùng 1 lần."}
                 </p>
               )}
               {promo && !promoAlreadyUsed && !promoApplicability.applicable && (
-                <p className="mt-2.5 rounded-lg bg-rose-50 p-2.5 text-xs font-medium text-rose-700">
+                <p className="mt-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 p-2.5 text-xs font-medium text-rose-700 dark:text-rose-300">
                   ✕ {promoApplicability.reason || "Mã không áp dụng cho khách sạn này."}
                 </p>
               )}
               {promo && !promoAlreadyUsed && promoMinBookingFailed && (
-                <p className="mt-2.5 rounded-lg bg-amber-50 p-2.5 text-xs font-medium text-amber-800">
+                <p className="mt-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 p-2.5 text-xs font-medium text-amber-800 dark:text-amber-300">
                   ⚠ Mã {matchedActivePromo?.code} yêu cầu giá trị tiền phòng tối thiểu {matchedActivePromo?.minBookingValue?.toLocaleString("vi-VN")}đ (hiện tại: {roomSubtotal.toLocaleString("vi-VN")}đ).
                 </p>
               )}
               {promo && !promoAlreadyUsed && promoApplicability.applicable && !promoMinBookingFailed && discount === 0 && (
-                <p className="mt-2.5 rounded-lg bg-amber-50 p-2.5 text-xs font-medium text-amber-800">
+                <p className="mt-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 p-2.5 text-xs font-medium text-amber-800 dark:text-amber-300">
                   ⚠ Mã chưa đủ điều kiện cho đơn này (ví dụ: số đêm tối thiểu).
                 </p>
               )}
               {promo && discount > 0 && (
-                <p className="mt-2.5 rounded-lg bg-emerald-50 p-2.5 text-xs font-semibold text-emerald-700">
+                <p className="mt-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 p-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                   ✓ Áp dụng thành công: giảm {formatVnd(discount)}
                 </p>
               )}
@@ -957,14 +957,14 @@ export default function Checkout() {
                               ? "border-border/60 bg-muted/40 opacity-60 cursor-not-allowed"
                               : isSelected
                                 ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                                : "border-amber-200 bg-amber-50/50 hover:border-amber-400"
+                                : "border-amber-200 bg-amber-50/50 dark:bg-amber-950/50 hover:border-amber-400"
                           }`}
                         >
                           <div className="min-w-0">
                             <p className="font-mono text-xs font-bold text-primary truncate">{item.code}</p>
                             <p className="text-xs text-muted-foreground truncate">{item.name}</p>
                             {item.discountText && (
-                              <span className="mt-0.5 inline-block text-[11px] font-semibold text-amber-700">
+                              <span className="mt-0.5 inline-block text-[11px] font-semibold text-amber-700 dark:text-amber-300">
                                 {item.discountText}
                               </span>
                             )}

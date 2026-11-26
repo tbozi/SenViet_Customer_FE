@@ -247,10 +247,10 @@ export default function BookingSummaryPanel({
                       <p
                         className={`flex items-center gap-1.5 text-[11px] font-medium ${
                           notice.type === "free"
-                            ? "text-emerald-700"
+                            ? "text-emerald-700 dark:text-emerald-300"
                             : notice.type === "partial"
-                              ? "text-amber-700"
-                              : "text-rose-700"
+                              ? "text-amber-700 dark:text-amber-300"
+                              : "text-rose-700 dark:text-rose-300"
                         }`}
                       >
                         {notice.type === "free" ? (
@@ -272,7 +272,7 @@ export default function BookingSummaryPanel({
                     <span className="font-semibold text-foreground tabular-nums">{formatVnd(breakdown.roomPrice)}</span>
                   </div>
                   {breakdown.extraGuestSurcharge > 0 && (
-                    <div className="flex justify-between gap-3 font-medium text-amber-700">
+                    <div className="flex justify-between gap-3 font-medium text-amber-700 dark:text-amber-300">
                       <span>{isEn ? "Extra guest surcharge" : "Phụ thu vượt sức chứa"}</span>
                       <span className="tabular-nums">+{formatVnd(breakdown.extraGuestSurcharge)}</span>
                     </div>
@@ -367,7 +367,7 @@ export default function BookingSummaryPanel({
                           </p>
                         )}
                         {!isApplicable && promotion.reason && (
-                          <p className="mt-1 flex items-start gap-1 text-[10px] text-slate-600 italic leading-tight">
+                          <p className="mt-1 flex items-start gap-1 text-[10px] text-slate-600 dark:text-slate-300 italic leading-tight">
                             <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-slate-500" />
                             <span>{promotion.reason}</span>
                           </p>
@@ -382,7 +382,7 @@ export default function BookingSummaryPanel({
                           }
                           className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                             isSelected
-                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              ? "bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200"
                               : "bg-primary text-primary-foreground hover:bg-primary/90"
                           }`}
                         >
@@ -444,7 +444,7 @@ export default function BookingSummaryPanel({
                   </div>
                 )}
                 {discount > 0 && (
-                  <div className="flex justify-between gap-3 text-emerald-700">
+                  <div className="flex justify-between gap-3 text-emerald-700 dark:text-emerald-300">
                     <span>{isEn ? "Discount" : "Giảm giá"}</span>
                     <span className="tabular-nums font-semibold">-{formatVnd(discount)}</span>
                   </div>
@@ -453,7 +453,7 @@ export default function BookingSummaryPanel({
             ) : null}
             <div className="flex items-center justify-between gap-3 text-lg font-bold text-primary">
               <span>{showOuterBreakdown ? (isEn ? "Total" : "Tổng cộng") : (isEn ? "Subtotal" : "Tạm tính")}</span>
-              <span className="tabular-nums text-xl font-extrabold text-amber-700">{formatVnd(total)}</span>
+              <span className="tabular-nums text-xl font-extrabold text-amber-700 dark:text-amber-300">{formatVnd(total)}</span>
             </div>
             {!showOuterBreakdown && (
               <p className="mt-2 text-xs leading-5 text-muted-foreground">
@@ -464,7 +464,7 @@ export default function BookingSummaryPanel({
           {roomBreakdowns.some(
             (b) => !b.stay.checkIn || !b.stay.checkOut || !Number.isFinite(b.stay.nights) || b.stay.nights < 1,
           ) && (
-            <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-medium text-rose-700">
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-950/50 p-3 text-xs font-medium text-rose-700 dark:text-rose-300">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
               <span>
                 {isEn

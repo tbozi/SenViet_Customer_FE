@@ -226,12 +226,12 @@ export default function ContactPage() {
               </p>
 
               {submitted ? (
-                <div className="my-8 rounded-2xl bg-emerald-50 border border-emerald-200 p-6 text-center text-emerald-900">
+                <div className="my-8 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 p-6 text-center text-emerald-900 dark:text-emerald-300">
                   <CheckCircle className="mx-auto h-12 w-12 text-emerald-600 mb-3" />
                   <h3 className="text-base font-bold">
                     {isEn ? "Email Sent Successfully!" : "Đã gửi email thắc mắc & góp ý thành công!"}
                   </h3>
-                  <p className="text-xs sm:text-sm text-emerald-700 mt-1 max-w-md mx-auto">
+                  <p className="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 mt-1 max-w-md mx-auto">
                     {isEn
                       ? `Thank you for reaching out to Sen Việt Hotels & Resorts. A confirmation copy has been sent to ${sentEmail || "your email"}.`
                       : `Cảm ơn quý khách đã gửi góp ý cho Sen Việt. Hệ thống đã chuyển thông tin đến bộ phận CSKH và gửi email xác nhận tới ${sentEmail || "hộp thư của quý khách"}.`}
@@ -347,7 +347,7 @@ export default function ContactPage() {
                   </div>
 
                   {submitError && (
-                    <p role="alert" className="rounded-xl bg-rose-50 border border-rose-200 px-3.5 py-2.5 text-xs font-medium text-rose-700">
+                    <p role="alert" className="rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 px-3.5 py-2.5 text-xs font-medium text-rose-700 dark:text-rose-300">
                       {submitError}
                     </p>
                   )}
