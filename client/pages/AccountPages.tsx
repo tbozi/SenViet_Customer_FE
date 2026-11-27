@@ -706,13 +706,14 @@ export function AuthPage({ mode }: { mode: "login" | "register" }) {
             <label className="block text-sm font-medium text-primary">
               {t("auth.password")}
               <div className="relative mt-1">
+                <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <input
                   required
                   type={showPassword ? "text" : "password"}
                   minLength={6}
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  className="w-full rounded-xl border border-input p-3 pr-11"
+                  className="w-full rounded-xl border border-input p-3 pl-10 pr-11"
                 />
                 <button
                   type="button"

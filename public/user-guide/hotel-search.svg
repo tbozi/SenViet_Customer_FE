@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title">
+  <title id="title">Hotel search and selection illustration</title>
+  <rect width="960" height="420" rx="24" fill="#f3f4f6"/><rect x="22" y="22" width="916" height="376" rx="20" fill="#fff"/>
+  <rect x="22" y="22" width="916" height="52" rx="20" fill="#172554"/><text x="54" y="55" fill="#fff" font-family="Arial" font-size="16" font-weight="700">SEN VIET HOTELS</text>
+  <rect x="54" y="103" width="852" height="100" rx="15" fill="#f8fafc" stroke="#e2e8f0"/>
+  <g font-family="Arial"><text x="78" y="132" fill="#64748b" font-size="11">1 · DESTINATION</text><text x="78" y="169" fill="#0f172a" font-size="14">Choose city or hotel</text><text x="292" y="132" fill="#64748b" font-size="11">2 · CHECK-IN</text><text x="292" y="169" fill="#0f172a" font-size="14">Arrival date</text><text x="478" y="132" fill="#64748b" font-size="11">3 · CHECK-OUT</text><text x="478" y="169" fill="#0f172a" font-size="14">Departure date</text><text x="658" y="132" fill="#64748b" font-size="11">4 · GUESTS / ROOMS</text><text x="658" y="169" fill="#0f172a" font-size="14">Guest and room count</text></g>
+  <rect x="790" y="146" width="92" height="40" rx="20" fill="#d4a84e"/><text x="812" y="171" fill="#172554" font-family="Arial" font-size="12" font-weight="700">SEARCH</text>
+  <rect x="54" y="226" width="852" height="136" rx="14" fill="#f1f5f9"/><rect x="70" y="242" width="160" height="104" rx="10" fill="#bfdbfe"/><path d="M75 328 118 278l26 30 18-20 47 62" fill="#93c5fd"/>
+  <text x="254" y="270" fill="#0f172a" font-family="Arial" font-size="15" font-weight="700">5 · Review a hotel card</text><text x="254" y="298" fill="#64748b" font-family="Arial" font-size="12">Name · address · rating · starting price</text><text x="254" y="326" fill="#1d4ed8" font-family="Arial" font-size="12" font-weight="700">Open details → view available rooms</text>
+</svg>

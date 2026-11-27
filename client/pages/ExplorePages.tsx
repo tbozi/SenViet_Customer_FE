@@ -204,8 +204,8 @@ export function Offers() {
 
   const isSavedCode = (code: string, offerId?: string | number) => {
     const upper = code.trim().toUpperCase();
-    if (user && savedPromos) {
-      return Boolean(matchSavedPromo(code, offerId)) || savedCodes.some((c) => c.toUpperCase() === upper);
+    if (user) {
+      return Boolean(matchSavedPromo(code, offerId));
     }
     return savedCodes.some((c) => c.toUpperCase() === upper);
   };
@@ -214,11 +214,6 @@ export function Offers() {
     const upperCode = code.trim().toUpperCase();
     const currentlySaved = isSavedCode(upperCode, offerId);
 
-    // Đồng bộ localStorage
-    const updated = toggleSavedPromotion(user?.email, upperCode);
-    setSavedCodes(updated);
-
-    // Đồng bộ sang Backend nếu đã đăng nhập
     if (user) {
       const saved = matchSavedPromo(upperCode, offerId);
       if (currentlySaved && saved) {
@@ -229,39 +224,35 @@ export function Offers() {
               ? `Đã bỏ lưu mã khuyến mãi "${upperCode}" khỏi Ví voucher`
               : `Removed voucher "${upperCode}" from wallet`,
           );
-          return;
         } catch (err: any) {
           toast.error(err?.data?.message || "Không thể bỏ lưu mã khuyến mãi này");
-          return;
         }
+        return;
       } else {
         const matched = activePromos?.find(
           (p) => (offerId && String(p.id) === String(offerId)) || p.code.toUpperCase() === upperCode,
         );
-        if (matched) {
-          try {
-            await savePromo(matched.id).unwrap();
-            toast.success(
-              isVietnamese
-                ? `Đã lưu mã "${upperCode}" vào Ví voucher của bạn!`
-                : `Saved voucher "${upperCode}" to your wallet!`,
-            );
-            return;
-          } catch (err: any) {
-            // Nếu đã lưu trên DB trước đó và khách muốn bấm để bỏ lưu
-            if (currentlySaved) {
-              try {
-                await unsavePromo(matched.id).unwrap();
-                toast.info(isVietnamese ? `Đã bỏ lưu voucher "${upperCode}"` : `Removed voucher "${upperCode}"`);
-                return;
-              } catch {
-                // ignore
-              }
-            }
-          }
+        if (!matched) {
+          toast.error(isVietnamese ? "Không thể tìm thấy khuyến mãi để lưu." : "Promotion could not be found.");
+          return;
         }
+
+        try {
+          await savePromo(matched.id).unwrap();
+          toast.success(
+            isVietnamese
+              ? `Đã lưu mã "${upperCode}" vào Ví voucher của bạn!`
+              : `Saved voucher "${upperCode}" to your wallet!`,
+          );
+        } catch (err: any) {
+          toast.error(err?.data?.message || (isVietnamese ? "Không thể lưu mã khuyến mãi này." : "Could not save this promotion."));
+        }
+        return;
       }
     }
+
+    const updated = toggleSavedPromotion(user?.email, upperCode);
+    setSavedCodes(updated);
 
     if (!currentlySaved) {
       toast.success(

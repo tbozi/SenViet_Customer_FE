@@ -27,14 +27,9 @@ import { useAuth } from "@/lib/auth";
 import { useLanguage } from "@/lib/i18n";
 import { useGetMyBookingsQuery } from "@/services/bookingApi";
 import {
-  useGetActivePromotionsQuery,
   useGetMySavedPromotionsQuery,
   useUnsavePromotionMutation,
 } from "@/services/promotionApi";
-import {
-  getSavedPromotionCodes,
-  toggleSavedPromotion,
-} from "@/lib/savedPromotions";
 import { formatVnd } from "@/data/hotels";
 
 export default function CustomerAccount() {
@@ -46,9 +41,6 @@ export default function CustomerAccount() {
   const [activeTab, setActiveTab] = useState<"bookings" | "vouchers">("bookings");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [localSavedCodes, setLocalSavedCodes] = useState<string[]>(() =>
-    getSavedPromotionCodes(user?.email),
-  );
 
   const { data: serverBookings } = useGetMyBookingsQuery(undefined, {
     skip: !user,
@@ -59,12 +51,7 @@ export default function CustomerAccount() {
       skip: !user,
     });
 
-  const { data: activePromotions = [] } = useGetActivePromotionsQuery();
   const [unsavePromotion] = useUnsavePromotionMutation();
-
-  useEffect(() => {
-    setLocalSavedCodes(getSavedPromotionCodes(user?.email));
-  }, [user?.email]);
 
   useEffect(() => {
     const local = user
@@ -201,8 +188,6 @@ export default function CustomerAccount() {
       minValue?: number;
     }> = [];
 
-    const addedCodes = new Set<string>();
-
     const nowMs = Date.now();
     const isNotExpired = (endDate?: string) => {
       if (!endDate) return true;
@@ -215,7 +200,6 @@ export default function CustomerAccount() {
         if (!isNotExpired(sp.endDate)) continue;
         const cleanCode = (sp.promotionCode || sp.code || "").toUpperCase();
         if (!cleanCode) continue;
-        addedCodes.add(cleanCode);
 
         const discountText =
           sp.discountType === "PERCENTAGE" || Number(sp.discountValue) <= 100
@@ -238,39 +222,8 @@ export default function CustomerAccount() {
       }
     }
 
-    for (const code of localSavedCodes) {
-      const cleanCode = code.toUpperCase();
-      if (addedCodes.has(cleanCode)) continue;
-      addedCodes.add(cleanCode);
-
-      const activeMatch = activePromotions.find(
-        (ap) => ap.code.trim().toUpperCase() === cleanCode,
-      );
-      if (activeMatch && !isNotExpired(activeMatch.endDate)) continue;
-
-      const discountText = activeMatch
-        ? activeMatch.discountType === "PERCENTAGE" ||
-          Number(activeMatch.discountValue) <= 100
-          ? `Giảm ${activeMatch.discountValue}%`
-          : `Giảm ${formatVnd(Number(activeMatch.discountValue || 0))}`
-        : "Ưu đãi đặc quyền";
-
-      list.push({
-        id: cleanCode,
-        code: cleanCode,
-        title: activeMatch?.name || `Mã ưu đãi ${cleanCode}`,
-        description: activeMatch?.description,
-        discountText,
-        hotelName: activeMatch?.hotelName || "Toàn hệ thống",
-        isUsed: false,
-        startDate: activeMatch?.startDate,
-        endDate: activeMatch?.endDate,
-        minValue: activeMatch?.minBookingValue,
-      });
-    }
-
     return list;
-  }, [savedPromosBackend, localSavedCodes, activePromotions]);
+  }, [savedPromosBackend]);
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -285,10 +238,6 @@ export default function CustomerAccount() {
     savedId?: number | string;
     code: string;
   }) => {
-    if (user?.email) {
-      toggleSavedPromotion(user.email, promo.code);
-      setLocalSavedCodes(getSavedPromotionCodes(user.email));
-    }
     if (promo.savedId) {
       try {
         await unsavePromotion(promo.savedId).unwrap();

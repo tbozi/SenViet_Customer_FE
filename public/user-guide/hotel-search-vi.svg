@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="title">
+  <title id="title">Minh họa tìm kiếm khách sạn</title>
+  <rect width="960" height="420" rx="24" fill="#f3f4f6"/><rect x="22" y="22" width="916" height="376" rx="20" fill="#fff"/>
+  <rect x="22" y="22" width="916" height="52" rx="20" fill="#172554"/><text x="54" y="55" fill="#fff" font-family="Arial" font-size="16" font-weight="700">SEN VIỆT HOTELS</text><text x="680" y="54" fill="#dbeafe" font-family="Arial" font-size="10">KHÁCH SẠN · ƯU ĐÃI · DỊCH VỤ · TÀI KHOẢN</text>
+  <text x="54" y="103" fill="#0f172a" font-family="Arial" font-size="18" font-weight="700">TÌM CHỖ NGHỈ CỦA BẠN</text>
+  <rect x="54" y="118" width="852" height="100" rx="15" fill="#f8fafc" stroke="#e2e8f0"/>
+  <g font-family="Arial"><text x="78" y="146" fill="#64748b" font-size="10">1 · ĐIỂM ĐẾN</text><text x="78" y="182" fill="#0f172a" font-size="12">Chọn thành phố / khách sạn</text><text x="292" y="146" fill="#64748b" font-size="10">2 · NGÀY NHẬN</text><text x="292" y="182" fill="#0f172a" font-size="12">Chọn ngày đến</text><text x="478" y="146" fill="#64748b" font-size="10">3 · NGÀY TRẢ</text><text x="478" y="182" fill="#0f172a" font-size="12">Chọn ngày đi</text><text x="658" y="146" fill="#64748b" font-size="10">4 · KHÁCH / PHÒNG</text><text x="658" y="182" fill="#0f172a" font-size="12">Số khách và số phòng</text></g>
+  <rect x="790" y="158" width="92" height="40" rx="20" fill="#d4a84e"/><text x="812" y="183" fill="#172554" font-family="Arial" font-size="11" font-weight="700">TÌM KIẾM</text>
+  <rect x="54" y="238" width="852" height="124" rx="14" fill="#f1f5f9"/><rect x="70" y="252" width="160" height="96" rx="10" fill="#bfdbfe"/><path d="M75 328 118 278l26 30 18-20 47 62" fill="#93c5fd"/>
+  <text x="254" y="278" fill="#0f172a" font-family="Arial" font-size="14" font-weight="700">5 · XEM THẺ KHÁCH SẠN</text><text x="254" y="304" fill="#64748b" font-family="Arial" font-size="11">Tên · địa chỉ · đánh giá · giá từ</text><text x="254" y="330" fill="#1d4ed8" font-family="Arial" font-size="11" font-weight="700">Mở chi tiết → xem phòng còn trống</text>
+</svg>
