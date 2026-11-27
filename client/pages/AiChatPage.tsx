@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Bot,
   Send,
@@ -17,12 +17,30 @@ import {
   Loader2,
   Mic,
   Minimize2,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
+import { getBookings, updateBooking } from "@/lib/bookings";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8081";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/components/ui/use-toast";
 import { formatStayDates } from "@/lib/dateTime";
+import {
+  CHAT_SYNC_EVENT,
+  appendChatMessageToStorage,
+  deriveContextualQuickReplies,
+  escapeChatHtml,
+  formatChatReply,
+  readChatQuickReplies,
+  readChatTypingState,
+  saveChatQuickReplies,
+  setChatTypingState,
+  shouldSuppressBookingCard,
+  stripRawPaymentQrTags,
+} from "@/lib/chatSync";
 import { formatVnd } from "@/data/hotels";
 import { useGetPublicHotelsQuery } from "@/services/hotelApi";
 import {
@@ -109,52 +127,7 @@ function escapeHtml(text: string): string {
 }
 
 function formatReply(text: string): string {
-  if (!text) return "";
-  const safe = escapeHtml(text.trim());
-  const formatted = safe
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^\s*\n][^*\n]*?)\*/g, "<em>$1</em>");
-  const lines = formatted.split("\n");
-  const processed: string[] = [];
-  let inList = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    const listMatch = trimmed.match(/^[-•*]\s+(.+)$/);
-    if (listMatch) {
-      if (!inList) {
-        processed.push('<ul class="my-1.5 space-y-1 list-disc pl-5">');
-        inList = true;
-      }
-      processed.push(`<li>${listMatch[1]}</li>`);
-    } else {
-      if (inList) {
-        processed.push("</ul>");
-        inList = false;
-      }
-      processed.push(trimmed);
-    }
-  }
-  if (inList) {
-    processed.push("</ul>");
-  }
-
-  const res: string[] = [];
-  for (const item of processed) {
-    if (item.startsWith("<ul") || item.endsWith("</ul>") || item.startsWith("<li>")) {
-      res.push(item);
-    } else if (!item) {
-      res.push("<br/>");
-    } else {
-      res.push(`<span>${item}</span><br/>`);
-    }
-  }
-
-  let output = res.join("");
-  while (output.endsWith("<br/>")) {
-    output = output.slice(0, -5);
-  }
-  return output;
+  return formatChatReply(text);
 }
 
 function parseBotMessage(rawText: string) {
@@ -212,6 +185,7 @@ function parseBotMessage(rawText: string) {
 
   cleanText = cleanText.replace(/```(?:json)?(?::\w+)?[\s\S]*?```/g, "").trim();
   cleanText = cleanText.replace(/```[\s\S]*$/g, "").trim();
+  cleanText = stripRawPaymentQrTags(cleanText).cleanText;
 
   return { cleanText, bookingCard, payosPayment };
 }
@@ -244,6 +218,9 @@ export default function AiChatPage() {
     return [{ id: 1, from: "bot", text: t("ai.widgetGreeting") }];
   });
   const [isTyping, setIsTyping] = useState(false);
+  const [dynamicQuickReplies, setDynamicQuickReplies] = useState<string[]>(() => readChatQuickReplies(userKey));
+  const [confirmedBookingIds, setConfirmedBookingIds] = useState<string[]>([]);
+  const [cancelledBookingIds, setCancelledBookingIds] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef<ChatMessageType[]>([]);
@@ -395,6 +372,8 @@ export default function AiChatPage() {
         }
       }
     } catch {}
+    setIsTyping(readChatTypingState(userKey, curSession));
+    setDynamicQuickReplies(readChatQuickReplies(userKey));
 
     const fetchServerHistory = async () => {
       if (!curSession) return;
@@ -402,6 +381,13 @@ export default function AiChatPage() {
         const res = await triggerGetHistory(curSession).unwrap();
         const serverMsgs = res.result?.messages;
         if (isMounted && serverMsgs && serverMsgs.length > 0) {
+          try {
+            const rawLocal = localStorage.getItem(cacheKey);
+            const localMsgs = rawLocal ? JSON.parse(rawLocal) : [];
+            if (readChatTypingState(userKey, curSession) && Array.isArray(localMsgs) && localMsgs.length > serverMsgs.length) {
+              return;
+            }
+          } catch {}
           const restored: Message[] = serverMsgs.map((m: any, idx: number) => ({
             id: m.id || Date.now() + idx,
             from: m.role === "user" ? ("user" as const) : ("bot" as const),
@@ -419,10 +405,132 @@ export default function AiChatPage() {
       } catch {}
     };
     fetchServerHistory();
+
+    const syncFromStorage = () => {
+      if (!isMounted) return;
+      const syncedSession = localStorage.getItem(sessionKey) || sessionIdRef.current;
+      sessionIdRef.current = syncedSession;
+      try {
+        const raw = localStorage.getItem(cacheKey);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMessages(parsed);
+          }
+        }
+      } catch {}
+      setIsTyping(readChatTypingState(userKey, syncedSession));
+      setDynamicQuickReplies(readChatQuickReplies(userKey));
+    };
+
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener(CHAT_SYNC_EVENT, syncFromStorage);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener(CHAT_SYNC_EVENT, syncFromStorage);
     };
   }, [userKey, sessionKey, cacheKey, triggerGetHistory]);
+
+  // Nếu tab/popup khác đang gửi tin nhắn chờ AI trả lời, tự đồng bộ lại khi server hoàn tất
+  useEffect(() => {
+    if (!isTyping) return;
+    const timer = setInterval(() => {
+      const curSession = sessionIdRef.current;
+      const stillTyping = readChatTypingState(userKey, curSession);
+      if (!stillTyping) {
+        try {
+          const raw = localStorage.getItem(cacheKey);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) setMessages(parsed);
+          }
+        } catch {}
+        setDynamicQuickReplies(readChatQuickReplies(userKey));
+        setIsTyping(false);
+        return;
+      }
+      if (curSession) {
+        triggerGetHistory(curSession)
+          .unwrap()
+          .then((res) => {
+            const serverMsgs = res.result?.messages;
+            const rawLocal = localStorage.getItem(cacheKey);
+            const localMsgs = rawLocal ? JSON.parse(rawLocal) : [];
+            if (Array.isArray(serverMsgs) && serverMsgs.length >= localMsgs.length && serverMsgs[serverMsgs.length - 1]?.role !== "user") {
+              const restored: Message[] = serverMsgs.map((m: any, idx: number) => ({
+                id: m.id || Date.now() + idx,
+                from: m.role === "user" ? ("user" as const) : ("bot" as const),
+                text: m.content,
+                state: idx === serverMsgs.length - 1 ? res.result?.state : undefined,
+              }));
+              setMessages(restored);
+              setChatTypingState(userKey, false, curSession);
+              setIsTyping(false);
+            }
+          })
+          .catch(() => {});
+      }
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [isTyping, userKey, cacheKey, triggerGetHistory]);
+
+  // Đồng bộ trạng thái thanh toán PayOS cho các thẻ QR đang hiển thị trên /chat
+  useEffect(() => {
+    const pendingIds = new Set<string>();
+    messages.forEach((m) => {
+      if (m.from !== "bot") return;
+      const parsed = parseBotMessage(m.text);
+      const bId = m.state?.bookingId || parsed.payosPayment?.bookingId;
+      const oId = m.state?.orderId || parsed.payosPayment?.orderId;
+      const target = oId && oId !== "N/A" ? String(oId) : bId ? String(bId) : "";
+      if (!target) return;
+      const isAlreadyDone =
+        m.state?.status === "CONFIRMED" ||
+        m.state?.status === "CANCELLED" ||
+        confirmedBookingIds.includes(target) ||
+        cancelledBookingIds.includes(target) ||
+        (bId && (confirmedBookingIds.includes(String(bId)) || cancelledBookingIds.includes(String(bId))));
+      if (!isAlreadyDone && (m.state?.qrUrl || parsed.payosPayment)) {
+        pendingIds.add(target);
+      }
+    });
+    if (pendingIds.size === 0) return;
+
+    let cancelled = false;
+    const checkAll = async () => {
+      for (const id of pendingIds) {
+        if (cancelled) return;
+        try {
+          const res = await fetch(`${API_BASE_URL}/payment/check-order-status/${id}`);
+          if (!res.ok) continue;
+          const raw = await res.json();
+          const d = raw?.result ?? raw;
+          const bId = String(d?.bookingId || id);
+          const oId = String(d?.orderId || id);
+          if (d?.isPaid || d?.status === "PAID" || d?.status === "CONFIRMED" || d?.status === "CLOSED") {
+            setConfirmedBookingIds((prev) => Array.from(new Set([...prev, bId, oId])));
+            updateBooking(bId, { status: "confirmed" });
+            const postPayChips = isEn
+              ? ["View booking history", "Book another room", "Check-in/out policy"]
+              : ["Xem lịch sử đặt phòng", "Đặt thêm phòng khác", "Chính sách nhận/trả phòng"];
+            setDynamicQuickReplies(postPayChips);
+            saveChatQuickReplies(userKey, postPayChips);
+          } else if (d?.status === "CANCELLED" || String(d?.bookingStatus || "").startsWith("CANCEL")) {
+            setCancelledBookingIds((prev) => Array.from(new Set([...prev, bId, oId])));
+            updateBooking(bId, { status: "cancelled" });
+          }
+        } catch {}
+      }
+    };
+    checkAll();
+    const timer = setInterval(checkAll, 6000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [messages, confirmedBookingIds, cancelledBookingIds, isEn, userKey]);
 
   // Tự động cập nhật câu chào đầu tiên khi đổi ngôn ngữ VI <-> EN
   useEffect(() => {
@@ -451,6 +559,9 @@ export default function AiChatPage() {
     } catch {}
     sessionIdRef.current = newId;
     historyRef.current = [];
+    setDynamicQuickReplies([]);
+    saveChatQuickReplies(userKey, []);
+    setChatTypingState(userKey, false, newId);
     setMessages([{ id: Date.now(), from: "bot", text: t("ai.widgetGreeting") }]);
   };
 
@@ -484,7 +595,9 @@ export default function AiChatPage() {
     setInput("");
     const userMsg: Message = { id: Date.now(), from: "user", text: trimmed };
     setMessages((prev) => [...prev, userMsg]);
+    appendChatMessageToStorage(cacheKey, userMsg);
     setIsTyping(true);
+    setChatTypingState(userKey, true, sessionIdRef.current);
 
     historyRef.current = [
       ...historyRef.current,
@@ -510,10 +623,17 @@ export default function AiChatPage() {
 
       const reply = result.result?.reply || t("ai.genericReply");
       const state = result.result?.state;
+      const nextChips = Array.isArray((result.result as { quickReplies?: string[] })?.quickReplies)
+        ? ((result.result as { quickReplies?: string[] }).quickReplies ?? [])
+        : [];
+      const finalChips = nextChips.length > 0 ? nextChips : deriveContextualQuickReplies(reply, isEn, state);
+      setDynamicQuickReplies(finalChips);
+      saveChatQuickReplies(userKey, finalChips);
 
       const isBookingAction = Boolean(
         state &&
           state.status !== "CANCELLED" &&
+          !shouldSuppressBookingCard(reply, state) &&
           (state.cardAction === "SHOW_ROOM_OPTIONS" ||
             state.cardAction === "SHOW_PAYOS_PAYMENT" ||
             state.cardAction === "SHOW_HOTEL_RESERVATION" ||
@@ -535,33 +655,43 @@ export default function AiChatPage() {
         { role: "model" as const, content: reply },
       ].slice(-10);
 
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, from: "bot", text: reply, state: isBookingAction ? state : undefined },
-      ]);
+      const botMsg: Message = { id: Date.now() + 1, from: "bot", text: reply, state: isBookingAction ? state : undefined };
+      appendChatMessageToStorage(cacheKey, botMsg);
+      setMessages((prev) => [...prev, botMsg]);
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          from: "bot",
-          text: isEn
-            ? "Our AI service is experiencing high traffic. Please call hotline 1900 6868 for immediate assistance."
-            : "Dạ hệ thống Trợ lý AI đang có lưu lượng truy cập cao trong giây lát. Quý khách vui lòng liên hệ hotline 1900 6868 để được hỗ trợ tức thì ạ! 🌸",
-        },
-      ]);
+      const errMsg: Message = {
+        id: Date.now() + 1,
+        from: "bot",
+        text: isEn
+          ? "Our AI service is experiencing high traffic. Please call hotline 1900 6868 for immediate assistance."
+          : "Dạ hệ thống Trợ lý AI đang có lưu lượng truy cập cao trong giây lát. Quý khách vui lòng liên hệ hotline 1900 6868 để được hỗ trợ tức thì ạ! 🌸",
+      };
+      appendChatMessageToStorage(cacheKey, errMsg);
+      setMessages((prev) => [...prev, errMsg]);
     } finally {
+      setChatTypingState(userKey, false, sessionIdRef.current);
       setIsTyping(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
-  const quickPrompts = [
-    t("ai.quickBook"),
-    t("ai.quickOffer"),
-    t("ai.quickLocation"),
-    t("ai.quickSupport"),
-  ];
+  const lastBotMsgObj = messages.filter((m) => m.from === "bot").slice(-1)[0];
+  const fallbackContextualChips = deriveContextualQuickReplies(
+    lastBotMsgObj?.text || "",
+    isEn,
+    lastBotMsgObj?.state
+  );
+  const quickPrompts =
+    dynamicQuickReplies.length > 0
+      ? dynamicQuickReplies
+      : fallbackContextualChips.length > 0
+        ? fallbackContextualChips
+        : [
+            t("ai.quickBook"),
+            t("ai.quickOffer"),
+            t("ai.quickLocation"),
+            t("ai.quickSupport"),
+          ];
 
   return (
     <main className="container max-w-7xl py-5 sm:py-6">
@@ -728,7 +858,8 @@ export default function AiChatPage() {
                     m.state.availableRooms &&
                     m.state.availableRooms.length > 0 &&
                     m.state.currentStep !== "PAYMENT_PROCESSING" &&
-                    !m.state.qrUrl
+                    !m.state.qrUrl &&
+                    !shouldSuppressBookingCard(m.text, m.state)
                 );
 
                 if (shouldShowBookingCard && m.state.branch && !bookingCard) {
@@ -782,80 +913,197 @@ export default function AiChatPage() {
                   >
                     {cleanText && (
                       <div
-                        dangerouslySetInnerHTML={{ __html: isUser ? escapeHtml(cleanText) : formatReply(cleanText) }}
+                        onClick={(e) => {
+                          const anchor = (e.target as HTMLElement)?.closest("a[data-spa-link]") as HTMLAnchorElement | null;
+                          if (anchor) {
+                            e.preventDefault();
+                            const path = anchor.getAttribute("data-spa-link");
+                            if (path) navigate(path);
+                          }
+                        }}
+                        dangerouslySetInnerHTML={{ __html: isUser ? escapeChatHtml(cleanText) : formatReply(cleanText) }}
                         className="prose prose-sm max-w-none dark:prose-invert [&_li]:my-0.5 [&_ul]:my-1.5 [&_p]:my-1 break-words"
                       />
                     )}
 
-                    {/* PayOS Payment Card */}
-                    {payosPayment && (
-                      <div className="mt-4 overflow-hidden rounded-2xl border border-emerald-500/50 bg-card p-4 shadow-lg">
-                        <div className="flex items-center justify-between border-b border-border/60 pb-2">
-                          <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                            <Clock className="h-4 w-4" /> {isEn ? "Temporary Room Hold (5 mins)" : "Đơn giữ chỗ tạm thời (5 phút)"}
-                          </span>
-                          <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                            {isEn ? "Code" : "Mã"} #{payosPayment.bookingId || payosPayment.orderId}
-                          </span>
-                        </div>
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                          <div className="space-y-1.5 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1.5 font-semibold text-primary">
-                              <Building2 className="h-3.5 w-3.5 text-gold shrink-0" />
-                              <span className="truncate">{payosPayment.hotelName}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <BedDouble className="h-3.5 w-3.5 text-gold shrink-0" />
-                              <span className="font-medium text-foreground">{payosPayment.roomName}</span>
-                            </div>
-                            {(payosPayment.checkIn || payosPayment.checkOut) && (
-                              <div className="flex items-center gap-1.5">
-                                <CalendarDays className="h-3.5 w-3.5 text-gold shrink-0" />
-                                <span>{formatStayDates(payosPayment.checkIn, payosPayment.checkOut, language)}</span>
-                              </div>
-                            )}
-                            {payosPayment.customerName && (
-                              <div className="flex items-center gap-1.5">
-                                <UserIcon className="h-3.5 w-3.5 text-gold shrink-0" />
-                                <span>{payosPayment.customerName} {payosPayment.customerPhone ? `· ${payosPayment.customerPhone}` : ""}</span>
-                              </div>
-                            )}
-                            <div className="mt-2 flex items-center justify-between rounded-lg bg-emerald-500/10 px-3 py-2 text-foreground">
-                              <span className="text-xs font-medium">{isEn ? "Total payment:" : "Tổng thanh toán:"}</span>
-                              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                                {formatVnd(payosPayment.totalAmount)}
+                    {/* PayOS Payment Card (đồng bộ 100% trạng thái Đã thanh toán / Đã hủy / Chờ quét mã như ChatWidget) */}
+                    {payosPayment && (() => {
+                      const displayCode =
+                        payosPayment.bookingId && payosPayment.bookingId !== "BKG_SENVIET"
+                          ? payosPayment.bookingId
+                          : payosPayment.orderId;
+                      const isCardConfirmed =
+                        m.state?.status === "CONFIRMED" ||
+                        (payosPayment.bookingId && confirmedBookingIds.includes(String(payosPayment.bookingId))) ||
+                        (payosPayment.orderId && confirmedBookingIds.includes(String(payosPayment.orderId))) ||
+                        messages.some(
+                          (msg) =>
+                            msg.from === "bot" &&
+                            (msg.text.includes("XÁC NHẬN THANH TOÁN THÀNH CÔNG") || msg.text.includes("Chúc mừng quý khách")) &&
+                            (msg.text.includes(String(payosPayment.bookingId)) ||
+                              (payosPayment.orderId !== "N/A" && msg.text.includes(String(payosPayment.orderId))))
+                        ) ||
+                        getBookings().some(
+                          (b) =>
+                            (b.id === payosPayment.bookingId || b.id === payosPayment.orderId) &&
+                            b.status === "confirmed"
+                        );
+                      const isCardCancelled =
+                        !isCardConfirmed &&
+                        (m.state?.status === "CANCELLED" ||
+                          (payosPayment.bookingId && cancelledBookingIds.includes(String(payosPayment.bookingId))) ||
+                          (payosPayment.orderId && cancelledBookingIds.includes(String(payosPayment.orderId))) ||
+                          messages.some(
+                            (msg) =>
+                              msg.from === "bot" &&
+                              msg.text.includes("THÔNG BÁO HỦY ĐẶT PHÒNG") &&
+                              msg.text.includes(String(payosPayment.bookingId))
+                          ) ||
+                          getBookings().some(
+                            (b) =>
+                              (b.id === payosPayment.bookingId || b.id === payosPayment.orderId) &&
+                              b.status === "cancelled"
+                          ));
+
+                      return (
+                        <div
+                          className={`mt-4 overflow-hidden rounded-2xl border p-4 shadow-lg transition-colors ${
+                            isCardConfirmed
+                              ? "border-emerald-500 bg-emerald-500/5 dark:bg-emerald-950/20"
+                              : isCardCancelled
+                              ? "border-rose-500/40 bg-rose-500/5 dark:bg-rose-950/20"
+                              : "border-emerald-500/50 bg-card"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                            {isCardConfirmed ? (
+                              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="h-4 w-4" /> {isEn ? "Paid & Reservation Confirmed" : "Đã thanh toán & Xác nhận giữ phòng"}
                               </span>
+                            ) : isCardCancelled ? (
+                              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                                <XCircle className="h-4 w-4" /> {isEn ? "Booking Cancelled (Hold Expired)" : "Đơn đã bị hủy (Hết hạn giữ chỗ)"}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                <Clock className="h-4 w-4" /> {isEn ? "Temporary Room Hold (5 mins)" : "Đơn giữ chỗ tạm thời (5 phút)"}
+                              </span>
+                            )}
+                            <span
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                                isCardCancelled
+                                  ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                                  : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                              }`}
+                            >
+                              {isEn ? "Code" : "Mã"} #{displayCode}
+                            </span>
+                          </div>
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                            <div className="space-y-1.5 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5 font-semibold text-primary">
+                                <Building2 className="h-3.5 w-3.5 text-gold shrink-0" />
+                                <span className="truncate">{payosPayment.hotelName}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <BedDouble className="h-3.5 w-3.5 text-gold shrink-0" />
+                                <span className="font-medium text-foreground">{payosPayment.roomName}</span>
+                              </div>
+                              {(payosPayment.checkIn || payosPayment.checkOut) && (
+                                <div className="flex items-center gap-1.5">
+                                  <CalendarDays className="h-3.5 w-3.5 text-gold shrink-0" />
+                                  <span>{formatStayDates(payosPayment.checkIn, payosPayment.checkOut, language)}</span>
+                                </div>
+                              )}
+                              {payosPayment.customerName && (
+                                <div className="flex items-center gap-1.5">
+                                  <UserIcon className="h-3.5 w-3.5 text-gold shrink-0" />
+                                  <span>{payosPayment.customerName} {payosPayment.customerPhone ? `· ${payosPayment.customerPhone}` : ""}</span>
+                                </div>
+                              )}
+                              <div
+                                className={`mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-foreground ${
+                                  isCardCancelled ? "bg-rose-500/10" : "bg-emerald-500/10"
+                                }`}
+                              >
+                                <span className="text-xs font-medium">{isEn ? "Total payment:" : "Tổng thanh toán:"}</span>
+                                <span
+                                  className={`text-sm font-bold ${
+                                    isCardCancelled ? "text-rose-600 dark:text-rose-400 line-through" : "text-emerald-600 dark:text-emerald-400"
+                                  }`}
+                                >
+                                  {formatVnd(payosPayment.totalAmount)}
+                                </span>
+                              </div>
+                              {isCardConfirmed ? (
+                                <Button asChild size="sm" className="h-auto min-h-9 w-full mt-2 rounded-xl bg-emerald-600 px-3 py-2 text-center font-semibold leading-snug text-white shadow-sm hover:bg-emerald-700 whitespace-normal">
+                                  <Link to={`/booking-success/${displayCode}`} className="inline-flex items-center justify-center gap-1.5">
+                                    <span>{isEn ? "View Booking Confirmation" : "Xem phiếu xác nhận đặt phòng"}</span>
+                                    <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+                                  </Link>
+                                </Button>
+                              ) : isCardCancelled ? (
+                                <Button
+                                  onClick={() => send(`Em muốn đặt lại phòng ${payosPayment.roomName} tại ${payosPayment.hotelName} từ ${payosPayment.checkIn} đến ${payosPayment.checkOut}`)}
+                                  size="sm"
+                                  className="w-full mt-2 rounded-xl bg-amber-600 font-semibold text-white shadow-sm hover:bg-amber-700"
+                                >
+                                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {isEn ? "Rebook this room" : "Đặt lại phòng này"}
+                                </Button>
+                              ) : (
+                                payosPayment.checkoutUrl && (
+                                  <Button asChild variant="outline" size="sm" className="w-full mt-2 rounded-xl text-xs">
+                                    <a href={payosPayment.checkoutUrl} target="_blank" rel="noopener noreferrer">
+                                      {isEn ? "Open PayOS Payment Gateway" : "Mở cổng thanh toán PayOS"} <ExternalLink className="ml-1.5 h-3 w-3" />
+                                    </a>
+                                  </Button>
+                                )
+                              )}
                             </div>
-                            {payosPayment.checkoutUrl && (
-                              <Button asChild variant="outline" size="sm" className="w-full mt-2 rounded-xl text-xs">
-                                <a href={payosPayment.checkoutUrl} target="_blank" rel="noopener noreferrer">
-                                  {isEn ? "Open PayOS Payment Gateway" : "Mở cổng thanh toán PayOS"} <ExternalLink className="ml-1.5 h-3 w-3" />
-                                </a>
-                              </Button>
+                            {payosPayment.qrCodeUrl && (
+                              <div className="text-center">
+                                {isCardConfirmed ? (
+                                  <div className="relative inline-block rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-4 shadow-inner">
+                                    <CheckCircle2 className="h-10 w-10 text-emerald-600 dark:text-emerald-400 mx-auto mb-1.5" />
+                                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                                      {isEn ? "Payment Successful" : "Đã thanh toán thành công"}
+                                    </p>
+                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                      {isEn ? "Your room reservation is confirmed." : "Phòng của quý khách đã được xác nhận giữ chỗ."}
+                                    </p>
+                                  </div>
+                                ) : isCardCancelled ? (
+                                  <div className="relative inline-block rounded-xl border-2 border-rose-500/30 bg-rose-500/10 p-4 shadow-inner">
+                                    <XCircle className="h-10 w-10 text-rose-600 dark:text-rose-400 mx-auto mb-1.5" />
+                                    <p className="text-xs font-bold text-rose-700 dark:text-rose-300">
+                                      {isEn ? "QR Expired" : "Mã QR đã hết hiệu lực"}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="inline-block rounded-xl border-2 border-dashed border-emerald-500/40 bg-card text-card-foreground p-2 shadow-inner">
+                                      <img
+                                        src={
+                                          payosPayment.qrCodeUrl.startsWith("http")
+                                            ? payosPayment.qrCodeUrl
+                                            : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payosPayment.qrCodeUrl)}`
+                                        }
+                                        alt="Mã QR PayOS"
+                                        className="h-40 w-40 object-contain mx-auto"
+                                      />
+                                    </div>
+                                    <p className="mt-1.5 text-[11px] text-muted-foreground flex items-center justify-center gap-1">
+                                      <QrCode className="h-3.5 w-3.5 text-emerald-500" />
+                                      {isEn ? "Auto-confirmed after scanning" : "Tự động xác nhận ngay sau khi quét mã"}
+                                    </p>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
-                          {payosPayment.qrCodeUrl && (
-                            <div className="text-center">
-                              <div className="inline-block rounded-xl border-2 border-dashed border-emerald-500/40 bg-card text-card-foreground p-2 shadow-inner">
-                                <img
-                                  src={
-                                    payosPayment.qrCodeUrl.startsWith("http")
-                                      ? payosPayment.qrCodeUrl
-                                      : `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payosPayment.qrCodeUrl)}`
-                                  }
-                                  alt="Mã QR PayOS"
-                                  className="h-40 w-40 object-contain mx-auto"
-                                />
-                              </div>
-                              <p className="mt-1.5 text-[11px] text-muted-foreground flex items-center justify-center gap-1">
-                                <QrCode className="h-3.5 w-3.5 text-emerald-500" />
-                                {isEn ? "Auto-confirmed after scanning" : "Tự động xác nhận ngay sau khi quét mã"}
-                              </p>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
 
                     {/* Booking Card if returned by AI */}
                     {bookingCard && (
@@ -948,12 +1196,22 @@ export default function AiChatPage() {
             )}
           </div>
 
-          {/* Quick Prompts Bar on mobile/tablet only (desktop already shows sidebar) */}
-          <div className="flex lg:hidden items-center gap-2 overflow-x-auto no-scrollbar border-t border-border bg-muted/30 px-4 py-2.5 whitespace-nowrap">
+          {/* Contextual Quick Replies Bar */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar border-t border-border bg-muted/30 px-4 py-2.5 whitespace-nowrap">
             {quickPrompts.map((q) => (
               <button
                 key={q}
-                onClick={() => send(q)}
+                onClick={() => {
+                  if (q === "Xem lịch sử đặt phòng" || q === "View booking history") {
+                    navigate("/history");
+                    return;
+                  }
+                  if (q === "Đăng nhập ngay" || q === "Sign in now") {
+                    navigate("/login");
+                    return;
+                  }
+                  send(q);
+                }}
                 disabled={isTyping}
                 className="shrink-0 rounded-full border border-amber-300/80 bg-amber-50/90 dark:bg-amber-950/50 dark:border-amber-700/60 dark:bg-amber-950/40 px-3.5 py-1 text-xs font-medium text-amber-950 dark:text-amber-200 transition hover:bg-amber-100 disabled:opacity-50"
               >

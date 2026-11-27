@@ -142,7 +142,7 @@ export function HeroCinematicSlider({
     <section
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className="relative min-h-[700px] lg:min-h-[740px] w-full overflow-hidden bg-slate-950"
+      className="group relative min-h-[700px] lg:min-h-[740px] w-full overflow-hidden bg-slate-950"
     >
       {/* 1. Ken Burns Cinematic Background Slide Layer */}
       <AnimatePresence mode="wait">
@@ -281,41 +281,27 @@ export function HeroCinematicSlider({
         </div>
       </div>
 
-      {/* 3. Minimalist Slider Navigation Controls — top-right inside Hero so it never overlaps stats or QuickSearch */}
-      <div className="absolute top-24 sm:top-28 right-6 sm:right-12 z-20 flex items-center gap-3 bg-slate-950/55 border border-white/15 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-lg">
-        {/* Slide Counter (e.g. 01 / 08) */}
-        <div className="font-mono text-[11px] font-semibold tracking-wider text-amber-400 tabular-nums">
-          <span>{String(safeIndex + 1).padStart(2, "0")}</span>
-          <span className="text-white/35 mx-1">/</span>
-          <span className="text-white/60">{String(slides.length).padStart(2, "0")}</span>
-        </div>
-
-        {/* Sleek Linear Progress Indicator */}
-        <div className="hidden sm:block h-1 w-14 overflow-hidden rounded-full bg-white/20">
-          <div
-            className="h-full rounded-full bg-amber-400 transition-all duration-300"
-            style={{ width: `${((safeIndex + 1) / Math.max(1, slides.length)) * 100}%` }}
-          />
-        </div>
-
-        {/* Prev / Next Navigation Arrows */}
-        <div className="flex items-center gap-0.5 border-l border-white/15 pl-2">
+      {/* 3. Editorial Bare Edge Navigation Arrows (subtle fade & glide on hover) */}
+      {slides.length > 1 && (
+        <>
           <button
+            type="button"
             onClick={prevSlide}
             aria-label="Previous Slide"
-            className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition-all active:scale-90"
+            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 p-2 text-white/40 opacity-0 -translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 focus-visible:opacity-100 hover:text-amber-300/90 hover:scale-110 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-95 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]"
           >
-            <ChevronLeft className="h-3.5 w-3.5" />
+            <ChevronLeft className="h-9 w-9 sm:h-12 sm:w-12" strokeWidth={1.25} />
           </button>
           <button
+            type="button"
             onClick={nextSlide}
             aria-label="Next Slide"
-            className="flex h-6 w-6 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition-all active:scale-90"
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 p-2 text-white/40 opacity-0 translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 focus-visible:opacity-100 hover:text-amber-300/90 hover:scale-110 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-95 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]"
           >
-            <ChevronRight className="h-3.5 w-3.5" />
+            <ChevronRight className="h-9 w-9 sm:h-12 sm:w-12" strokeWidth={1.25} />
           </button>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* 4. Slim Automatic Progress Bar at the Top Edge */}
       {!isPaused && (

@@ -1,4 +1,16 @@
 import { formatStayDates, formatDisplayDate } from "@/lib/dateTime";
+import {
+  CHAT_SYNC_EVENT,
+  appendChatMessageToStorage,
+  deriveContextualQuickReplies,
+  formatChatReply,
+  readChatQuickReplies,
+  readChatTypingState,
+  saveChatQuickReplies,
+  setChatTypingState,
+  shouldSuppressBookingCard,
+  stripRawPaymentQrTags,
+} from "@/lib/chatSync";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useDraggablePosition } from "@/hooks/useDraggablePosition";
 
@@ -680,7 +692,8 @@ function parseBotMessage(rawText: string): {
 
   }
 
-
+  const strippedQr = stripRawPaymentQrTags(cleanText);
+  cleanText = strippedQr.cleanText;
 
   return { cleanText, bookingCard, payosPayment, hotelReservation };
 
@@ -736,52 +749,7 @@ function formatShortBranchName(name?: string): string {
 }
 
 function formatReply(text: string): string {
-  if (!text) return "";
-  const safe = escapeHtml(text.trim());
-  const formatted = safe
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^\s*\n][^*\n]*?)\*/g, "<em>$1</em>");
-  const lines = formatted.split("\n");
-  const processed: string[] = [];
-  let inList = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    const listMatch = trimmed.match(/^[-•*]\s+(.+)$/);
-    if (listMatch) {
-      if (!inList) {
-        processed.push('<ul class="my-1.5 space-y-1 list-disc pl-5">');
-        inList = true;
-      }
-      processed.push(`<li>${listMatch[1]}</li>`);
-    } else {
-      if (inList) {
-        processed.push("</ul>");
-        inList = false;
-      }
-      processed.push(trimmed);
-    }
-  }
-  if (inList) {
-    processed.push("</ul>");
-  }
-
-  const res: string[] = [];
-  for (const item of processed) {
-    if (item.startsWith("<ul") || item.endsWith("</ul>") || item.startsWith("<li>")) {
-      res.push(item);
-    } else if (!item) {
-      res.push("<br/>");
-    } else {
-      res.push(`<span>${item}</span><br/>`);
-    }
-  }
-
-  let output = res.join("");
-  while (output.endsWith("<br/>")) {
-    output = output.slice(0, -5);
-  }
-  return output;
+  return formatChatReply(text);
 }
 
 
@@ -1364,10 +1332,13 @@ export default function ChatWidget() {
 
       });
 
+      const postPayChips = isEn
+        ? ["View booking history", "Book another room", "Check-in/out policy"]
+        : ["Xem lịch sử đặt phòng", "Đặt thêm phòng khác", "Chính sách nhận/trả phòng"];
+      setDynamicQuickReplies(postPayChips);
+      saveChatQuickReplies(userKey, postPayChips);
     },
-
-    []
-
+    [isEn, userKey]
   );
 
 
@@ -1508,16 +1479,17 @@ export default function ChatWidget() {
 
 
 
+      const cancelChips = isEn
+        ? ["Book a new room", "Search another branch", "Current promotions"]
+        : ["Đặt phòng mới", "Tìm phòng chi nhánh khác", "Ưu đãi hiện có"];
+      setDynamicQuickReplies(cancelChips);
+      saveChatQuickReplies(userKey, cancelChips);
+
       if (!open) {
-
         setBotUnreadCount((c) => c + 1);
-
       }
-
     },
-
-    [open, activePaymentOrderId]
-
+    [open, activePaymentOrderId, isEn, userKey]
   );
 
 
@@ -1601,10 +1573,12 @@ export default function ChatWidget() {
     setActivePaymentOrderId(null);
 
     setDynamicQuickReplies([]);
+    saveChatQuickReplies(userKey, []);
+    setChatTypingState(userKey, false, newId);
 
     setMessages([{ id: Date.now(), from: "bot", text: t("ai.widgetGreeting") }]);
 
-  }, [t, sessionKey, cacheKey]);
+  }, [t, sessionKey, cacheKey, userKey]);
 
 
 
@@ -1621,6 +1595,8 @@ export default function ChatWidget() {
     const initialMsgs = getInitialCachedMessages(cacheKey);
 
     setMessages(initialMsgs.length > 0 ? initialMsgs : [{ id: 1, from: "bot", text: t("ai.widgetGreeting") }]);
+    setIsTyping(readChatTypingState(userKey, curSession));
+    setDynamicQuickReplies(readChatQuickReplies(userKey));
 
     historyRef.current = [];
 
@@ -1647,6 +1623,12 @@ export default function ChatWidget() {
         const serverMsgs = res.result?.messages;
 
         if (isMounted && serverMsgs && serverMsgs.length > 0) {
+          const latestLocal = getInitialCachedMessages(cacheKey);
+          const stillTyping = readChatTypingState(userKey, curSession);
+          // Nếu đang có tin nhắn chờ AI trả lời ở tab/khung chat khác, không ghi đè mất tin nhắn vừa gửi
+          if (stillTyping && latestLocal.length > serverMsgs.length) {
+            return;
+          }
 
           const restored: Message[] = serverMsgs.map((m: any, idx: number) => ({
 
@@ -1730,13 +1712,70 @@ export default function ChatWidget() {
 
     fetchHistory();
 
+    const syncFromStorage = () => {
+      if (!isMounted) return;
+      const syncedSession = getStoredSessionId(sessionKey);
+      sessionIdRef.current = syncedSession;
+      const syncedMsgs = getInitialCachedMessages(cacheKey);
+      if (syncedMsgs.length > 0) {
+        setMessages(deduplicateMessages(syncedMsgs));
+      }
+      setIsTyping(readChatTypingState(userKey, syncedSession));
+      const syncedChips = readChatQuickReplies(userKey);
+      setDynamicQuickReplies(syncedChips);
+    };
+
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener(CHAT_SYNC_EVENT, syncFromStorage);
+
     return () => {
 
       isMounted = false;
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener(CHAT_SYNC_EVENT, syncFromStorage);
 
     };
 
   }, [userKey, sessionKey, cacheKey, triggerGetHistory, t]);
+
+  // Nếu tab/giao diện khác đang gửi tin nhắn chờ AI trả lời, tự đồng bộ lại khi server hoàn tất
+  useEffect(() => {
+    if (!isTyping) return;
+    const timer = setInterval(() => {
+      const curSession = sessionIdRef.current;
+      const stillTyping = readChatTypingState(userKey, curSession);
+      if (!stillTyping) {
+        const syncedMsgs = getInitialCachedMessages(cacheKey);
+        if (syncedMsgs.length > 0) {
+          setMessages(deduplicateMessages(syncedMsgs));
+        }
+        setDynamicQuickReplies(readChatQuickReplies(userKey));
+        setIsTyping(false);
+        return;
+      }
+      if (curSession) {
+        triggerGetHistory(curSession)
+          .unwrap()
+          .then((res) => {
+            const serverMsgs = res.result?.messages;
+            const localMsgs = getInitialCachedMessages(cacheKey);
+            if (Array.isArray(serverMsgs) && serverMsgs.length >= localMsgs.length && serverMsgs[serverMsgs.length - 1]?.role !== "user") {
+              const restored: Message[] = serverMsgs.map((m: any, idx: number) => ({
+                id: m.id || Date.now() + idx,
+                from: m.role === "user" ? ("user" as const) : ("bot" as const),
+                text: m.content,
+                state: idx === serverMsgs.length - 1 ? res.result?.state : undefined,
+              }));
+              setMessages(deduplicateMessages(restored));
+              setChatTypingState(userKey, false, curSession);
+              setIsTyping(false);
+            }
+          })
+          .catch(() => {});
+      }
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [isTyping, userKey, cacheKey, triggerGetHistory]);
 
   // Tự động đồng bộ ngôn ngữ câu chào đầu tiên khi người dùng bấm chuyển đổi VI <-> EN
   useEffect(() => {
@@ -1800,15 +1839,17 @@ export default function ChatWidget() {
 
 
 
-      // Add user message to UI
+      // Add user message to UI & persist immediately for cross-tab/cross-view sync
 
       const userMsg: Message = { id: Date.now(), from: "user", text };
 
       setMessages((prev) => [...prev, userMsg]);
+      appendChatMessageToStorage(cacheKey, userMsg);
 
       setInput("");
 
       setIsTyping(true);
+      setChatTypingState(userKey, true, sessionIdRef.current);
 
 
 
@@ -1868,7 +1909,10 @@ export default function ChatWidget() {
         const nextChips = Array.isArray((result.result as { quickReplies?: string[] })?.quickReplies)
           ? ((result.result as { quickReplies?: string[] }).quickReplies ?? [])
           : [];
-        setDynamicQuickReplies(nextChips);
+        const finalChips =
+          nextChips.length > 0 ? nextChips : deriveContextualQuickReplies(reply, language === "en", state);
+        setDynamicQuickReplies(finalChips);
+        saveChatQuickReplies(userKey, finalChips);
 
 
 
@@ -1898,7 +1942,10 @@ export default function ChatWidget() {
 
 
 
-        const validState = isBookingAction ? state : undefined;
+        const validState = isBookingAction && !shouldSuppressBookingCard(reply, state) ? state : undefined;
+
+        const botMsg: Message = { id: Date.now() + 1, from: "bot", text: reply, state: validState };
+        appendChatMessageToStorage(cacheKey, botMsg);
 
         // Giữ nguyên state của các tin nhắn trước đó, KHÔNG xóa để thẻ không bị biến mất khi chat câu tiếp theo!
 
@@ -1906,7 +1953,7 @@ export default function ChatWidget() {
 
           ...prev,
 
-          { id: Date.now() + 1, from: "bot", text: reply, state: validState },
+          botMsg,
 
         ]);
 
@@ -2211,32 +2258,21 @@ export default function ChatWidget() {
         ].slice(-10);
 
       } catch {
-
-        setMessages((prev) => [
-
-          ...prev,
-
-          {
-
-            id: Date.now() + 1,
-
-            from: "bot",
-
-            text: "Xin lỗi, hệ thống đang bận. Vui lòng thử lại sau giây lát nhé! 🙏",
-
-          },
-
-        ]);
-
+        const errMsg: Message = {
+          id: Date.now() + 1,
+          from: "bot",
+          text: "Xin lỗi, hệ thống đang bận. Vui lòng thử lại sau giây lát nhé! 🙏",
+        };
+        appendChatMessageToStorage(cacheKey, errMsg);
+        setMessages((prev) => [...prev, errMsg]);
       } finally {
-
+        setChatTypingState(userKey, false, sessionIdRef.current);
         setIsTyping(false);
-
       }
 
     },
 
-    [isTyping, sendChatMessage, t, sessionKey],
+    [isTyping, sendChatMessage, t, sessionKey, cacheKey, userKey, language],
 
   );
 
@@ -2472,40 +2508,26 @@ export default function ChatWidget() {
 
 
 
-  const lastBotMsg = messages.filter((m) => m.from === "bot").slice(-1)[0]?.text?.toLowerCase() || "";
+  const lastBotMsgObj = messages.filter((m) => m.from === "bot").slice(-1)[0];
+  const fallbackContextualChips = deriveContextualQuickReplies(
+    lastBotMsgObj?.text || "",
+    isEn,
+    lastBotMsgObj?.state
+  );
 
-  const isAwaitingConfirmation =
-
-    (lastBotMsg.includes("xác nhận") || lastBotMsg.includes("thanh toán")) &&
-
-    !lastBotMsg.includes("payos_payment");
-
-
-
-  const [dynamicQuickReplies, setDynamicQuickReplies] = useState<string[]>([]);
+  const [dynamicQuickReplies, setDynamicQuickReplies] = useState<string[]>(() => readChatQuickReplies(userKey));
 
   const quickReplies =
     dynamicQuickReplies.length > 0
       ? dynamicQuickReplies
-      : isAwaitingConfirmation
-
-    ? (isEn
-
-        ? ["✅ Confirm booking", "Edit details", "Airport pickup service"]
-
-        : ["✅ Xác nhận đặt phòng", "Chỉnh sửa thông tin", "Dịch vụ đưa đón sân bay"])
-
-    : [
-
-        t("ai.quickBook"),
-
-        t("ai.quickOffer"),
-
-        t("ai.quickLocation"),
-
-        t("ai.quickSupport"),
-
-      ];
+      : fallbackContextualChips.length > 0
+        ? fallbackContextualChips
+        : [
+            t("ai.quickBook"),
+            t("ai.quickOffer"),
+            t("ai.quickLocation"),
+            t("ai.quickSupport"),
+          ];
 
 
 
@@ -4155,7 +4177,9 @@ export default function ChatWidget() {
 
                   m.state?.currentStep !== "PAYMENT_PROCESSING" &&
 
-                  !m.state?.qrUrl
+                  !m.state?.qrUrl &&
+
+                  !shouldSuppressBookingCard(m.text, m.state)
 
                 );
 
@@ -4231,6 +4255,17 @@ export default function ChatWidget() {
                     <div
 
                       className="prose prose-sm max-w-none dark:prose-invert [&_li]:my-0.5 [&_ul]:my-1.5 [&_p]:my-1"
+                      onClick={(e) => {
+                        const anchor = (e.target as HTMLElement)?.closest("a[data-spa-link]") as HTMLAnchorElement | null;
+                        if (anchor) {
+                          e.preventDefault();
+                          const path = anchor.getAttribute("data-spa-link");
+                          if (path) {
+                            setOpen(false);
+                            navigate(path);
+                          }
+                        }
+                      }}
 
                       dangerouslySetInnerHTML={{ __html: formatReply(cleanText) }}
 
@@ -4596,13 +4631,14 @@ export default function ChatWidget() {
 
                                   size="sm"
 
-                                  className="w-full rounded-xl bg-emerald-600 font-semibold text-white shadow-sm hover:bg-emerald-700"
+                                  className="h-auto min-h-9 w-full rounded-xl bg-emerald-600 px-3 py-2 text-center font-semibold leading-snug text-white shadow-sm hover:bg-emerald-700 whitespace-normal"
 
                                 >
 
-                                  <Link to={`/booking-success/${displayCode}`} onClick={() => setOpen(false)}>
+                                  <Link to={`/booking-success/${displayCode}`} onClick={() => setOpen(false)} className="inline-flex items-center justify-center gap-1.5">
 
-                                    {isEn ? "View Booking Confirmation" : "Xem phiếu xác nhận đặt phòng"} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                                    <span>{isEn ? "View Booking Confirmation" : "Xem phiếu xác nhận đặt phòng"}</span>
+                                    <ArrowRight className="h-3.5 w-3.5 shrink-0" />
 
                                   </Link>
 
@@ -5145,7 +5181,19 @@ export default function ChatWidget() {
             {quickReplies.map((q) => (
               <button
                 key={q}
-                onClick={() => send(q)}
+                onClick={() => {
+                  if (q === "Xem lịch sử đặt phòng" || q === "View booking history") {
+                    setOpen(false);
+                    navigate("/history");
+                    return;
+                  }
+                  if (q === "Đăng nhập ngay" || q === "Sign in now") {
+                    setOpen(false);
+                    navigate("/login");
+                    return;
+                  }
+                  send(q);
+                }}
                 disabled={isTyping}
                 className="shrink-0 rounded-full border border-amber-200/90 bg-amber-50/70 dark:border-amber-700/60 dark:bg-amber-950/40 px-3 py-1 text-xs font-medium text-amber-900 dark:text-amber-200 transition-all duration-150 hover:bg-amber-100/90 hover:border-amber-300 hover:text-amber-950 active:scale-95 shadow-2xs disabled:opacity-50"
               >
